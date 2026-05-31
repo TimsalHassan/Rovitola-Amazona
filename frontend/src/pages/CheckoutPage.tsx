@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { User, Phone, MapPin, FileText, CreditCard, ArrowLeft, ArrowRight, Truck, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from "../hooks/useAuth";
 
 interface CartState {
   orderType: 'delivery' | 'pickup';

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, Truck, Percent, ChevronRight, Smartphone, Star, ArrowRight, Quote, UtensilsCrossed } from 'lucide-react';
+import { Clock, Truck, Percent, ChevronRight, Smartphone, Star, ArrowRight, Quote, X } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { isRestaurantOpen } from '../utils/openingHours';
 
 export default function HomePage() {

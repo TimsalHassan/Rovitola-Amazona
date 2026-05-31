@@ -1,89 +1,184 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import {
+  FormField,
+  PasswordField,
+  Button,
+  Alert,
+} from "../components/FormElements";
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  function set(field: keyof typeof form) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm((f) => ({ ...f, [field]: e.target.value }));
+      // Clear error on change
+      setFieldErrors((fe) => {
+        const next = { ...fe };
+        delete next[field];
+        return next;
+      });
+    };
+  }
+
+  function validate(): Record<string, string> {
+    const errors: Record<string, string> = {};
+    if (!form.name.trim()) errors.name = "Full name is required.";
+    if (!form.email.trim()) errors.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      errors.email = "Enter a valid email address.";
+    if (form.phone && !/^\+?[\d\s\-()]{7,20}$/.test(form.phone))
+      errors.phone = "Enter a valid phone number.";
+    if (!form.password) errors.password = "Password is required.";
+    else if (form.password.length < 8)
+      errors.password = "Password must be at least 8 characters.";
+    if (!form.confirmPassword)
+      errors.confirmPassword = "Please confirm your password.";
+    else if (form.password !== form.confirmPassword)
+      errors.confirmPassword = "Passwords do not match.";
+    return errors;
+  }
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError('');
-    if (form.password !== form.confirmPassword) {
-      setError(t('Salasanat eivät täsmää', 'Passwords do not match'));
+    setError(null);
+
+    const errors = validate();
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
       return;
     }
+
     setLoading(true);
-    const success = await register(form.name, form.email, form.phone, form.password);
-    setLoading(false);
-    if (success) {
-      navigate('/account');
-    } else {
-      setError(t('Rekisteröinti epäonnistui', 'Registration failed'));
+    try {
+      await register({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+      });
+      navigate("/", { replace: true });
+    } catch (err: unknown) {
+      const e = err as Error & { field?: string };
+      if (e.field) {
+        setFieldErrors({ [e.field]: e.message });
+      } else {
+        setError(e.message || "Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <main className="bg-gray-950 min-h-screen pt-16 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-gray-900 border border-white/5 rounded-2xl p-6">
-          <h1 className="text-2xl font-bold text-white text-center mb-6">{t('Rekisteröidy', 'Register')}</h1>
-          {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-5"><p className="text-red-400 text-sm text-center">{error}</p></div>}
+        {/* Branding */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-500 text-white text-2xl font-bold mb-4 shadow-lg">
+            A
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Create your account
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Order from Amazona in minutes
+          </p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Koko nimi', 'Full Name')}</label>
-              <div className="relative">
-                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="text" required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
+        {/* Card */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
+          {error && (
+            <div className="mb-4">
+              <Alert type="error" message={error} />
             </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Sähköposti', 'Email')}</label>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="email" required value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Puhelin', 'Phone')}</label>
-              <div className="relative">
-                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="tel" required value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Salasana', 'Password')}</label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="password" required value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Vahvista salasana', 'Confirm Password')}</label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="password" required value={form.confirmPassword} onChange={e => setForm(p => ({ ...p, confirmPassword: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-50">
-              {loading ? <span className="animate-spin w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full" /> : <ArrowRight size={16} />}
-              {t('Rekisteröidy', 'Register')}
-            </button>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+            <FormField
+              label="Full name"
+              type="text"
+              placeholder="Your name"
+              value={form.name}
+              onChange={set("name")}
+              error={fieldErrors.name}
+              autoComplete="name"
+              required
+            />
+            <FormField
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={set("email")}
+              error={fieldErrors.email}
+              autoComplete="email"
+              required
+            />
+            <FormField
+              label="Phone number"
+              type="tel"
+              placeholder="+358 40 000 0000"
+              value={form.phone}
+              onChange={set("phone")}
+              error={fieldErrors.phone}
+              autoComplete="tel"
+              hint="Optional — needed for delivery updates"
+            />
+            <PasswordField
+              label="Password"
+              placeholder="Min. 8 characters"
+              value={form.password}
+              onChange={set("password")}
+              error={fieldErrors.password}
+              autoComplete="new-password"
+              required
+            />
+            <PasswordField
+              label="Confirm password"
+              placeholder="Repeat your password"
+              value={form.confirmPassword}
+              onChange={set("confirmPassword")}
+              error={fieldErrors.confirmPassword}
+              autoComplete="new-password"
+              required
+            />
+
+            <Button
+              type="submit"
+              size="lg"
+              loading={loading}
+              className="w-full mt-2"
+            >
+              {loading ? "Creating account…" : "Create account"}
+            </Button>
           </form>
 
-          <p className="mt-5 text-center text-sm text-gray-400">
-            {t('On jo tili?', 'Have an account?')} <Link to="/login" className="text-amber-400 hover:text-amber-300">{t('Kirjaudu', 'Login')}</Link>
+          <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="text-orange-600 hover:text-orange-700 dark:text-orange-400 font-medium"
+            >
+              Sign in
+            </Link>
           </p>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
