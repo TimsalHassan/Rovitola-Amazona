@@ -12,14 +12,13 @@ import OrderConfirmedPage from './pages/OrderConfirmedPage';
 import ContactPage from './pages/ContactPage';
 import AboutPage from './pages/AboutPage';
 import LoginPage from './pages/LoginPage';
-// import AdminLogin from './pages/AdminLogin';
 import RegisterPage from './pages/RegisterPage';
 import AccountPage from './pages/AccountPage';
 import GuestOrdersPage from './pages/GuestOrdersPage';
 
 function Layout() {
   const location = useLocation();
-  const hideFooter = location.pathname === '/order-confirmed' || location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/admin-login';
+  const hideFooter = location.pathname === '/order-confirmed' || location.pathname === '/login' || location.pathname === '/register';
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -34,7 +33,6 @@ function Layout() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/login" element={<LoginPage />} />
-          {/* <Route path="/admin-login" element={<AdminLogin />} /> */}
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/my-orders" element={<GuestOrdersPage />} />

@@ -15,7 +15,7 @@ class Category(models.Model):
         help_text='e.g. "2 Pizzas + Drink = €19.90"'
     )
     deal_label_fi = models.CharField(max_length=200, blank=True)
-    creation_date = models.DateTimeField(auto_now_add=True)
+    creation_date = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["order"]
