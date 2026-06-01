@@ -39,7 +39,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
             "transition-all duration-150 outline-none",
             error
               ? "border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-300 dark:focus:ring-red-800"
-              : "border-gray-200 dark:border-gray-700 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900/40",
+              : "border-gray-200 dark:border-gray-700 focus:border-amber-400 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900/40",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             className,
           ].join(" ")}
@@ -76,26 +76,73 @@ FormField.displayName = "FormField";
 // ─── PasswordField ────────────────────────────────────────────────────────────
 
 type PasswordFieldProps = Omit<FormFieldProps, "type">;
-
 export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
-  ({ className = "", ...props }, ref) => {
+  ({ className = "", label, error, hint, required, id, ...props }, ref) => {
     const [show, setShow] = useState(false);
+    const fieldId = id ?? (label as string).toLowerCase().replace(/\s+/g, "-");
+
     return (
-      <div className="relative">
-        <FormField
-          ref={ref}
-          type={show ? "text" : "password"}
-          className={`pr-12 ${className}`}
-          {...props}
-        />
-        <button
-          type="button"
-          onClick={() => setShow((s) => !s)}
-          aria-label={show ? "Hide password" : "Show password"}
-          className="absolute right-3 top-[38px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+      <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor={fieldId}
+          className="text-sm font-medium text-gray-700 dark:text-gray-300"
         >
-          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
+          {label}
+          {required && (
+            <span className="ml-1 text-red-500" aria-hidden>*</span>
+          )}
+        </label>
+
+        {/* Input + toggle sit in a relative container */}
+        <div className="relative">
+          <input
+            ref={ref}
+            id={fieldId}
+            type={show ? "text" : "password"}
+            className={[
+              "w-full rounded-xl border bg-white dark:bg-gray-900 px-4 py-3 pr-12 text-sm",
+              "text-gray-900 dark:text-gray-100",
+              "placeholder:text-gray-400 dark:placeholder:text-gray-600",
+              "transition-all duration-150 outline-none",
+              error
+                ? "border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-300 dark:focus:ring-red-800"
+                : "border-gray-200 dark:border-gray-700 focus:border-amber-400 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900/40",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              className,
+            ].join(" ")}
+            aria-invalid={!!error}
+            aria-describedby={
+              error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined
+            }
+            required={required}
+            {...props}
+          />
+          {/* Button is now relative to the input wrapper, not the whole field */}
+          <button
+            type="button"
+            onClick={() => setShow((s) => !s)}
+            aria-label={show ? "Hide password" : "Show password"}
+            className="absolute right-3 inset-y-0 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {error && (
+          <p
+            id={`${fieldId}-error`}
+            role="alert"
+            className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400"
+          >
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            {error}
+          </p>
+        )}
+        {hint && !error && (
+          <p id={`${fieldId}-hint`} className="text-xs text-gray-500 dark:text-gray-500">
+            {hint}
+          </p>
+        )}
       </div>
     );
   }
@@ -126,7 +173,7 @@ export function Button({
 
   const variants = {
     primary:
-      "bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white focus-visible:ring-orange-400 shadow-sm hover:shadow-md",
+      "bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white focus-visible:ring-amber-400 shadow-sm hover:shadow-md",
     secondary:
       "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 focus-visible:ring-gray-300",
     ghost:
@@ -204,7 +251,7 @@ export function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const sizes = { sm: "w-4 h-4", md: "w-6 h-6", lg: "w-10 h-10" };
   return (
     <Loader2
-      className={`${sizes[size]} animate-spin text-orange-500`}
+      className={`${sizes[size]} animate-spin text-amber-500`}
       aria-label="Loading"
     />
   );

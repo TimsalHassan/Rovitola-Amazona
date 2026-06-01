@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function ContactPage() {
   const { t } = useLanguage();

@@ -48,13 +48,13 @@ export function AddressCard({ address, onEdit }: AddressCardProps) {
         address.id < 0
           ? "opacity-60 border-dashed border-gray-200 dark:border-gray-700"
           : address.is_default
-          ? "border-orange-300 dark:border-orange-600 bg-orange-50/50 dark:bg-orange-900/10"
+          ? "border-amber-300 dark:border-amber-600 bg-amber-50/50 dark:bg-amber-900/10"
           : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-600",
       ].join(" ")}
     >
       {/* Default badge */}
       {address.is_default && (
-        <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40 px-2 py-0.5 rounded-full">
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">
           <Star className="w-3 h-3 fill-current" />
           Default
         </span>
@@ -84,7 +84,7 @@ export function AddressCard({ address, onEdit }: AddressCardProps) {
             <button
               onClick={handleSetDefault}
               disabled={settingDefault}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400 transition-colors disabled:opacity-50"
             >
               {settingDefault ? (
                 <Check className="w-3.5 h-3.5 animate-bounce" />
@@ -313,7 +313,7 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
                 className={[
                   "w-10 h-5.5 rounded-full transition-colors duration-200",
                   form.is_default
-                    ? "bg-orange-500"
+                    ? "bg-amber-500"
                     : "bg-gray-200 dark:bg-gray-700",
                 ].join(" ")}
               />
@@ -360,7 +360,7 @@ export function AddAddressButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:border-orange-300 hover:text-orange-600 dark:hover:border-orange-600 dark:hover:text-orange-400 transition-all duration-150 group"
+      className="w-full rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:border-amber-300 hover:text-amber-600 dark:hover:border-amber-600 dark:hover:text-amber-400 transition-all duration-150 group"
     >
       <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
       Add new address

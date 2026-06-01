@@ -35,7 +35,7 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-16">
       <div className="max-w-2xl mx-auto px-4 py-10">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
           My Account
@@ -87,6 +87,8 @@ function ProfileTab() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  console.log(user);
 
   const isDirty = name !== user?.name || phone !== user?.phone;
 

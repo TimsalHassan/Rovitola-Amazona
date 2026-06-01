@@ -3,9 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   ShoppingCart, Menu, X, Utensils, User,
   ChevronDown, LogOut, Settings, ShoppingBag,
+  LogIn
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from '../hooks/useAuth';
 
 export default function Navbar() {
@@ -184,7 +185,7 @@ export default function Navbar() {
                 to="/login"
                 className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium px-4 py-2 rounded-lg transition-all text-sm"
               >
-                <User size={16} />
+                <LogIn size={16} />
                 <span className="hidden sm:inline">{t('Kirjaudu', 'Login')}</span>
               </Link>
             )}
