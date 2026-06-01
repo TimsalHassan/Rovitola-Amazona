@@ -1,6 +1,6 @@
 import { useLocation, Link, useNavigate, Navigate } from 'react-router-dom';
 import { CheckCircle, Home, User, ArrowRight } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from "../hooks/useLanguage";
 import { useEffect, useState } from 'react';
 import { CartItem } from '../types';
 

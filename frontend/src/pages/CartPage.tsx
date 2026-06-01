@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingBag, Truck, MapPin, AlertCircle, ArrowRight, UtensilsCrossed } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, Truck, AlertCircle, ArrowRight, UtensilsCrossed } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
+import { useLanguage } from "../hooks/useLanguage";
+import { useAuth } from "../hooks/useAuth";
 
 const MIN_ORDER = 13;
 const DELIVERY_CHARGE = 4;

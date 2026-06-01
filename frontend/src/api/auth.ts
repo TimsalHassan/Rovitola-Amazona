@@ -1,0 +1,167 @@
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+export interface Address {
+  id: number;
+  street_address: string;
+  city: string;
+  postal_code: string;
+  country: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface AuthTokens {
+  token: string;
+  user: User;
+}
+
+export interface ApiError {
+  message: string;
+  field?: string; // for field-level validation errors
+}
+
+// ─── Core fetch wrapper ───────────────────────────────────────────────────────
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  token?: string | null
+): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Token ${token}` } : {}),
+    ...(options.headers as Record<string, string>),
+  };
+
+  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+  if (!res.ok) {
+    let errorMessage = `Request failed (${res.status})`;
+    let fieldError: string | undefined;
+
+    try {
+      const data = await res.json();
+      // Django REST Framework error shapes
+      if (typeof data === "object" && data !== null) {
+        if (data.detail) {
+          errorMessage = data.detail;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (data.non_field_errors) {
+          errorMessage = data.non_field_errors[0];
+        } else {
+          // Field-level errors — grab first one
+          const firstField = Object.keys(data)[0];
+          if (firstField) {
+            const msgs = data[firstField];
+            errorMessage = Array.isArray(msgs) ? msgs[0] : String(msgs);
+            fieldError = firstField;
+          }
+        }
+      }
+    } catch {
+      // Response wasn't JSON — use HTTP status message
+    }
+
+    const err = new Error(errorMessage) as Error & { field?: string; status: number };
+    err.field = fieldError;
+    err.status = res.status;
+    throw err;
+  }
+
+  // 204 No Content — return empty object
+  if (res.status === 204) return {} as T;
+
+  return res.json();
+}
+
+// ─── Auth endpoints ───────────────────────────────────────────────────────────
+
+export const authApi = {
+  register: (data: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+  }) =>
+    request<AuthTokens>("/auth/register/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  login: (data: { email: string; password: string }) =>
+    request<AuthTokens>("/auth/login/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  logout: (token: string) =>
+    request<{ detail: string }>("/auth/logout/", { method: "POST" }, token),
+
+  getProfile: (token: string) =>
+    request<User>("/auth/profile/", { method: "GET" }, token),
+
+  updateProfile: (token: string, data: { name?: string; phone?: string }) =>
+    request<User>(
+      "/auth/profile/",
+      { method: "PATCH", body: JSON.stringify(data) },
+      token
+    ),
+
+  changePassword: (
+    token: string,
+    data: { current_password: string; new_password: string }
+  ) =>
+    request<{ detail: string }>(
+      "/auth/change-password/",
+      { method: "POST", body: JSON.stringify(data) },
+      token
+    ),
+};
+
+// ─── Address endpoints ────────────────────────────────────────────────────────
+
+export const addressApi = {
+  list: (token: string) =>
+    request<Address[]>("/auth/addresses/", { method: "GET" }, token),
+
+  create: (
+    token: string,
+    data: Omit<Address, "id" | "created_at">
+  ) =>
+    request<Address>(
+      "/auth/addresses/",
+      { method: "POST", body: JSON.stringify(data) },
+      token
+    ),
+
+  update: (
+    token: string,
+    id: number,
+    data: Partial<Omit<Address, "id" | "created_at">>
+  ) =>
+    request<Address>(
+      `/auth/addresses/${id}/`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      token
+    ),
+
+  delete: (token: string, id: number) =>
+    request<void>(`/auth/addresses/${id}/`, { method: "DELETE" }, token),
+
+  setDefault: (token: string, id: number) =>
+    request<Address>(
+      `/auth/addresses/${id}/`,
+      { method: "PATCH", body: JSON.stringify({ is_default: true }) },
+      token
+    ),
+};

@@ -1,5 +1,5 @@
 import { MapPin, Clock, Utensils, UtensilsCrossed } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from "../hooks/useLanguage";
 
 export default function AboutPage() {
   const { t } = useLanguage();

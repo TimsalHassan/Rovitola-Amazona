@@ -1,29 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, X, Utensils, User, ChevronDown, LogOut, Settings } from 'lucide-react';
+import {
+  ShoppingCart, Menu, X, Utensils, User,
+  ChevronDown, LogOut, Settings, ShoppingBag,
+  LogIn
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
+import { useLanguage } from "../hooks/useLanguage";
+import { useAuth } from '../hooks/useAuth';
 
 export default function Navbar() {
   const { totalItems } = useCart();
   const { language, setLanguage, t } = useLanguage();
   const { user, logout } = useAuth();
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const location = useLocation();
 
+  const location = useLocation();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Scroll detection
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Close everything on route change
   useEffect(() => {
     setMobileOpen(false);
     setUserDropdown(false);
-  }, [location]);
+  }, [location.pathname]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setUserDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const isHome = location.pathname === '/';
   const solidBg = scrolled || !isHome;
@@ -35,6 +55,11 @@ export default function Navbar() {
     { to: '/contact', label: t('Yhteystiedot', 'Contact') },
   ];
 
+  function handleLogout() {
+    setUserDropdown(false);
+    logout();
+  }
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -43,6 +68,8 @@ export default function Navbar() {
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
+
+          {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
             <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center shadow-md group-hover:bg-amber-400 transition-colors">
               <Utensils size={20} className="text-gray-900" />
@@ -53,6 +80,7 @@ export default function Navbar() {
             </div>
           </Link>
 
+          {/* Desktop nav links */}
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map(link => (
               <Link
@@ -69,28 +97,30 @@ export default function Navbar() {
             ))}
           </nav>
 
+          {/* Right side actions */}
           <div className="flex items-center gap-3">
+
+            {/* Language switcher */}
             <div className="hidden sm:flex items-center bg-white/10 rounded-lg overflow-hidden border border-white/10">
-              <button
-                onClick={() => setLanguage('fi')}
-                className={`px-3 py-1.5 text-xs font-semibold transition-all ${
-                  language === 'fi' ? 'bg-amber-500 text-gray-900' : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                FI
-              </button>
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-3 py-1.5 text-xs font-semibold transition-all ${
-                  language === 'en' ? 'bg-amber-500 text-gray-900' : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                EN
-              </button>
+              {(['fi', 'en'] as const).map(lang => (
+                <button
+                  key={lang}
+                  onClick={() => setLanguage(lang)}
+                  className={`px-3 py-1.5 text-xs font-semibold transition-all ${
+                    language === lang
+                      ? 'bg-amber-500 text-gray-900'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  {lang.toUpperCase()}
+                </button>
+              ))}
             </div>
 
+            {/* Cart */}
             <Link
               to="/cart"
+              aria-label={`Cart, ${totalItems} items`}
               className="relative flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-semibold px-3 py-2 rounded-lg transition-all text-sm"
             >
               <ShoppingCart size={18} />
@@ -101,18 +131,29 @@ export default function Navbar() {
               )}
             </Link>
 
+            {/* User menu */}
             {user ? (
-              <div className="relative">
+              <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setUserDropdown(v => !v)}
+                  aria-expanded={userDropdown}
+                  aria-haspopup="true"
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-2 rounded-lg transition-all text-sm"
                 >
                   <User size={16} />
                   <span className="hidden sm:inline">{user.name.split(' ')[0]}</span>
-                  <ChevronDown size={14} />
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 ${userDropdown ? 'rotate-180' : ''}`}
+                  />
                 </button>
+
                 {userDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-white/10 rounded-xl shadow-xl overflow-hidden">
+                    <div className="px-4 py-2.5 border-b border-white/10">
+                      <p className="text-xs text-gray-400">{t('Kirjautunut sisään', 'Signed in as')}</p>
+                      <p className="text-sm font-medium text-white truncate">{user.email}</p>
+                    </div>
                     <Link
                       to="/account"
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
@@ -120,13 +161,22 @@ export default function Navbar() {
                       <Settings size={16} />
                       {t('Oma Tili', 'My Account')}
                     </Link>
-                    <button
-                      onClick={logout}
-                      className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                    <Link
+                      to="/my-orders"
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
                     >
-                      <LogOut size={16} />
-                      {t('Kirjaudu Ulos', 'Logout')}
-                    </button>
+                      <ShoppingBag size={16} />
+                      {t('Tilaukseni', 'My Orders')}
+                    </Link>
+                    <div className="border-t border-white/10">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                      >
+                        <LogOut size={16} />
+                        {t('Kirjaudu Ulos', 'Sign out')}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -135,13 +185,15 @@ export default function Navbar() {
                 to="/login"
                 className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium px-4 py-2 rounded-lg transition-all text-sm"
               >
-                <User size={16} />
+                <LogIn size={16} />
                 <span className="hidden sm:inline">{t('Kirjaudu', 'Login')}</span>
               </Link>
             )}
 
+            {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileOpen(v => !v)}
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
               className="md:hidden text-gray-300 hover:text-white p-2 rounded-lg hover:bg-white/10"
             >
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -153,7 +205,7 @@ export default function Navbar() {
       {/* Mobile menu */}
       <div
         className={`md:hidden transition-all duration-300 overflow-hidden ${
-          mobileOpen ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'
+          mobileOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="bg-gray-900 border-t border-white/10 px-4 py-3 space-y-1">
@@ -170,32 +222,48 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+
+          {/* Language switcher (mobile) */}
           <div className="flex items-center gap-2 px-4 py-2 border-t border-white/10 mt-2 pt-3">
             <span className="text-gray-400 text-xs">{t('Kieli', 'Language')}:</span>
-            <button
-              onClick={() => setLanguage('fi')}
-              className={`px-3 py-1 text-xs font-semibold rounded ${
-                language === 'fi' ? 'bg-amber-500 text-gray-900' : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              Suomi
-            </button>
-            <button
-              onClick={() => setLanguage('en')}
-              className={`px-3 py-1 text-xs font-semibold rounded ${
-                language === 'en' ? 'bg-amber-500 text-gray-900' : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              English
-            </button>
+            {(['fi', 'en'] as const).map(lang => (
+              <button
+                key={lang}
+                onClick={() => setLanguage(lang)}
+                className={`px-3 py-1 text-xs font-semibold rounded ${
+                  language === lang ? 'bg-amber-500 text-gray-900' : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                {lang === 'fi' ? 'Suomi' : 'English'}
+              </button>
+            ))}
           </div>
+
+          {/* Authenticated mobile links */}
           {user && (
-            <Link
-              to="/account"
-              className="block px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10"
-            >
-              {t('Oma Tili', 'My Account')}
-            </Link>
+            <>
+              <Link
+                to="/account"
+                className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10"
+              >
+                <Settings size={16} />
+                {t('Oma Tili', 'My Account')}
+              </Link>
+              <Link
+                to="/my-orders"
+                className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10"
+              >
+                <ShoppingBag size={16} />
+                {t('Tilaukseni', 'My Orders')}
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              >
+                <LogOut size={16} />
+                {t('Kirjaudu Ulos', 'Sign out')}
+              </button>
+            </>
           )}
         </div>
       </div>

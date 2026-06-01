@@ -1,58 +1,111 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { CartProvider } from './context/CartContext';
-import { LanguageProvider } from './context/LanguageContext';
-import { AuthProvider } from './context/AuthContext';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import HomePage from './pages/HomePage';
-import MenuPage from './pages/MenuPage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import OrderConfirmedPage from './pages/OrderConfirmedPage';
-import ContactPage from './pages/ContactPage';
-import AboutPage from './pages/AboutPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import AccountPage from './pages/AccountPage';
-import GuestOrdersPage from './pages/GuestOrdersPage';
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { LanguageProvider } from "./context/LanguageContext";
+import { CartProvider } from "./context/CartContext";
+import { ProtectedRoute, RequireGuest } from "./components/ProtectedRoute";
+import Navbar from "./components/Navbar";
+import AuthLayout from "./components/AuthLayout";
 
-function Layout() {
-  const location = useLocation();
-  const hideFooter = location.pathname === '/order-confirmed' || location.pathname === '/login' || location.pathname === '/register';
+import HomePage from "./pages/HomePage";
+import MenuPage from "./pages/MenuPage";
+import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrderConfirmedPage from "./pages/OrderConfirmedPage";
+import ContactPage from "./pages/ContactPage";
+import AboutPage from "./pages/AboutPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import AccountPage from "./pages/AccountPage";
+import MyOrdersPage from "./pages/MyOrdersPage";
+import { MenuProvider } from "./context/MenuContext";
+import MenuItemPage from "./pages/MenuItemPage";
+import Footer from "./components/Footer";
 
+// Layout WITH navbar — used for all app pages
+function AppLayout() {
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
+    <>
       <Navbar />
-      <div className="flex-1">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/menu" element={<MenuPage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/order-confirmed" element={<OrderConfirmedPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/account" element={<AccountPage />} />
-          <Route path="/my-orders" element={<GuestOrdersPage />} />
-        </Routes>
-      </div>
-      {!hideFooter && <Footer />}
-    </div>
+      <Outlet />
+      <Footer/>
+    </>
   );
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <LanguageProvider>
-        <AuthProvider>
-          <CartProvider>
-            <Layout />
-          </CartProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </BrowserRouter>
+    <LanguageProvider>
+      <MenuProvider>
+        <CartProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Auth pages — no navbar */}
+                <Route element={<AuthLayout />}>
+                  <Route
+                    path="/login"
+                    element={
+                      <RequireGuest>
+                        <LoginPage />
+                      </RequireGuest>
+                    }
+                  />
+                  <Route
+                    path="/register"
+                    element={
+                      <RequireGuest>
+                        <RegisterPage />
+                      </RequireGuest>
+                    }
+                  />
+                </Route>
+
+                {/* App pages — with navbar */}
+                <Route element={<AppLayout />}>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/menu" element={<MenuPage />} />
+                  <Route path="/menu/:id" element={<MenuItemPage />} />
+                  <Route path="/cart" element={<CartPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/about" element={<AboutPage />} />
+                  <Route
+                    path="/checkout"
+                    element={
+                      <ProtectedRoute>
+                        <CheckoutPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/order-confirmed"
+                    element={
+                      <ProtectedRoute>
+                        <OrderConfirmedPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/account"
+                    element={
+                      <ProtectedRoute>
+                        <AccountPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/my-orders"
+                    element={
+                      <ProtectedRoute>
+                        <MyOrdersPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </AuthProvider>
+        </CartProvider>
+      </MenuProvider>
+    </LanguageProvider>
   );
 }
