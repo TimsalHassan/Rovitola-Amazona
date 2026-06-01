@@ -4,6 +4,17 @@ from rest_framework.response import Response
 
 from .models import Order
 from .serializers import OrderSerializer, CreateOrderSerializer, OrderStatusSerializer
+from notifications.tasks import (
+    send_order_received_email,
+    send_restaurant_notification_email,
+    send_order_confirmation_email,
+    send_order_shipped_email,
+    send_order_preparing_email,
+    send_order_on_the_way_email,
+    send_order_cancelled_email,
+)
+
+from payments.tasks import send_payment_notification_email
 
 
 class OrderListView(generics.ListAPIView):
@@ -37,12 +48,39 @@ class OrderListView(generics.ListAPIView):
 
 class OrderCreateView(generics.CreateAPIView):
     serializer_class = CreateOrderSerializer
-    permission_classes = [AllowAny]   # guests can order too
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
+
+        # Customer email get karo
+        customer_email = None
+        if order.customer:
+            customer_email = order.customer.email
+        elif order.guest_email:
+            customer_email = order.guest_email
+
+        if customer_email:
+            items_text = "\n".join([
+                f"- {item.menu_item_name} x{item.quantity} = €{item.total_price}"
+                for item in order.items.all()
+            ])
+
+            send_order_received_email.delay(
+                order_id=order.order_number,
+                user_email=customer_email,
+                user_name=order.get_customer_name(),
+                order_type=order.order_type,
+                total=str(order.total),
+            )
+
+        send_restaurant_notification_email.delay(
+            order_id=order.order_number,
+            order_details=f"New order #{order.order_number}\nType: {order.order_type}\nCustomer: {order.get_customer_name()}\nTotal: €{order.total}",
+        )
+
         return Response(
             OrderSerializer(order).data,
             status=status.HTTP_201_CREATED,
@@ -68,4 +106,61 @@ class OrderStatusUpdateView(generics.UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         kwargs["partial"] = True
-        return super().update(request, *args, **kwargs)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+
+        customer_email = None
+        if order.customer:
+            customer_email = order.customer.email
+        elif order.guest_email:
+            customer_email = order.guest_email
+
+        if customer_email:
+            items_text = "\n".join([
+                f"- {item.menu_item_name} x{item.quantity} = €{item.total_price}"
+                for item in order.items.all()
+            ])
+
+            if order.status == "confirmed":
+                send_order_confirmation_email.delay(
+                    order_id=order.order_number,
+                    user_email=customer_email,
+                    user_name=order.get_customer_name(),
+                    items_text=items_text,
+                    total=str(order.total),
+                )
+
+            if order.status == "preparing":
+                send_order_preparing_email.delay(
+                    order_id=order.order_number,
+                    user_email=customer_email,
+                    user_name=order.get_customer_name(),
+                )
+
+            if order.status == "on_the_way":
+                send_order_on_the_way_email.delay(
+                    order_id=order.order_number,
+                    user_email=customer_email,
+                    user_name=order.get_customer_name(),
+                )
+
+            if order.status == "delivered":
+                send_order_shipped_email.delay(
+                    order_id=order.order_number,
+                    user_email=customer_email,
+                    user_name=order.get_customer_name(),
+                )
+
+            if order.status == "cancelled":
+                send_order_cancelled_email.delay(
+                    order_id=order.order_number,
+                    user_email=customer_email,
+                    user_name=order.get_customer_name(),
+                )
+
+        return Response(
+            OrderSerializer(order).data,
+            status=status.HTTP_200_OK,
+        )

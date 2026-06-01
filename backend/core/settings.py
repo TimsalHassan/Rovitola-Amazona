@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    # 'cloudinary_storage',
+    'django_celery_results',
     'cloudinary',
 
     # Local apps
@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'menu',
     'orders',
     'reviews',
+    'notifications',
+    'payments',
 ]
 
 MIDDLEWARE = [
@@ -155,6 +157,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
 
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -178,6 +181,16 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Redis settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_RESULT_EXPIRES = 3600 
+# CELERY_BROKER_URL = config('REDIS_URL')
+# CELERY_RESULT_BACKEND = config('REDIS_URL')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
 # Email Settings
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -188,14 +201,16 @@ REST_FRAMEWORK = {
 # # EMAIL_HOST_PASSWORD = 'your-app-password'
 # RESTAURANT_EMAIL = 'timsalhassan9@gmail.com'
 
-# EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST         = 'smtp.resend.com'
-# EMAIL_PORT         = 587
-# EMAIL_USE_TLS      = True
-# EMAIL_HOST_USER    = 'resend'                          # hamesha 'resend' hi rehta hai
-# EMAIL_HOST_PASSWORD = config('RESEND_API_KEY')         # .env se
-# DEFAULT_FROM_EMAIL  = 'order@timsalhassan.me'       # verified domain wala
-# RESTAURANT_EMAIL    = config('RESTAURANT_EMAIL')       # owner ka email
+EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST         = 'smtp.resend.com'
+EMAIL_PORT         = 587
+EMAIL_USE_TLS      = True
+EMAIL_HOST_USER    = 'resend'                          # hamesha 'resend' hi rehta hai
+EMAIL_HOST_PASSWORD = config('RESEND_API_KEY')         # .env se
+DEFAULT_FROM_EMAIL  = 'Ravintola Amazona <orders@timsalhassan.me>'     # verified domain wala
+RESTAURANT_EMAIL    = config('RESTAURANT_EMAIL')       # owner ka email
+
+
 
 # # settings.py mein add karo
 # PAYTRAIL_ACCOUNT = config('PAYTRAIL_ACCOUNT', default='375917')   # test
