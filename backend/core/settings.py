@@ -48,7 +48,7 @@ INSTALLED_APPS = [
 
     # Local apps
     'users',
-    'menu',
+    'menu.apps.MenuConfig',
     'orders',
     'reviews',
 ]
@@ -177,15 +177,13 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Email Settings
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# # EMAIL_HOST = 'smtp.gmail.com'
-# # EMAIL_PORT = 587
-# # EMAIL_USE_TLS = True
-# # EMAIL_HOST_USER = 'timsalhassan042@gmail.com'
-# # EMAIL_HOST_PASSWORD = 'your-app-password'
-# RESTAURANT_EMAIL = 'timsalhassan9@gmail.com'
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+    }
+}
+
 
 # EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST         = 'smtp.resend.com'
