@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import Order, OrderItem, OrderItemSelectedOption
-from .emails import send_order_confirmation, send_restaurant_notification
 
 
 # ── Read serializers ──────────────────────────────────────────────────────────
@@ -85,6 +84,7 @@ class CreateOrderItemSerializer(serializers.Serializer):
 class CreateOrderSerializer(serializers.Serializer):
     guest_name  = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     guest_phone = serializers.CharField(max_length=20,  required=False, allow_blank=True, default="")
+    guest_email = serializers.EmailField(required=False, allow_blank=True, default="")  # ← yeh add karo
     order_type  = serializers.ChoiceField(choices=["delivery", "pickup"], default="delivery")
     delivery_address = serializers.CharField(required=False, allow_blank=True, default="")
     order_notes      = serializers.CharField(required=False, allow_blank=True, default="")
@@ -120,15 +120,12 @@ class CreateOrderSerializer(serializers.Serializer):
             for opt in options_data:
                 OrderItemSelectedOption.objects.create(order_item=order_item, **opt)
 
-        send_order_confirmation(order)
-        send_restaurant_notification(order)
-
         return order
 
 
 # ── Status-only update ────────────────────────────────────────────────────────
 
-class OrderStatusSerializer(serializers.ModelSerializer):
+class OrderStatusSerializer(serializers.ModelSerializer): 
     class Meta:
         model = Order
         fields = ["status"]
