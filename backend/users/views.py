@@ -14,11 +14,13 @@ from .serializers import (
     AddressSerializer,
 )
 from .models import Address
+from .throttles import LoginRateThrottle, RegisterRateThrottle, ChangePasswordRateThrottle
 
 User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
+    throttle_classes = [RegisterRateThrottle]  # add karo
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
 
@@ -37,6 +39,7 @@ class RegisterView(generics.CreateAPIView):
 
 
 class LoginView(APIView):
+    throttle_classes = [LoginRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -53,6 +56,12 @@ class LoginView(APIView):
             return Response(
                 {"error": "Invalid email or password."},
                 status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not (user.is_staff or user.is_superuser):
+            return Response(
+                {"error": "Access denied. Admins and staff only."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         token, _ = Token.objects.get_or_create(user=user)
@@ -90,6 +99,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
 
 class ChangePasswordView(APIView):
+    throttle_classes = [ChangePasswordRateThrottle]  # add karo
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

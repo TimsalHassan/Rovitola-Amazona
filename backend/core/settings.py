@@ -175,6 +175,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',   # logged out users
+        'rest_framework.throttling.UserRateThrottle',   # logged in users
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',     # anonymous user
+        'user': '1000/day',    # authenticated user
+        'login': '5/minute',    # 5 attempts per minute
+        'register': '3/minute',    # 3 attempts per minute
+        'change_password': '3/minute',    # 3 attempts per minute
+    },
 }
 
 CACHES = {
