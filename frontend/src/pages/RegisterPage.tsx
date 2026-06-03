@@ -1,89 +1,217 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../hooks/useLanguage";
+import { FormField, PasswordField, Button, Alert } from "../components/FormElements";
+
+type FormKey = "name" | "email" | "phone" | "password" | "confirmPassword";
+type T = (fi: string, en: string) => string;
+
+function validateSingle(field: FormKey, value: string, form: Record<FormKey, string>, t: T): string | null {
+  switch (field) {
+    case "name":
+      return !value.trim() ? t("Koko nimi vaaditaan.", "Full name is required.") : null;
+    case "email":
+      if (!value.trim()) return t("Sähköposti vaaditaan.", "Email is required.");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+        return t(
+          "Sähköpostiosoite ei ole kelvollinen. Kokeile muotoa sinä@esimerkki.com",
+          "That doesn't look like a valid email. Try something like you@example.com"
+        );
+      return null;
+    case "phone":
+      if (value && !/^\+?[\d\s\-()]{7,20}$/.test(value))
+        return t("Syötä kelvollinen puhelinnumero.", "Enter a valid phone number.");
+      return null;
+    case "password":
+      if (!value) return t("Salasana vaaditaan.", "Password is required.");
+      if (value.length < 8)
+        return t(
+          "Salasanan täytyy olla vähintään 8 merkkiä.",
+          "Password must be at least 8 characters."
+        );
+      return null;
+    case "confirmPassword":
+      if (!value) return t("Vahvista salasanasi.", "Please confirm your password.");
+      if (value !== form.password)
+        return t("Salasanat eivät täsmää.", "Passwords do not match.");
+      return null;
+  }
+}
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState<Record<FormKey, string>>({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  function updateFieldError(field: FormKey, value: string, latestForm: Record<FormKey, string>) {
+    const msg = validateSingle(field, value, latestForm, t);
+    setFieldErrors((prev) => {
+      if (msg) return { ...prev, [field]: msg };
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
+  function handleChange(field: FormKey) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      const newForm = { ...form, [field]: value };
+      setForm(newForm);
+      if (touched[field]) updateFieldError(field, value, newForm);
+      // Keep confirm password in sync when password changes
+      if (field === "password" && touched.confirmPassword) {
+        updateFieldError("confirmPassword", newForm.confirmPassword, newForm);
+      }
+    };
+  }
+
+  function handleBlur(field: FormKey) {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    updateFieldError(field, form[field], form);
+  }
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError('');
-    if (form.password !== form.confirmPassword) {
-      setError(t('Salasanat eivät täsmää', 'Passwords do not match'));
+    setError(null);
+
+    setTouched(Object.fromEntries((Object.keys(form) as FormKey[]).map((k) => [k, true])));
+
+    const errors: Record<string, string> = {};
+    (Object.keys(form) as FormKey[]).forEach((field) => {
+      const msg = validateSingle(field, form[field], form, t);
+      if (msg) errors[field] = msg;
+    });
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
       return;
     }
+
     setLoading(true);
-    const success = await register(form.name, form.email, form.phone, form.password);
-    setLoading(false);
-    if (success) {
-      navigate('/account');
-    } else {
-      setError(t('Rekisteröinti epäonnistui', 'Registration failed'));
+    try {
+      await register({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+      });
+      navigate("/", { replace: true });
+    } catch (err: unknown) {
+      const e = err as Error & { field?: string };
+      if (e.field) {
+        setFieldErrors({ [e.field]: e.message });
+      } else {
+        setError(t("Jokin meni pieleen. Yritä uudelleen.", "Something went wrong. Please try again."));
+      }
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <main className="bg-gray-950 min-h-screen pt-16 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="bg-gray-900 border border-white/5 rounded-2xl p-6">
-          <h1 className="text-2xl font-bold text-white text-center mb-6">{t('Rekisteröidy', 'Register')}</h1>
-          {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-5"><p className="text-red-400 text-sm text-center">{error}</p></div>}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Koko nimi', 'Full Name')}</label>
-              <div className="relative">
-                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="text" required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Sähköposti', 'Email')}</label>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="email" required value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Puhelin', 'Phone')}</label>
-              <div className="relative">
-                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="tel" required value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Salasana', 'Password')}</label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="password" required value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1">{t('Vahvista salasana', 'Confirm Password')}</label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="password" required value={form.confirmPassword} onChange={e => setForm(p => ({ ...p, confirmPassword: e.target.value }))} className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm outline-none" />
-              </div>
-            </div>
-            <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-50">
-              {loading ? <span className="animate-spin w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full" /> : <ArrowRight size={16} />}
-              {t('Rekisteröidy', 'Register')}
-            </button>
-          </form>
-
-          <p className="mt-5 text-center text-sm text-gray-400">
-            {t('On jo tili?', 'Have an account?')} <Link to="/login" className="text-amber-400 hover:text-amber-300">{t('Kirjaudu', 'Login')}</Link>
-          </p>
-        </div>
+    <div className="w-full max-w-md">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {t("Luo tili", "Create your account")}
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {t("Tilaa Amazonasta minuuteissa", "Order from Amazona in minutes")}
+        </p>
       </div>
-    </main>
+
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
+        {error && (
+          <div className="mb-4">
+            <Alert type="error" message={error} />
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+          <FormField
+            label={t("Koko nimi", "Full name")}
+            type="text"
+            placeholder={t("Nimesi", "Your name")}
+            value={form.name}
+            onChange={handleChange("name")}
+            onBlur={() => handleBlur("name")}
+            error={fieldErrors.name}
+            autoComplete="name"
+            required
+          />
+          <FormField
+            label={t("Sähköposti", "Email")}
+            type="email"
+            placeholder={t("sinä@esimerkki.com", "you@example.com")}
+            value={form.email}
+            onChange={handleChange("email")}
+            onBlur={() => handleBlur("email")}
+            error={fieldErrors.email}
+            autoComplete="email"
+            required
+          />
+          <FormField
+            label={t("Puhelinnumero", "Phone number")}
+            type="tel"
+            placeholder="+358 40 000 0000"
+            value={form.phone}
+            onChange={handleChange("phone")}
+            onBlur={() => handleBlur("phone")}
+            error={fieldErrors.phone}
+            autoComplete="tel"
+            hint={t(
+              "Valinnainen — tarvitaan toimitusilmoituksiin",
+              "Optional — needed for delivery updates"
+            )}
+          />
+          <PasswordField
+            label={t("Salasana", "Password")}
+            placeholder={t("Väh. 8 merkkiä", "Min. 8 characters")}
+            value={form.password}
+            onChange={handleChange("password")}
+            onBlur={() => handleBlur("password")}
+            error={fieldErrors.password}
+            autoComplete="new-password"
+            required
+          />
+          <PasswordField
+            label={t("Vahvista salasana", "Confirm password")}
+            placeholder={t("Toista salasanasi", "Repeat your password")}
+            value={form.confirmPassword}
+            onChange={handleChange("confirmPassword")}
+            onBlur={() => handleBlur("confirmPassword")}
+            error={fieldErrors.confirmPassword}
+            autoComplete="new-password"
+            required
+          />
+
+          <Button type="submit" size="lg" loading={loading} className="w-full mt-2">
+            {loading ? t("Luodaan tiliä…", "Creating account…") : t("Luo tili", "Create account")}
+          </Button>
+        </form>
+
+        <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+          {t("Onko sinulla jo tili? ", "Already have an account? ")}
+          <Link
+            to="/login"
+            className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
+          >
+            {t("Kirjaudu sisään", "Sign in")}
+          </Link>
+        </p>
+      </div>
+    </div>
   );
 }

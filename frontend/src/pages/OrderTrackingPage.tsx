@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { CheckCircle, Circle, Clock, MapPin, Truck, ShoppingBag, Home, XCircle, ChefHat, Package } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from "../hooks/useLanguage";
 import { CartItem, OrderStatus } from '../types';
 
 interface LocationState {
@@ -32,8 +32,8 @@ const STATUS_CONFIG = {
     labelFi: 'Valmistetaan',
     labelEn: 'Preparing',
     icon: ChefHat,
-    color: 'text-orange-400',
-    bg: 'bg-orange-400',
+    color: 'text-amber-400',
+    bg: 'bg-amber-400',
   },
   on_the_way: {
     labelFi: 'Matkalla',

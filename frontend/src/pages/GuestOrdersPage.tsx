@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, Phone, Package, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from "../hooks/useLanguage";
 import { findOrdersByPhone } from '../data/orders';
 import { Order, OrderStatus } from '../types';
 
@@ -9,7 +9,7 @@ function StatusBadge({ status }: { status: OrderStatus }) {
   const config = {
     pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: { fi: 'Odottaa', en: 'Pending' } },
     confirmed: { bg: 'bg-blue-500/20', text: 'text-blue-400', label: { fi: 'Vahvistettu', en: 'Confirmed' } },
-    preparing: { bg: 'bg-orange-500/20', text: 'text-orange-400', label: { fi: 'Valmistetaan', en: 'Preparing' } },
+    preparing: { bg: 'bg-amber-500/20', text: 'text-amber-400', label: { fi: 'Valmistetaan', en: 'Preparing' } },
     on_the_way: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: { fi: 'Matkalla', en: 'On the Way' } },
     delivered: { bg: 'bg-green-500/20', text: 'text-green-400', label: { fi: 'Toimitettu', en: 'Delivered' } },
   };

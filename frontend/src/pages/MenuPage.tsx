@@ -1,29 +1,114 @@
-import { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, ChevronDown, Minus, UtensilsCrossed, X, Clock } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
-import { useCart } from '../context/CartContext';
-import { categories } from '../data/categories';
-import { menuItems, emptyCategories } from '../data/menuItems';
-import { lunchItems } from '../data/menuItems';
-import { MenuItem, ToppingSelection, SeasoningSelection, AVAILABLE_TOPPINGS, AVAILABLE_SEASONINGS, SIZE_PRICES } from '../types';
-import { isLunchHours } from '../utils/openingHours';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Clock, Plus, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import {
+  MenuItem as ApiMenuItem,
+  type Category as ApiCategory,
+} from "../api/menu";
+import { useCart } from "../context/CartContext";
+import { useLanguage } from "../hooks/useLanguage";
+import { useMenu } from "../hooks/useMenu";
+import { isLunchHours } from "../utils/openingHours";
+import { useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 8;
 
-function ItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
-  const { language } = useLanguage();
+const CATEGORY_ICONS: Record<string, string> = {
+  burgerateriat: "🍔",
+  burgers: "🍔",
+  desserts: "🍰",
+  drinks: "🥤",
+  falafel: "🧆",
+  juomat: "🥤",
+  kanafileet: "🍗",
+  kanaburgerateriat: "🍔",
+  kanakebabit: "🍗",
+  kebab: "🥙",
+  kebabit: "🥙",
+  nugetit: "🍟",
+  pihvit: "🥩",
+  pizza: "🍕",
+  pizzat: "🍕",
+  salaatti: "🥗",
+  salaatit: "🥗",
+  vegaanipizzat: "🌱",
+  vegaaniruoka: "🥦",
+};
+
+const getCategoryKey = (category: ApiCategory) =>
+  category.slug || String(category.id);
+
+const toNumber = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return 0;
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const getLocalizedText = (
+  language: string,
+  en: string,
+  fi: string,
+  fallback: string,
+) => {
+  const preferred = language === "fi" ? fi : en;
+  return preferred || en || fi || fallback;
+};
+
+function ItemCard({ item, onAdd }: { item: ApiMenuItem; onAdd: () => void }) {
+  const { language, t } = useLanguage();
+  const name = getLocalizedText(
+    language,
+    item.name,
+    item.name_fi,
+    t("unnamedItem"),
+  );
+  const description = getLocalizedText(
+    language,
+    item.description,
+    item.description_fi,
+    t("unnamedItemDesc"),
+  );
+  const price = toNumber(item.current_price);
+  const basePrice = toNumber(item.base_price);
+  const isAvailable = item.is_available;
 
   return (
     <div className="bg-gray-900 border border-white/5 rounded-xl p-4 hover:border-amber-500/20 transition-colors">
       <div className="flex gap-4">
-        <img src={item.image} alt="" className="w-20 h-20 object-cover rounded-lg shrink-0" loading="lazy" />
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={name}
+            className="w-20 h-20 object-cover rounded-lg shrink-0"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-20 h-20 bg-gray-800 rounded-lg flex items-center justify-center shrink-0 text-gray-600">
+            🍕
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-sm truncate">{language === 'fi' ? item.nameFi : item.name}</h3>
-          <p className="text-gray-400 text-xs mt-1 line-clamp-2">{language === 'fi' ? item.descriptionFi : item.description}</p>
+          <h3 className="text-white font-semibold text-sm truncate">{name}</h3>
+          <p className="text-gray-400 text-xs mt-1 line-clamp-2">
+            {description}
+          </p>
           <div className="flex items-center justify-between mt-3">
-            <span className="text-amber-400 font-bold">€{item.price.toFixed(2)}</span>
-            <button onClick={onAdd} className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-gray-900 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors">
-              <Plus size={14} />{language === 'fi' ? 'Lisää' : 'Add'}
+            <div className="flex items-center gap-2">
+              {item.is_on_sale && (
+                <span className="text-gray-500 text-xs line-through">
+                  €{basePrice.toFixed(2)}
+                </span>
+              )}
+              <span className="text-amber-400 font-bold">
+                €{price.toFixed(2)}
+              </span>
+            </div>
+            <button
+              onClick={onAdd}
+              disabled={!isAvailable}
+              className="flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-gray-900 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+              <Plus size={14} />
+              {isAvailable ? t("menu.add") : t("menu.unavailable")}
             </button>
           </div>
         </div>
@@ -33,149 +118,64 @@ function ItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 }
 
 function EmptyCard() {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   return (
     <div className="bg-gray-900 border border-white/5 rounded-xl p-6 flex items-center gap-4 opacity-60">
-      <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center shrink-0"><UtensilsCrossed size={24} className="text-gray-600" /></div>
+      <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center shrink-0">
+        <UtensilsCrossed size={24} className="text-gray-600" />
+      </div>
       <div>
-        <p className="text-gray-500 text-sm font-medium">{language === 'fi' ? 'Tuotteita tulossa pian' : 'Items coming soon'}</p>
-        <p className="text-gray-600 text-xs mt-1">{language === 'fi' ? 'Tämä kategoria avataan pian.' : 'This category will open soon.'}</p>
+        <p className="text-gray-500 text-sm font-medium">
+          {t("menu.emptyTitle")}
+        </p>
+        <p className="text-gray-600 text-xs mt-1">{t("menu.emptyBody")}</p>
       </div>
     </div>
   );
 }
 
-function LunchUnavailableCard({ item }: { item: MenuItem }) {
-  const { language } = useLanguage();
+function LunchUnavailableCard({ item }: { item: ApiMenuItem }) {
+  const { language, t } = useLanguage();
+  const name = getLocalizedText(
+    language,
+    item.name,
+    item.name_fi,
+    t("unnamedItem"),
+  );
+  const description = getLocalizedText(
+    language,
+    item.description,
+    item.description_fi,
+    t("unnamedItemDesc"),
+  );
+  const price = toNumber(item.current_price);
   return (
     <div className="relative bg-gray-900 border border-white/5 rounded-xl p-4 opacity-70">
       <div className="absolute inset-0 bg-gray-950/60 rounded-xl flex items-center justify-center z-10">
         <div className="text-center px-4">
           <Clock size={20} className="text-gray-500 mx-auto mb-1" />
-          <p className="text-gray-400 text-xs">{language === 'fi' ? 'Ei saatavilla' : 'Not currently available'}</p>
+          <p className="text-gray-400 text-xs">{t("menu.lunchUnavailable")}</p>
         </div>
       </div>
       <div className="flex gap-4 opacity-40">
-        <img src={item.image} alt="" className="w-20 h-20 object-cover rounded-lg shrink-0" />
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={name}
+            className="w-20 h-20 object-cover rounded-lg shrink-0"
+          />
+        ) : (
+          <div className="w-20 h-20 bg-gray-800 rounded-lg flex items-center justify-center shrink-0 text-gray-600">
+            🍕
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-sm truncate">{language === 'fi' ? item.nameFi : item.name}</h3>
-          <p className="text-gray-400 text-xs mt-1">{language === 'fi' ? item.descriptionFi : item.description}</p>
-          <div className="mt-3"><span className="text-amber-400 font-bold">€{item.price.toFixed(2)}</span></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AddItemModal({ item, onClose }: { item: MenuItem; onClose: () => void }) {
-  const { addItem } = useCart();
-  const { language, t } = useLanguage();
-  const [size, setSize] = useState<'small' | 'medium' | 'large'>('medium');
-  const [toppings, setToppings] = useState<ToppingSelection[]>([]);
-  const [seasonings, setSeasonings] = useState<SeasoningSelection[]>([]);
-  const [quantity, setQuantity] = useState(1);
-
-  const basePrice = item.price + SIZE_PRICES[size];
-  const toppingsPrice = toppings.reduce((s, t) => s + t.price, 0);
-  const totalPrice = (basePrice + toppingsPrice) * quantity;
-
-  const toggleTopping = (tp: typeof AVAILABLE_TOPPINGS[0]) => {
-    setToppings(prev => {
-      const exists = prev.find(t => t.id === tp.id);
-      if (exists) return prev.filter(t => t.id !== tp.id);
-      return [...prev, { id: tp.id, name: tp.name, nameFi: tp.nameFi, price: tp.price }];
-    });
-  };
-
-  const toggleSeasoning = (s: typeof AVAILABLE_SEASONINGS[0]) => {
-    setSeasonings(prev => {
-      const exists = prev.find(sp => sp.id === s.id);
-      if (exists) return prev.filter(sp => sp.id !== s.id);
-      return [...prev, { id: s.id, name: s.name, nameFi: s.nameFi }];
-    });
-  };
-
-  const handleAdd = () => {
-    addItem(item, size, toppings, seasonings, quantity);
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md my-8">
-        <div className="p-4 border-b border-white/10 flex justify-between items-center">
-          <h3 className="text-white font-bold">{language === 'fi' ? item.nameFi : item.name}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20} /></button>
-        </div>
-
-        <div className="p-4 space-y-5">
-          <img src={item.image} alt="" className="w-full h-40 object-cover rounded-lg" />
-
-          {/* Size */}
-          <div>
-            <p className="text-gray-400 text-sm mb-2">{t('Koko', 'Size')}</p>
-            <div className="grid grid-cols-3 gap-2">
-              {(['small', 'medium', 'large'] as const).map(s => (
-                <button key={s} onClick={() => setSize(s)} className={`py-2 rounded-lg text-sm font-medium transition-all ${size === s ? 'bg-amber-500 text-gray-900' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
-                  {s === 'small' ? t('Pieni', 'Small') : s === 'medium' ? t('Keski', 'Medium') : t('Suuri', 'Large')}
-                  <span className="text-xs block opacity-70">+€{SIZE_PRICES[s].toFixed(0)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Toppings */}
-          <div>
-            <p className="text-gray-400 text-sm mb-2">{t('Lisäkkeet', 'Extra Toppings')}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {AVAILABLE_TOPPINGS.map(tp => {
-                const selected = toppings.some(t => t.id === tp.id);
-                return (
-                  <button key={tp.id} onClick={() => toggleTopping(tp)} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all ${selected ? 'bg-amber-500/20 border-amber-500/50 text-amber-400 border' : 'bg-gray-800 border-white/10 text-gray-300 border'}`}>
-                    <span className="w-4 h-4 rounded border flex items-center justify-center text-[10px]">{selected ? '✓' : ''}</span>
-                    <span>{language === 'fi' ? tp.nameFi : tp.name}</span>
-                    <span className="ml-auto text-gray-500">+€{tp.price.toFixed(2)}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Seasonings */}
-          <div>
-            <p className="text-gray-400 text-sm mb-2">{t('Mausteet', 'Extra Seasonings')} <span className="text-gray-600">({t('Ilmainen', 'Free')})</span></p>
-            <div className="flex flex-wrap gap-2">
-              {AVAILABLE_SEASONINGS.map(s => {
-                const selected = seasonings.some(sp => sp.id === s.id);
-                return (
-                  <button key={s.id} onClick={() => toggleSeasoning(s)} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all ${selected ? 'bg-green-500/20 border-green-500/50 text-green-400 border' : 'bg-gray-800 border-white/10 text-gray-300 border'}`}>
-                    <span className="w-4 h-4 rounded border flex items-center justify-center text-[10px]">{selected ? '✓' : ''}</span>
-                    <span>{language === 'fi' ? s.nameFi : s.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Quantity */}
-          <div>
-            <p className="text-gray-400 text-sm mb-2">{t('Määrä', 'Quantity')}</p>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-lg flex items-center justify-center text-white"><Minus size={16} /></button>
-              <span className="text-white font-bold text-lg w-8 text-center">{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-lg flex items-center justify-center text-white"><Plus size={16} /></button>
-            </div>
-          </div>
-
-          {/* Total */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/10">
-            <div>
-              <p className="text-gray-400 text-xs">{t('Yhteensä', 'Total')}</p>
-              <p className="text-white font-bold text-xl">€{totalPrice.toFixed(2)}</p>
-            </div>
-            <button onClick={handleAdd} className="bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold px-6 py-3 rounded-xl transition-colors">
-              {t('Lisää Koriin', 'Add to Cart')}
-            </button>
+          <h3 className="text-white font-semibold text-sm truncate">{name}</h3>
+          <p className="text-gray-400 text-xs mt-1">{description}</p>
+          <div className="mt-3">
+            <span className="text-amber-400 font-bold">
+              €{price.toFixed(2)}
+            </span>
           </div>
         </div>
       </div>
@@ -184,132 +184,286 @@ function AddItemModal({ item, onClose }: { item: MenuItem; onClose: () => void }
 }
 
 export default function MenuPage() {
-  const { language, t } = useLanguage();
-  const [tab, setTab] = useState<'main' | 'lunch'>('main');
-  const [activeCategory, setActiveCategory] = useState('pizzat');
-  const [modalItem, setModalItem] = useState<MenuItem | null>(null);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const { t } = useLanguage();
+  const { items, isItemsLoading, categories } = useMenu();
+  const navigate = useNavigate();
+
+  const [tab, setTab] = useState<"main" | "lunch">("main");
+  const [activeCategory, setActiveCategory] = useState("");
+  const [visibleByCategory, setVisibleByCategory] = useState<
+    Record<string, number>
+  >({});
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
   const observerRef = useRef<IntersectionObserver | null>(null);
   const isLunch = isLunchHours();
+
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.order - b.order),
+    [categories],
+  );
+
+  const lunchItems = useMemo(
+    () => items.filter((item) => item.is_lunch_item),
+    [items],
+  );
+
+  useEffect(() => {
+    if (!sortedCategories.length) return;
+    setActiveCategory((prev) => {
+      const exists = sortedCategories.some(
+        (cat) => getCategoryKey(cat) === prev,
+      );
+      return exists ? prev : getCategoryKey(sortedCategories[0]);
+    });
+    setVisibleByCategory((prev) => {
+      const next = { ...prev };
+      sortedCategories.forEach((cat) => {
+        const key = getCategoryKey(cat);
+        if (!next[key]) next[key] = PAGE_SIZE;
+      });
+      return next;
+    });
+  }, [sortedCategories]);
 
   useEffect(() => {
     observerRef.current?.disconnect();
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) setActiveCategory(entry.target.id.replace('cat-', ''));
+        entries.forEach((entry) => {
+          if (entry.isIntersecting)
+            setActiveCategory(entry.target.id.replace("cat-", ""));
         });
       },
-      { rootMargin: '-100px 0px -60% 0px' }
+      { rootMargin: "-100px 0px -60% 0px" },
     );
-    categories.forEach(cat => {
-      const el = categoryRefs.current[cat.id];
+    sortedCategories.forEach((cat) => {
+      const key = getCategoryKey(cat);
+      const el = categoryRefs.current[key];
       if (el) observerRef.current?.observe(el);
     });
     return () => observerRef.current?.disconnect();
-  }, [tab]);
+  }, [tab, sortedCategories]);
 
   const scrollToCategory = (id: string) => {
-    const el = document.getElementById('cat-' + id);
-    if (el) window.scrollTo({ top: el.offsetTop - 120, behavior: 'smooth' });
+    const el = document.getElementById("cat-" + id);
+    if (el) window.scrollTo({ top: el.offsetTop - 120, behavior: "smooth" });
   };
-
-  const pizzatItems = menuItems.filter(i => i.categoryId === 'pizzat');
-  const shownPizzas = pizzatItems.slice(0, visibleCount);
 
   return (
     <main className="bg-gray-950 min-h-screen pt-16">
-      <div className="bg-gray-900 border-b border-white/5 pt-8 pb-4">
+      <div className="pt-8 pb-4">
         <div className="max-w-[1200px] mx-auto px-4">
-          <h1 className="text-3xl font-bold text-white mb-4">{t('Ruokalista', 'Menu')}</h1>
+          <h1 className="text-3xl font-bold text-white mb-4">
+            {t("menu.title")}
+          </h1>
           <div className="flex gap-2">
-            <button onClick={() => setTab('main')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'main' ? 'bg-amber-500 text-gray-900' : 'bg-gray-800 text-gray-400'}`}>
-              {t('Pääruokalista', 'Main Menu')}
+            <button
+              onClick={() => setTab("main")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === "main" ? "bg-amber-500 text-gray-900" : "bg-gray-800 text-gray-400"}`}
+            >
+              {t("menu.mainTab")}
             </button>
-            <button onClick={() => setTab('lunch')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'lunch' ? 'bg-amber-500 text-gray-900' : 'bg-gray-800 text-gray-400'}`}>
-              {t('Lounaslista', 'Lunch Menu')}
+            <button
+              onClick={() => setTab("lunch")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === "lunch" ? "bg-amber-500 text-gray-900" : "bg-gray-800 text-gray-400"}`}
+            >
+              {t("menu.lunchTab")}
             </button>
           </div>
         </div>
       </div>
 
-      {tab === 'main' && (
+      {tab === "main" && (
         <div className="max-w-[1200px] mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
             {/* Sidebar */}
             <aside className="hidden lg:block">
               <div className="sticky top-24 bg-gray-900 border border-white/5 rounded-xl p-3">
                 <nav className="space-y-1">
-                  {categories.map(cat => (
-                    <button key={cat.id} onClick={() => scrollToCategory(cat.id)} className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${activeCategory === cat.id ? 'bg-amber-500 text-gray-900' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-                      <span>{cat.icon}</span>
-                      <span>{language === 'fi' ? cat.nameFi : cat.name}</span>
-                    </button>
-                  ))}
+                  {sortedCategories.map((cat) => {
+                    const key = getCategoryKey(cat);
+                    const icon = CATEGORY_ICONS[cat.slug] ?? "🍽️";
+                    return (
+                      <button onClick={() => scrollToCategory(key)} className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all ${activeCategory === key ? "bg-amber-500 text-gray-900" : "text-gray-400"}`}>
+                        <span>{icon}</span>
+                        <span>{cat.name}</span>
+                      </button>
+                    );
+                  })}
                 </nav>
               </div>
             </aside>
 
             {/* Mobile tabs */}
-            <div className="lg:hidden flex gap-2 overflow-x-auto pb-3 mb-2" style={{ scrollbarWidth: 'none' }}>
-              {categories.map(cat => (
-                <button key={cat.id} onClick={() => scrollToCategory(cat.id)} className={`flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-all shrink-0 ${activeCategory === cat.id ? 'bg-amber-500 text-gray-900' : 'bg-gray-800 text-gray-400'}`}>
-                  <span>{cat.icon}</span>
-                  <span>{language === 'fi' ? cat.nameFi : cat.name}</span>
-                </button>
-              ))}
+            <div
+              className="lg:hidden flex gap-2 overflow-x-auto pb-3 mb-2"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {sortedCategories.map((cat) => {
+                const key = getCategoryKey(cat);
+                const icon = CATEGORY_ICONS[cat.slug] ?? "🍽️";
+                return (
+                  <button
+                    key={key}
+                    onClick={() => scrollToCategory(key)}
+                    className={`flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-all shrink-0 ${activeCategory === key ? "bg-amber-500 text-gray-900" : "bg-gray-800 text-gray-400"}`}
+                  >
+                    <span>{icon}</span>
+                    <span>{cat.name}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Content */}
             <div className="space-y-10">
-              {categories.map(cat => {
-                const isPizzat = cat.id === 'pizzat';
-                const isEmpty = emptyCategories.includes(cat.id);
-
-                return (
-                  <section key={cat.id} id={'cat-' + cat.id} ref={el => { categoryRefs.current[cat.id] = el; }}>
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-2xl">{cat.icon}</span>
-                      <h2 className="text-xl font-bold text-white">{language === 'fi' ? cat.nameFi : cat.name}</h2>
-                    </div>
-
-                    {isPizzat ? (
-                      <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {shownPizzas.map(item => <ItemCard key={item.id} item={item} onAdd={() => setModalItem(item)} />)}
+              {isItemsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-gray-900 border border-white/5 rounded-xl p-4 animate-pulse"
+                    >
+                      <div className="flex gap-4">
+                        <div className="w-20 h-20 bg-gray-800 rounded-lg" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-gray-800 rounded w-2/3" />
+                          <div className="h-3 bg-gray-800 rounded w-full" />
+                          <div className="h-3 bg-gray-800 rounded w-4/5" />
+                          <div className="h-6 bg-gray-800 rounded w-24" />
                         </div>
-                        {visibleCount < pizzatItems.length && (
-                          <button onClick={() => setVisibleCount(v => v + PAGE_SIZE)} className="mt-4 w-full py-3 bg-gray-800 hover:bg-gray-700 border border-white/10 text-gray-300 rounded-xl text-sm font-medium transition-colors">
-                            {t('Lataa lisää', 'Load More')} ({pizzatItems.length - visibleCount} {t('jäljellä', 'remaining')})
-                          </button>
-                        )}
-                      </>
-                    ) : isEmpty ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><EmptyCard /></div>
-                    ) : null}
-                  </section>
-                );
-              })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : !sortedCategories.length ? (
+                <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-10 text-center">
+                  <div className="text-3xl mb-3">🍽️</div>
+                  <h2 className="text-xl font-bold mb-2">
+                    {t("menu.noItemsTitle")}
+                  </h2>
+                  <p className="text-gray-400 text-sm">
+                    {t("menu.noItemsBody")}
+                  </p>
+                </div>
+              ) : (
+                sortedCategories.map((cat) => {
+                  const key = getCategoryKey(cat);
+                  const icon = CATEGORY_ICONS[cat.slug] ?? "🍽️";
+                  const categoryItems = items.filter(
+                    (item) => item.category === cat.id && !item.is_lunch_item,
+                  );
+                  const visibleCount = visibleByCategory[key] ?? PAGE_SIZE;
+                  const visibleItems = categoryItems.slice(0, visibleCount);
+
+                  return (
+                    <section
+                      key={key}
+                      id={`cat-${key}`}
+                      ref={(el) => {
+                        categoryRefs.current[key] = el;
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-2xl">{icon}</span>
+                        <h2 className="text-xl font-bold text-white">
+                          {cat.name}
+                        </h2>
+                      </div>
+
+                      {categoryItems.length ? (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {visibleItems.map((item) => (
+                              <ItemCard
+                                key={item.id}
+                                item={item}
+                                onAdd={() => navigate(`/menu/${item.id}`)}
+                              />
+                            ))}
+                          </div>
+                          {categoryItems.length > visibleCount && (
+                            <button
+                              onClick={() =>
+                                setVisibleByCategory((prev) => ({
+                                  ...prev,
+                                  [key]: (prev[key] ?? PAGE_SIZE) + PAGE_SIZE,
+                                }))
+                              }
+                              className="mt-4 w-full py-3 bg-gray-800 hover:bg-gray-700 border border-white/10 text-gray-300 rounded-xl text-sm font-medium transition-colors"
+                            >
+                              {t("menu.loadMore")} (
+                              {categoryItems.length - visibleCount}{" "}
+                              {t("menu.remaining")})
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <EmptyCard />
+                        </div>
+                      )}
+                    </section>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {tab === 'lunch' && (
+      {tab === "lunch" && (
         <div className="max-w-[1200px] mx-auto px-4 py-6">
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-6 text-center">
-            <p className="text-amber-400 font-semibold">{t('Lounas saatavilla', 'Lunch Available')}</p>
-            <p className="text-gray-400 text-sm">{t('Maanantai - Perjantai 10:30 - 14:30', 'Monday - Friday 10:30 - 14:30')}</p>
+            <p className="text-amber-400 font-semibold">
+              {t("menu.lunchAvailable")}
+            </p>
+            <p className="text-gray-400 text-sm">{t("menu.lunchHours")}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {lunchItems.map(item => isLunch ? <ItemCard key={item.id} item={item} onAdd={() => setModalItem(item)} /> : <LunchUnavailableCard key={item.id} item={item} />)}
-          </div>
+          {isItemsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="bg-gray-900 border border-white/5 rounded-xl p-4 animate-pulse"
+                >
+                  <div className="flex gap-4">
+                    <div className="w-20 h-20 bg-gray-800 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-800 rounded w-2/3" />
+                      <div className="h-3 bg-gray-800 rounded w-full" />
+                      <div className="h-3 bg-gray-800 rounded w-4/5" />
+                      <div className="h-6 bg-gray-800 rounded w-24" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : lunchItems.length ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {lunchItems.map((item) =>
+                isLunch ? (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    onAdd={() => navigate(`/menu/${item.id}`)}
+                  />
+                ) : (
+                  <LunchUnavailableCard key={item.id} item={item} />
+                ),
+              )}
+            </div>
+          ) : (
+            <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-10 text-center">
+              <div className="text-3xl mb-3">🍽️</div>
+              <h2 className="text-xl font-bold mb-2">
+                {t("menu.noItemsTitle")}
+              </h2>
+              <p className="text-gray-400 text-sm">{t("menu.noItemsBody")}</p>
+            </div>
+          )}
         </div>
       )}
-
-      {modalItem && <AddItemModal item={modalItem} onClose={() => setModalItem(null)} />}
-
       <CartFAB />
     </main>
   );
@@ -321,8 +475,15 @@ function CartFAB() {
   if (totalItems === 0) return null;
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
-      <a href="/cart" className="flex items-center gap-3 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold px-5 py-3 rounded-2xl shadow-xl">
-        <ShoppingCart size={18} />{t('Ostoskori', 'Cart')} • {totalItems} <span className="bg-gray-900/20 px-2 py-0.5 rounded-lg text-sm">€{subtotal.toFixed(2)}</span>
+      <a
+        href="/cart"
+        className="flex items-center gap-3 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold px-5 py-3 rounded-2xl shadow-xl"
+      >
+        <ShoppingCart size={18} />
+        {t("menu.cart")} • {totalItems}{" "}
+        <span className="bg-gray-900/20 px-2 py-0.5 rounded-lg text-sm">
+          €{subtotal.toFixed(2)}
+        </span>
       </a>
     </div>
   );
