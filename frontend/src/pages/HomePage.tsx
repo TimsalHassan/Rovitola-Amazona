@@ -18,6 +18,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMenu } from "../hooks/useMenu";
 import { isRestaurantOpen } from "../utils/openingHours";
+import { reviewsApi, type Review } from "../api/reviews";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -198,11 +199,18 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
 
 // ─── ReviewModal ──────────────────────────────────────────────────────────────
 
-function ReviewModal({ onClose }: { onClose: () => void }) {
+interface ReviewModalProps {
+  onClose: () => void;
+  onSubmitted: () => void;
+}
+
+function ReviewModal({ onClose, onSubmitted }: ReviewModalProps) {
   const { t } = useLanguage();
+  const { token } = useAuth();
   const [form, setForm] = useState<ReviewForm>({ rating: 5, text: "" });
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -213,13 +221,19 @@ function ReviewModal({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   async function handleSubmit() {
-    if (!form.text.trim()) return;
+    if (!form.text.trim() || !token) return;
     setLoading(true);
-    // TODO: wire to /api/reviews/ POST
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    setDone(true);
-    setTimeout(onClose, 1500);
+    setError(null);
+    try {
+      await reviewsApi.create(form, token);
+      setLoading(false);
+      setDone(true);
+      onSubmitted();
+      setTimeout(onClose, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit review");
+      setLoading(false);
+    }
   }
 
   return (
@@ -237,6 +251,12 @@ function ReviewModal({ onClose }: { onClose: () => void }) {
             <X size={18} />
           </button>
         </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
 
         {done ? (
           <div className="text-center py-6">
@@ -300,6 +320,8 @@ export default function HomePage() {
   const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
   const [carouselLoading, setCarouselLoading] = useState(true);
   const [reviewModal, setReviewModal] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
   useEffect(() => {
     if (isItemsLoading) {
@@ -339,6 +361,32 @@ export default function HomePage() {
     setCarouselLoading(false);
   }, [items, isItemsLoading, error, language, t]);
 
+  // Fetch reviews on mount
+  useEffect(() => {
+    async function fetchReviews() {
+      try {
+        const data = await reviewsApi.getAll();
+        setReviews(data);
+      } catch (err) {
+        console.error("Failed to fetch reviews:", err);
+        setReviews([]);
+      } finally {
+        setReviewsLoading(false);
+      }
+    }
+    fetchReviews();
+  }, []);
+
+  function handleReviewSubmitted() {
+    // Refresh reviews after submitting
+    setReviewsLoading(true);
+    reviewsApi
+      .getAll()
+      .then(setReviews)
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false));
+  }
+
   const features = [
     {
       icon: <Truck size={20} className="text-amber-400" />,
@@ -355,12 +403,6 @@ export default function HomePage() {
       title: t("deliveryTime"),
       desc: t("deliveryTimeDesc"),
     },
-  ];
-
-  const reviews = [
-    { name: "Mikko P.", rating: 5, text: t("review1"), date: "15.5.2024" },
-    { name: "Anna K.", rating: 5, text: t("review2"), date: "10.5.2024" },
-    { name: "Juhani V.", rating: 4, text: t("review3"), date: "3.5.2024" },
   ];
 
   return (
@@ -600,38 +642,67 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-            {reviews.map((r, i) => (
-              <div
-                key={i}
-                className="bg-gray-900 border border-white/5 rounded-2xl p-5 hover:border-amber-500/20 transition-colors"
-              >
-                <Quote size={20} className="text-amber-400/30 mb-3" />
-                <div className="flex gap-0.5 mb-3">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star
-                      key={j}
-                      size={13}
-                      className={
-                        j < r.rating
-                          ? "text-amber-400 fill-amber-400"
-                          : "text-gray-600"
-                      }
-                    />
-                  ))}
+          {reviewsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-gray-900 border border-white/5 rounded-2xl p-5 animate-pulse"
+                >
+                  <div className="h-4 bg-gray-800 rounded w-8 mb-3" />
+                  <div className="flex gap-0.5 mb-3">
+                    {[1, 2, 3, 4, 5].map((j) => (
+                      <div key={j} className="w-3 h-3 bg-gray-800 rounded-full" />
+                    ))}
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    <div className="h-3 bg-gray-800 rounded w-full" />
+                    <div className="h-3 bg-gray-800 rounded w-3/4" />
+                  </div>
                 </div>
-                <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                  "{r.text}"
-                </p>
-                <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                  <span className="text-amber-400 font-semibold text-xs">
-                    {r.name}
-                  </span>
-                  <span className="text-gray-600 text-xs">{r.date}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+              {reviews.slice(0, 3).map((r) => {
+                const date = new Date(r.created_at).toLocaleDateString();
+                return (
+                  <div
+                    key={r.id}
+                    className="bg-gray-900 border border-white/5 rounded-2xl p-5 hover:border-amber-500/20 transition-colors"
+                  >
+                    <Quote size={20} className="text-amber-400/30 mb-3" />
+                    <div className="flex gap-0.5 mb-3">
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <Star
+                          key={j}
+                          size={13}
+                          className={
+                            j < r.rating
+                              ? "text-amber-400 fill-amber-400"
+                              : "text-gray-600"
+                          }
+                        />
+                      ))}
+                    </div>
+                    <p className="text-gray-300 text-sm leading-relaxed mb-4">
+                      "{r.text}"
+                    </p>
+                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                      <span className="text-amber-400 font-semibold text-xs">
+                        {r.customer_name}
+                      </span>
+                      <span className="text-gray-600 text-xs">{date}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center mb-10">
+              <p className="text-gray-400">{t("noReviewsYet")}</p>
+            </div>
+          )}
 
           <div className="text-center">
             {user ? (
@@ -653,6 +724,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Contact ──────────────────────────────────────────────────────── */}
 
       {/* ── App download ──────────────────────────────────────────────────── */}
       <section className="py-14 bg-gray-900 border-t border-white/5">
@@ -752,7 +825,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {reviewModal && <ReviewModal onClose={() => setReviewModal(false)} />}
+      {reviewModal && (
+        <ReviewModal
+          onClose={() => setReviewModal(false)}
+          onSubmitted={handleReviewSubmitted}
+        />
+      )}
     </main>
   );
 }
