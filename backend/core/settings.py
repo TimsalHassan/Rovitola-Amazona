@@ -43,14 +43,19 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'django_celery_results',
     # 'cloudinary_storage',
     'cloudinary',
 
     # Local apps
     'users',
     'menu.apps.MenuConfig',
+    'cart',
     'orders',
     'reviews',
+    'payments',
+    'notifications',
+    'restaurant.apps.RestaurantConfig',
 ]
 
 MIDDLEWARE = [
@@ -149,11 +154,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
 
+FRONTEND_URL     = config('FRONTEND_URL', default='http://localhost:5173')
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -175,17 +184,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',   # logged out users
-        'rest_framework.throttling.UserRateThrottle',   # logged in users
-    ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',     # anonymous user
-        'user': '1000/day',    # authenticated user
-        'login': '5/minute',    # 5 attempts per minute
-        'register': '3/minute',    # 3 attempts per minute
-        'change_password': '3/minute',    # 3 attempts per minute
-    },
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 CACHES = {
@@ -195,17 +195,27 @@ CACHES = {
     }
 }
 
+# Celery
+CELERY_BROKER_URL = config('REDIS_URL', default='redis://127.0.0.1:6379/1')
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'default'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_RESULT_EXPIRES = 86400  # 24 hours in seconds
 
-# EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST         = 'smtp.resend.com'
-# EMAIL_PORT         = 587
-# EMAIL_USE_TLS      = True
-# EMAIL_HOST_USER    = 'resend'                          # hamesha 'resend' hi rehta hai
-# EMAIL_HOST_PASSWORD = config('RESEND_API_KEY')         # .env se
-# DEFAULT_FROM_EMAIL  = 'order@timsalhassan.me'       # verified domain wala
-# RESTAURANT_EMAIL    = config('RESTAURANT_EMAIL')       # owner ka email
+
+EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST         = 'smtp.resend.com'
+EMAIL_PORT         = 587
+EMAIL_USE_TLS      = True
+EMAIL_HOST_USER    = 'resend'                          # hamesha 'resend' hi rehta hai
+EMAIL_HOST_PASSWORD = config('RESEND_API_KEY')         # .env se
+DEFAULT_FROM_EMAIL  = 'order@timsalhassan.me'       # verified domain wala
+RESTAURANT_EMAIL    = config('RESTAURANT_EMAIL')       # owner ka email
 
 # # settings.py mein add karo
 # PAYTRAIL_ACCOUNT = config('PAYTRAIL_ACCOUNT', default='375917')   # test
 # PAYTRAIL_SECRET  = config('PAYTRAIL_SECRET',  default='SAIPPUAKAUPPIAS')  # test
-# FRONTEND_URL     = config('FRONTEND_URL', default='http://localhost:5173')

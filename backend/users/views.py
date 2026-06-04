@@ -23,13 +23,11 @@ from .tasks import (
     send_password_changed_email,
 )
 from .models import Address
-from .throttles import LoginRateThrottle, RegisterRateThrottle, ChangePasswordRateThrottle
 
 User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
-    throttle_classes = [RegisterRateThrottle]  # add karo
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
 
@@ -38,6 +36,12 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         token, _ = Token.objects.get_or_create(user=user)
+
+        send_registration_email.delay(
+            user_email=user.email,
+            user_name=user.name or user.email,
+        )
+
         return Response(
             {
                 "token": token.key,
@@ -48,7 +52,6 @@ class RegisterView(generics.CreateAPIView):
 
 
 class LoginView(APIView):
-    throttle_classes = [LoginRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -106,27 +109,6 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         kwargs["partial"] = True
         return super().update(request, *args, **kwargs)
 
-
-class ChangePasswordView(APIView):
-    throttle_classes = [ChangePasswordRateThrottle]  # add karo
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = request.user
-        if not user.check_password(
-            serializer.validated_data["current_password"]
-        ):
-            return Response(
-                {"error": "Current password is incorrect."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        user.set_password(serializer.validated_data["new_password"])
-        user.save()
-        return Response({"detail": "Password changed successfully."})
     
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
@@ -145,13 +127,16 @@ class ChangePasswordView(APIView):
         user.set_password(serializer.validated_data["new_password"])
         user.save()
 
+        Token.objects.filter(user=user).delete()
+        token = Token.objects.create(user=user)
+
         # Send Email
         send_password_changed_email.delay(
             user_email=user.email,
             user_name=user.first_name or user.email,
         )
 
-        return Response({"detail": "Password changed successfully."})
+        return Response({"detail": "Password changed successfully.", "token": token.key})
     
 
 class ForgotPasswordView(APIView):

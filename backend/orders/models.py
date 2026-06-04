@@ -2,20 +2,10 @@ from django.db import models
 from django.conf import settings
 from .utils import generate_order_number
 
-STATUS_CHOICES = [
-    ("pending",   "Pending"),
-    ("confirmed", "Confirmed"),
-    ("preparing", "Preparing"),
-    ("on_the_way","On the Way"),
-    ("delivered", "Delivered"),
-    ("cancelled", "Cancelled"),
-]
-
 ORDER_TYPE_CHOICES = [
     ("delivery", "Delivery"),
     ("pickup",   "Pickup"),
 ]
-
 
 class Order(models.Model):
     customer = models.ForeignKey(
@@ -35,9 +25,7 @@ class Order(models.Model):
     guest_email = models.EmailField(blank=True)
 
     order_number = models.CharField(max_length=20, unique=True)
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default="pending"
-    )
+    status = models.CharField(max_length=20, default="confirmed")
     order_type = models.CharField(
         max_length=10, choices=ORDER_TYPE_CHOICES, default="delivery"
     )

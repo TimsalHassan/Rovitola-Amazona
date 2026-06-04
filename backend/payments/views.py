@@ -77,4 +77,8 @@ class PaymentCallbackView(APIView):
                     )
 
         frontend = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+
+        if not order:
+            return redirect(f"{frontend}/payment-error?reason=order_not_found")
+
         return redirect(f"{frontend}/order/{order.order_number}?payment={result}")
