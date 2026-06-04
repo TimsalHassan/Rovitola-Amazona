@@ -27,13 +27,15 @@ class CategoryListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     def list(self, request, *args, **kwargs):
-        cached = cache.get('categories')
+        lang = request.query_params.get('language', 'en').lower()
+        cache_key = f'categories_{lang}'
+        cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
         queryset = Category.objects.all().order_by("order")
         serializer = self.get_serializer(queryset, many=True)
-        cache.set('categories', serializer.data, CACHE_TTL)
+        cache.set(cache_key, serializer.data, CACHE_TTL)
         return Response(serializer.data)
 
 
@@ -97,8 +99,9 @@ class MenuItemListView(generics.ListAPIView):
         category_slug = request.query_params.get("category", "all")
         is_lunch = request.query_params.get("is_lunch_item", "any")
         is_available = request.query_params.get("is_available", "any")
+        lang = request.query_params.get('language', 'en').lower()
 
-        cache_key = f'menu_items_{category_slug}_{is_lunch}_{is_available}'
+        cache_key = f'menu_items_{category_slug}_{is_lunch}_{is_available}_{lang}'
         cached = cache.get(cache_key)
 
         if cached is not None:
@@ -124,11 +127,12 @@ class MenuItemDetailView(generics.RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         pk = kwargs.get("pk")
-        cache_key = f"menu:item:{pk}"
+        lang = request.query_params.get('language', 'en').lower()
+        cache_key = f"menu:item:{pk}:{lang}"
         data = cache.get(cache_key)
         if data is None:
             instance = MenuItem.objects.select_related("category").get(pk=pk)
-            data = MenuItemSerializer(instance).data
+            data = MenuItemSerializer(instance, context={'request': request}).data
             cache.set(cache_key, data, CACHE_TTL)
         return Response(data)
 
@@ -158,7 +162,8 @@ class ExtraListView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         category_slug = request.query_params.get("category", "all")
-        cache_key = f'extras_{category_slug}'
+        lang = request.query_params.get('language', 'en').lower()
+        cache_key = f'extras_{category_slug}_{lang}'
         cached = cache.get(cache_key)
 
         if cached is not None:
@@ -199,7 +204,8 @@ class ExtraOptionListView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         extra_id = request.query_params.get("extra", "all")
-        cache_key = f'extra_options_{extra_id}'
+        lang = request.query_params.get('language', 'en').lower()
+        cache_key = f'extra_options_{extra_id}_{lang}'
         cached = cache.get(cache_key)
 
         if cached is not None:

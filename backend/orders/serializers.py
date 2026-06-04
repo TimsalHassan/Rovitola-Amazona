@@ -45,6 +45,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "guest_name",
             "guest_phone",
             "status",
+            "payment_status",
+            "payment_method",
             "order_type",
             "delivery_address",
             "order_notes",
@@ -84,8 +86,9 @@ class CreateOrderItemSerializer(serializers.Serializer):
 class CreateOrderSerializer(serializers.Serializer):
     guest_name  = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     guest_phone = serializers.CharField(max_length=20,  required=False, allow_blank=True, default="")
-    guest_email = serializers.EmailField(required=False, allow_blank=True, default="")  # ← yeh add karo
+    guest_email = serializers.EmailField(required=False, allow_blank=True, default="") 
     order_type  = serializers.ChoiceField(choices=["delivery", "pickup"], default="delivery")
+    payment_method = serializers.ChoiceField(choices=["online", "cash_on_delivery", "card_on_delivery"], default="online")
     delivery_address = serializers.CharField(required=False, allow_blank=True, default="")
     order_notes      = serializers.CharField(required=False, allow_blank=True, default="")
     subtotal         = serializers.DecimalField(max_digits=8, decimal_places=2)

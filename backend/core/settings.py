@@ -27,7 +27,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',') + ['.ngrok-free.dev']
 
 # Application definition
 
@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     'orders',
     'reviews',
     'payments',
-    'notifications',
     'restaurant.apps.RestaurantConfig',
 ]
 
@@ -68,14 +67,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-# settings.py
-# DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# CLOUDINARY_STORAGE = {
-#     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-#     'API_KEY':    config('CLOUDINARY_API_KEY'),
-#     'API_SECRET': config('CLOUDINARY_API_SECRET'),
-# }
 
 ROOT_URLCONF = 'core.urls'
 
@@ -100,14 +92,20 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-if not DEBUG:
+if DEBUG:
+    # Development → local PostgreSQL
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
         }
     }
 else:
+    # Production → PostgreSQL (SQLite production mein nahi chalega!)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -164,6 +162,8 @@ TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
 
 FRONTEND_URL     = config('FRONTEND_URL', default='http://localhost:5173')
 
+BACKEND_URL = config('BACKEND_URL', default='http://localhost:8000')
+
 AUTH_USER_MODEL = 'users.User'
 
 # CORS
@@ -188,12 +188,19 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': config('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+if DEBUG:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': config('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+        }
+    }
 
 # Celery
 CELERY_BROKER_URL = config('REDIS_URL', default='redis://127.0.0.1:6379/1')
@@ -206,16 +213,25 @@ CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_TRACK_STARTED = True
 CELERY_RESULT_EXPIRES = 86400  # 24 hours in seconds
 
+# In development, run Celery tasks synchronously (no Redis broker needed)
+if DEBUG:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
 
-EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST         = 'smtp.resend.com'
-EMAIL_PORT         = 587
-EMAIL_USE_TLS      = True
-EMAIL_HOST_USER    = 'resend'                          # hamesha 'resend' hi rehta hai
-EMAIL_HOST_PASSWORD = config('RESEND_API_KEY')         # .env se
-DEFAULT_FROM_EMAIL  = 'order@timsalhassan.me'       # verified domain wala
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST         = 'smtp.resend.com'
+    EMAIL_PORT         = 587
+    EMAIL_USE_TLS      = True
+    EMAIL_HOST_USER    = 'resend'                          # hamesha 'resend' hi rehta hai
+    EMAIL_HOST_PASSWORD = config('RESEND_API_KEY')         # .env se
+
+DEFAULT_FROM_EMAIL  = 'Ravintola Amazona <order@timsalhassan.me>'      # verified domain wala
 RESTAURANT_EMAIL    = config('RESTAURANT_EMAIL')       # owner ka email
 
 # # settings.py mein add karo
-# PAYTRAIL_ACCOUNT = config('PAYTRAIL_ACCOUNT', default='375917')   # test
-# PAYTRAIL_SECRET  = config('PAYTRAIL_SECRET',  default='SAIPPUAKAUPPIAS')  # test
+PAYTRAIL_ACCOUNT = config('PAYTRAIL_ACCOUNT', default='375917')
+PAYTRAIL_SECRET  = config('PAYTRAIL_SECRET',  default='SAIPPUAKAUPPIAS')

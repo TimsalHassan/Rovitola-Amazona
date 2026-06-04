@@ -12,5 +12,5 @@ urlpatterns = [
     path("items/", MenuItemListView.as_view()),
     path("items/<int:pk>/", MenuItemDetailView.as_view()),
     path("extras/", ExtraListView.as_view()),
-    path("extras/<int:pk>/", ExtraListView.as_view()),
+    path("extra-options/", ExtraOptionListView.as_view()),
 ]

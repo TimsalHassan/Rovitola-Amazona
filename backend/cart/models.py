@@ -67,7 +67,7 @@ class CartItem(models.Model):
     def line_total(self):
         extras_total = sum(
             opt.display_price for opt in
-            ExtraOption.objects.filter(cartitemselectedoption__cart_item=self)
+            ExtraOption.objects.filter(cart_selections__cart_item=self)
         )
         return (self.unit_price + extras_total) * self.quantity
 

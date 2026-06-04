@@ -52,7 +52,7 @@ class DeliveryCheckView(APIView):
                 "is_eligible": False,
                 "delivery_fee": None,
                 "distance_km": None,
-                "message": "Delivery filhaal available nahi hai.",
+                "message": "Delivery is currently not available.",
             })
 
         lat = serializer.validated_data['latitude']
@@ -65,7 +65,7 @@ class DeliveryCheckView(APIView):
                 "is_eligible": False,
                 "delivery_fee": None,
                 "distance_km": distance_rounded,
-                "message": f"Sorry, {distance_rounded}km door delivery nahi hoti. Max {settings.paid_delivery_radius_km}km hai.",
+                "message": f"Sorry, delivery is not available to your location ({distance_rounded}km). Maximum delivery radius is {settings.paid_delivery_radius_km}km.",
             })
 
         message = f"Free delivery! ({distance_rounded}km)" if fee == 0 else f"€{fee} delivery fee. ({distance_rounded}km)"

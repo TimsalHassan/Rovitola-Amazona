@@ -70,12 +70,6 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        if not (user.is_staff or user.is_superuser):
-            return Response(
-                {"error": "Access denied. Admins and staff only."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         token, _ = Token.objects.get_or_create(user=user)
         return Response(
             {
@@ -133,7 +127,7 @@ class ChangePasswordView(APIView):
         # Send Email
         send_password_changed_email.delay(
             user_email=user.email,
-            user_name=user.first_name or user.email,
+            user_name=user.name or user.email,
         )
 
         return Response({"detail": "Password changed successfully.", "token": token.key})
@@ -160,7 +154,7 @@ class ForgotPasswordView(APIView):
 
         send_forgot_password_email.delay(
             user_email=user.email,
-            user_name=user.first_name or user.email,
+            user_name=user.name or user.email,
             reset_link=reset_link,
         )
 
@@ -192,7 +186,7 @@ class ResetPasswordView(APIView):
 
         send_password_changed_email.delay(
             user_email=user.email,
-            user_name=user.first_name or user.email,
+            user_name=user.name or user.email,
         )
 
         return Response({'message': 'Password reset successfully.'})

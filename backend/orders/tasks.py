@@ -20,7 +20,7 @@ Estimated time: 45–60 minutes.
 Thank you for ordering from Ravintola Amazona!
 — Ravintola Amazona
         ''',
-        from_email=settings.DEFAULT_FROM_EMAIL,
+        from_email='Ravintola Amazona <order@timsalhassan.me>',
         recipient_list=[user_email],
         fail_silently=False,
     )
@@ -28,9 +28,17 @@ Thank you for ordering from Ravintola Amazona!
 @shared_task
 def send_restaurant_notification_email(order_id, order_details):
     send_mail(
-        subject=f'NEW ORDER – #{order_id}',
-        message=order_details,
-        from_email=settings.DEFAULT_FROM_EMAIL,
+        subject=f'🍽️ NEW ORDER – #{order_id}',
+        message=f"""
+NEW ORDER RECEIVED
+==================
+{order_details}
+==================
+
+Please prepare this order as soon as possible.
+— Ravintola Amazona System
+        """,
+        from_email='Ravintola Amazona <order@timsalhassan.me>',
         recipient_list=[settings.RESTAURANT_EMAIL],
         fail_silently=False,
     )
