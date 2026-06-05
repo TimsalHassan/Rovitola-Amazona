@@ -140,7 +140,7 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-const TOKEN_KEY = "amazona_token";
+const TOKEN_KEY = "access_token";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);

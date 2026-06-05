@@ -116,12 +116,15 @@ class CreateOrderSerializer(serializers.Serializer):
         for item_data in items_data:
             options_data = item_data.pop("selected_options", [])
             order_item   = OrderItem.objects.create(order=order, **item_data)
-
             for opt in options_data:
                 OrderItemSelectedOption.objects.create(order_item=order_item, **opt)
 
-        send_order_confirmation(order)
-        send_restaurant_notification(order)
+        # Wrap emails so a config error never kills a valid order
+        try:
+            send_order_confirmation(order)
+            send_restaurant_notification(order)
+        except Exception:
+            pass  # log this in production
 
         return order
 

@@ -20,6 +20,7 @@ import MyOrdersPage from "./pages/MyOrdersPage";
 import { MenuProvider } from "./context/MenuContext";
 import MenuItemPage from "./pages/MenuItemPage";
 import Footer from "./components/Footer";
+import OrderPage from "./pages/OrderConfirmationPage";
 
 // Layout WITH navbar — used for all app pages
 function AppLayout() {
@@ -27,7 +28,7 @@ function AppLayout() {
     <>
       <Navbar />
       <Outlet />
-      <Footer/>
+      <Footer />
     </>
   );
 }
@@ -73,6 +74,14 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <CheckoutPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/order/:orderId"
+                    element={
+                      <ProtectedRoute>
+                        <OrderPage />
                       </ProtectedRoute>
                     }
                   />
