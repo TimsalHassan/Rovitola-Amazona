@@ -4,7 +4,7 @@ import {
   MenuItem as ApiMenuItem,
   type Category as ApiCategory,
 } from "../api/menu";
-import { useCart } from "../context/CartContext";
+import { useCart } from "../hooks/useCart";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMenu } from "../hooks/useMenu";
 import { isLunchHours } from "../utils/openingHours";

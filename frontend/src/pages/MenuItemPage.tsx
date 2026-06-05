@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft, Star } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { ArrowLeft, Star, ShoppingCart, Plus, Minus, Check } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { MenuItem } from "../api/menu";
+import type { MenuItem, Extra, ExtraOption } from "../api/menu";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMenu } from "../hooks/useMenu";
+import { useCart } from "../hooks/useCart";
+import type { SelectedOption } from "../context/CartContext";
 
 function formatPrice(value: string | number | null | undefined) {
   if (value === null || value === undefined) return "";
@@ -13,23 +15,79 @@ function formatPrice(value: string | number | null | undefined) {
   return String(value);
 }
 
+// ─── Extra selection helpers ──────────────────────────────────────────────────
+
+/** Map of extra_id → set of selected option_ids */
+type ExtraSelections = Record<number, Set<number>>;
+
+function buildSelectedOptions(
+  extras: Extra[],
+  selections: ExtraSelections,
+): SelectedOption[] {
+  const result: SelectedOption[] = [];
+  for (const extra of extras) {
+    const chosen = selections[extra.id];
+    if (!chosen || chosen.size === 0) continue;
+    for (const optionId of chosen) {
+      const option = extra.options.find((o) => o.id === optionId);
+      if (!option) continue;
+      result.push({
+        extra_id: extra.id,
+        extra_name: extra.name,
+        extra_name_fi: extra.name_fi,
+        extra_type: extra.extra_type,
+        option_id: option.id,
+        option_name: option.name,
+        option_name_fi: option.name_fi,
+        additional_price: Number(option.display_price) || 0,
+      });
+    }
+  }
+  return result;
+}
+
+function validateSelections(extras: Extra[], selections: ExtraSelections): string | null {
+  for (const extra of extras) {
+    const chosen = selections[extra.id];
+    const count = chosen ? chosen.size : 0;
+    if (extra.is_required && count === 0) {
+      return extra.name;
+    }
+    if (extra.max_selections !== null && count > extra.max_selections) {
+      return extra.name;
+    }
+  }
+  return null;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const MenuItemPage = () => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const { items, isItemsLoading } = useMenu();
-  const [item, setItem] = useState<MenuItem | null>(null);
+  const { addItem } = useCart();
   const { id } = useParams();
 
+  const [item, setItem] = useState<MenuItem | null>(null);
+  const [selections, setSelections] = useState<ExtraSelections>({});
+  const [quantity, setQuantity] = useState(1);
+  const [specialInstruction, setSpecialInstruction] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [addedToCart, setAddedToCart] = useState(false);
+
   useEffect(() => {
-    const foundItem = items.find((item) => item.id === Number(id));
+    const foundItem = items.find((i) => i.id === Number(id));
     setItem(foundItem || null);
+    // Reset state when item changes
+    setSelections({});
+    setQuantity(1);
+    setSpecialInstruction("");
+    setValidationError(null);
+    setAddedToCart(false);
   }, [id, items]);
 
-  const getLocalizedText = (
-    en: string,
-    fi: string,
-    fallback: string,
-  ) => {
+  const getLocalizedText = (en: string, fi: string, fallback: string) => {
     const preferred = language === "fi" ? fi : en;
     return preferred || en || fi || fallback;
   };
@@ -40,13 +98,83 @@ const MenuItemPage = () => {
   const displayDescription = item
     ? getLocalizedText(item.description, item.description_fi, t("unnamedItemDesc"))
     : "";
-  const displayCategory = item?.category_name || item?.category_slug || t("menuItem.uncategorized");
+  const displayCategory =
+    item?.category_name || item?.category_slug || t("menuItem.uncategorized");
 
-  const reviews = [
-    { name: "Mikko P.", rating: 5, text: t("review1"), date: "15.5.2024" },
-    { name: "Anna K.", rating: 5, text: t("review2"), date: "10.5.2024" },
-    { name: "Juhani V.", rating: 4, text: t("review3"), date: "3.5.2024" },
-  ];
+  // ── Option toggle ────────────────────────────────────────────────────────
+
+  const toggleOption = useCallback(
+    (extra: Extra, option: ExtraOption) => {
+      setValidationError(null);
+      setSelections((prev) => {
+        const current = new Set(prev[extra.id] ?? []);
+
+        if (current.has(option.id)) {
+          // Deselect
+          current.delete(option.id);
+        } else {
+          if (extra.extra_type === "choice") {
+            // Radio behaviour: replace selection
+            current.clear();
+            current.add(option.id);
+          } else {
+            // Checkbox / addon behaviour: multi-select within max_selections
+            if (
+              extra.max_selections === null ||
+              current.size < extra.max_selections
+            ) {
+              current.add(option.id);
+            }
+            // If at max, silently ignore (could show a toast if desired)
+          }
+        }
+
+        return { ...prev, [extra.id]: current };
+      });
+    },
+    [],
+  );
+
+  // ── Computed unit price ──────────────────────────────────────────────────
+
+  const extrasCost = item
+    ? item.extras.reduce((sum, extra) => {
+        const chosen = selections[extra.id];
+        if (!chosen) return sum;
+        for (const optId of chosen) {
+          const opt = extra.options.find((o) => o.id === optId);
+          if (opt) sum += Number(opt.display_price) || 0;
+        }
+        return sum;
+      }, 0)
+    : 0;
+
+  const unitPrice = item ? (Number(item.current_price) || 0) + extrasCost : 0;
+  const totalPrice = unitPrice * quantity;
+
+  // ── Add to cart handler ──────────────────────────────────────────────────
+
+  const handleAddToCart = () => {
+    if (!item) return;
+
+    const invalid = validateSelections(item.extras, selections);
+    if (invalid) {
+      setValidationError(invalid);
+      // Scroll to extras section
+      document
+        .getElementById("extras-section")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    const selectedOptions = buildSelectedOptions(item.extras, selections);
+    addItem(item, selectedOptions, quantity, specialInstruction);
+
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <main className="min-h-screen bg-gray-950 text-white">
@@ -83,6 +211,7 @@ const MenuItemPage = () => {
           </div>
         ) : (
           <>
+            {/* ── Item header ── */}
             <section className="grid gap-8 lg:grid-cols-2 items-start">
               <div className="relative bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden">
                 {item.image ? (
@@ -113,12 +242,8 @@ const MenuItemPage = () => {
                   <p className="text-amber-400 text-xs uppercase tracking-widest">
                     {t("menuItem.details")}
                   </p>
-                  <h1 className="text-3xl sm:text-4xl font-black">
-                    {displayName}
-                  </h1>
-                  <p className="text-gray-300 leading-relaxed">
-                    {displayDescription}
-                  </p>
+                  <h1 className="text-3xl sm:text-4xl font-black">{displayName}</h1>
+                  <p className="text-gray-300 leading-relaxed">{displayDescription}</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -148,15 +273,94 @@ const MenuItemPage = () => {
                     </span>
                   )}
                 </div>
+
+                {/* ── Special instruction ── */}
                 <div>
-                  <button>
-                    {t("addToCart")} - €{formatPrice(item.current_price)}
+                  <label
+                    htmlFor="special-instruction"
+                    className="block text-xs text-gray-400 mb-1.5"
+                  >
+                    {t("menuItem.specialInstruction") ?? "Special instructions (optional)"}
+                  </label>
+                  <textarea
+                    id="special-instruction"
+                    rows={2}
+                    value={specialInstruction}
+                    onChange={(e) => setSpecialInstruction(e.target.value)}
+                    placeholder={
+                      t("menuItem.specialInstructionPlaceholder") ??
+                      "E.g. no onions, extra sauce…"
+                    }
+                    className="w-full bg-gray-900/60 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+
+                {/* ── Quantity + Add to cart ── */}
+                <div className="flex items-center gap-3 pt-1">
+                  {/* Quantity stepper */}
+                  <div className="flex items-center gap-0 bg-gray-900/60 border border-white/10 rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      className="px-3 py-2.5 text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <span className="px-4 py-2.5 text-sm font-bold min-w-[2.5rem] text-center">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => q + 1)}
+                      className="px-3 py-2.5 text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+
+                  {/* Add to cart button */}
+                  <button
+                    type="button"
+                    disabled={!item.is_available}
+                    onClick={handleAddToCart}
+                    className={`flex-1 inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-xl transition-all duration-200 ${
+                      addedToCart
+                        ? "bg-green-500 text-white"
+                        : item.is_available
+                        ? "bg-amber-500 hover:bg-amber-400 text-gray-900"
+                        : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    {addedToCart ? (
+                      <>
+                        <Check size={15} />
+                        {t("menuItem.addedToCart") ?? "Added!"}
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart size={15} />
+                        {t("menuItem.addToCart") ?? "Add to cart"} — €
+                        {formatPrice(totalPrice)}
+                      </>
+                    )}
                   </button>
                 </div>
+
+                {/* Validation error */}
+                {validationError && (
+                  <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    {t("menuItem.requiredExtraError")
+                      ? `${t("menuItem.requiredExtraError")}: ${validationError}`
+                      : `Please make a selection for: ${validationError}`}
+                  </p>
+                )}
               </div>
             </section>
 
-            <section className="mt-12">
+            {/* ── Extras ── */}
+            <section id="extras-section" className="mt-12">
               <div className="flex items-end justify-between mb-5">
                 <div>
                   <p className="text-amber-400 text-sm font-semibold uppercase tracking-widest">
@@ -190,12 +394,20 @@ const MenuItemPage = () => {
                           })
                         : null;
 
+                    const isInvalid =
+                      validationError === extra.name && extra.is_required;
+                    const chosenSet = selections[extra.id] ?? new Set<number>();
+
                     return (
                       <div
                         key={extra.id}
-                        className="bg-gray-900/60 border border-white/10 rounded-2xl p-4"
+                        className={`bg-gray-900/60 border rounded-2xl p-4 transition-colors ${
+                          isInvalid
+                            ? "border-red-500/50"
+                            : "border-white/10"
+                        }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-3 mb-4">
                           <div>
                             <h3 className="text-white font-semibold">
                               {extraName}
@@ -205,37 +417,72 @@ const MenuItemPage = () => {
                               {maxLabel ? ` • ${maxLabel}` : ""}
                             </p>
                           </div>
-                          <span className="text-[10px] uppercase tracking-wide bg-white/5 border border-white/10 px-2 py-1 rounded-full text-gray-300">
+                          <span
+                            className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${
+                              extra.is_required
+                                ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                                : "bg-white/5 border-white/10 text-gray-300"
+                            }`}
+                          >
                             {selectionLabel}
                           </span>
                         </div>
 
-                        <div className="mt-4 space-y-2">
+                        <div className="space-y-2">
                           {extra.options.map((option) => {
                             const optionName = getLocalizedText(
                               option.name,
                               option.name_fi,
                               t("menuItem.unnamedOption"),
                             );
-                            const optionPrice = Number(option.additional_price);
+                            const optionPrice = Number(option.display_price);
                             const priceLabel = Number.isFinite(optionPrice)
                               ? optionPrice === 0
                                 ? t("menuItem.included")
                                 : `+€${formatPrice(optionPrice)}`
                               : t("menuItem.included");
 
+                            const isSelected = chosenSet.has(option.id);
+                            const isChoice = extra.extra_type === "choice";
+
                             return (
-                              <div
+                              <button
                                 key={option.id}
-                                className="flex items-center justify-between text-sm"
+                                type="button"
+                                onClick={() => toggleOption(extra, option)}
+                                className={`w-full flex items-center justify-between text-sm px-3 py-2.5 rounded-xl border transition-all duration-150 text-left ${
+                                  isSelected
+                                    ? "bg-amber-500/15 border-amber-500/40 text-white"
+                                    : "bg-white/[0.03] border-white/8 text-gray-300 hover:bg-white/[0.07] hover:border-white/15"
+                                }`}
                               >
-                                <span className="text-gray-200">
+                                <span className="flex items-center gap-2.5">
+                                  {/* Radio or checkbox indicator */}
+                                  <span
+                                    className={`flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-full border transition-colors ${
+                                      isSelected
+                                        ? "bg-amber-500 border-amber-500"
+                                        : "border-gray-600"
+                                    } ${!isChoice ? "rounded-md" : ""}`}
+                                  >
+                                    {isSelected && (
+                                      <Check
+                                        size={10}
+                                        className="text-gray-900"
+                                        strokeWidth={3}
+                                      />
+                                    )}
+                                  </span>
                                   {optionName}
                                 </span>
-                                <span className="text-gray-400">
+                                <span
+                                  className={`text-xs font-medium ${
+                                    isSelected ? "text-amber-400" : "text-gray-500"
+                                  }`}
+                                >
                                   {priceLabel}
                                 </span>
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
@@ -255,6 +502,7 @@ const MenuItemPage = () => {
               )}
             </section>
 
+            {/* ── Reviews ── */}
             <section className="mt-12">
               <div className="flex items-end justify-between mb-5">
                 <div>
@@ -283,51 +531,17 @@ const MenuItemPage = () => {
                 )}
               </div>
 
-              {reviews.length ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {reviews.map((review, index) => (
-                    <div
-                      key={`${review.name}-${index}`}
-                      className="bg-gray-900/60 border border-white/10 rounded-2xl p-5"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-white font-semibold">
-                          {review.name}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {review.date}
-                        </span>
-                      </div>
-                      <div className="flex gap-1 mb-3">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            size={14}
-                            className={
-                              i < review.rating
-                                ? "text-amber-400 fill-amber-400"
-                                : "text-gray-600"
-                            }
-                          />
-                        ))}
-                      </div>
-                      <p className="text-gray-300 text-sm">{review.text}</p>
-                    </div>
-                  ))}
+              <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-8 text-center">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 text-amber-400 mb-3">
+                  <Star size={18} />
                 </div>
-              ) : (
-                <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-8 text-center">
-                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 text-amber-400 mb-3">
-                    <Star size={18} />
-                  </div>
-                  <p className="text-white font-semibold mb-2">
-                    {t("menuItem.noReviewsTitle")}
-                  </p>
-                  <p className="text-gray-400 text-sm">
-                    {t("menuItem.noReviewsBody")}
-                  </p>
-                </div>
-              )}
+                <p className="text-white font-semibold mb-2">
+                  {t("menuItem.noReviewsTitle")}
+                </p>
+                <p className="text-gray-400 text-sm">
+                  {t("menuItem.noReviewsBody")}
+                </p>
+              </div>
             </section>
           </>
         )}

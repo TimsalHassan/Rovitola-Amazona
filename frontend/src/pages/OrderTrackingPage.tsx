@@ -15,36 +15,31 @@ const STATUS_ORDER: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'on_th
 
 const STATUS_CONFIG = {
   pending: {
-    labelFi: 'Tilaus Vastaanotettu',
-    labelEn: 'Order Confirmed',
+    labelKey: "orderStatus.pending",
     icon: CheckCircle,
     color: 'text-amber-400',
     bg: 'bg-amber-400',
   },
   confirmed: {
-    labelFi: 'Vahvistettu',
-    labelEn: 'Confirmed',
+    labelKey: "orderStatus.confirmed",
     icon: Package,
     color: 'text-blue-400',
     bg: 'bg-blue-400',
   },
   preparing: {
-    labelFi: 'Valmistetaan',
-    labelEn: 'Preparing',
+    labelKey: "orderStatus.preparing",
     icon: ChefHat,
     color: 'text-amber-400',
     bg: 'bg-amber-400',
   },
   on_the_way: {
-    labelFi: 'Matkalla',
-    labelEn: 'On the Way',
+    labelKey: "orderStatus.onTheWay",
     icon: Truck,
     color: 'text-green-400',
     bg: 'bg-green-400',
   },
   delivered: {
-    labelFi: 'Toimitettu',
-    labelEn: 'Delivered',
+    labelKey: "orderStatus.delivered",
     icon: CheckCircle,
     color: 'text-green-400',
     bg: 'bg-green-400',
@@ -85,25 +80,25 @@ export default function OrderTrackingPage() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2 mb-4">
-            <span className="text-gray-400 text-sm">{t('Tilausnumero', 'Order Number')}</span>
+            <span className="text-gray-400 text-sm">{t("orderTracking.orderNumber")}</span>
             <span className="text-amber-400 font-bold">{orderId}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white">
             {cancelled
-              ? t('Tilaus Peruttu', 'Order Cancelled')
-              : t('Seuraa Tilaustasi', 'Track Your Order')}
+              ? t("orderTracking.orderCancelled")
+              : t("orderTracking.trackOrder")}
           </h1>
         </div>
 
         {cancelled ? (
           <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 text-center mb-8">
             <XCircle size={40} className="text-red-400 mx-auto mb-4" />
-            <p className="text-white font-semibold text-lg mb-2">{t('Tilaus on peruttu', 'Order has been cancelled')}</p>
-            <p className="text-gray-400 text-sm">{t('Jos sinulla on kysyttavaa, ota yhteytta ravintolaan.', 'If you have questions, please contact the restaurant.')}</p>
+            <p className="text-white font-semibold text-lg mb-2">{t("orderTracking.cancelledTitle")}</p>
+            <p className="text-gray-400 text-sm">{t("orderTracking.cancelledBody")}</p>
           </div>
         ) : (
           <div className="bg-gray-900 border border-white/5 rounded-2xl p-6 mb-5">
-            <h2 className="text-white font-semibold mb-6">{t('Tilauksen Status', 'Order Status')}</h2>
+            <h2 className="text-white font-semibold mb-6">{t("orderTracking.orderStatusTitle")}</h2>
 
             <div className="relative">
               <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-gray-800" />
@@ -150,12 +145,12 @@ export default function OrderTrackingPage() {
                               : 'text-gray-600'
                           }`}
                         >
-                          {language === 'fi' ? config.labelFi : config.labelEn}
+                          {t(config.labelKey)}
                         </p>
                         {isCurrent && (
                           <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-                            {t('Nykyinen tila', 'Current status')}
+                            {t("orderTracking.currentStatus")}
                           </p>
                         )}
                       </div>
@@ -168,7 +163,7 @@ export default function OrderTrackingPage() {
         )}
 
         <div className="bg-gray-900 border border-white/5 rounded-2xl p-5 mb-5">
-          <h2 className="text-white font-semibold mb-4">{t('Toimitustiedot', 'Delivery Info')}</h2>
+          <h2 className="text-white font-semibold mb-4">{t("orderTracking.deliveryInfo")}</h2>
           <div className="space-y-3 text-sm">
             <div className="flex items-center gap-3 text-gray-400">
               {state?.orderType === 'pickup'
@@ -176,8 +171,8 @@ export default function OrderTrackingPage() {
                 : <Truck size={15} className="text-amber-400" />}
               <span>
                 {state?.orderType === 'pickup'
-                  ? t('Nouto ravintolasta', 'Pickup from restaurant')
-                  : t('Toimitus', 'Delivery')}
+                  ? t("orderTracking.pickupFromRestaurant")
+                  : t("orderTracking.delivery")}
               </span>
             </div>
             <div className="flex items-start gap-3 text-gray-400">
@@ -185,13 +180,13 @@ export default function OrderTrackingPage() {
               <span>
                 {state?.orderType === 'pickup'
                   ? 'Aleksanterinkatu 3, 15110 Lahti'
-                  : state?.address || t('Osoite ei saatavilla', 'Address not available')}
+                  : state?.address || t("orderTracking.addressUnavailable")}
               </span>
             </div>
             {!cancelled && currentStatus !== 'delivered' && (
               <div className="flex items-center gap-3 text-gray-400">
                 <Clock size={15} className="text-amber-400" />
-                <span>{t('Arvioitu aika:', 'Estimated time:')} 30-45 {t('min', 'min')}</span>
+                <span>{t("orderTracking.estimatedTimeLabel")} 30-45 {t("orderTracking.minAbbrev")}</span>
               </div>
             )}
           </div>
@@ -199,7 +194,7 @@ export default function OrderTrackingPage() {
 
         {state?.items && state.items.length > 0 && (
           <div className="bg-gray-900 border border-white/5 rounded-2xl p-5 mb-5">
-            <h2 className="text-white font-semibold mb-4">{t('Tilatut Tuotteet', 'Ordered Items')}</h2>
+            <h2 className="text-white font-semibold mb-4">{t("orderTracking.orderedItems")}</h2>
             <div className="space-y-3">
               {state.items.map(({ item, quantity }) => (
                 <div key={item.id} className="flex items-center gap-3">
@@ -218,7 +213,7 @@ export default function OrderTrackingPage() {
             </div>
             {state.total && (
               <div className="border-t border-white/10 mt-4 pt-3 flex justify-between text-white font-bold">
-                <span>{t('Yhteensa', 'Total')}</span>
+                <span>{t("orderTracking.total")}</span>
                 <span>€{state.total.toFixed(2)}</span>
               </div>
             )}
@@ -233,16 +228,13 @@ export default function OrderTrackingPage() {
                 className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold py-3.5 rounded-xl transition-colors"
               >
                 <XCircle size={17} />
-                {t('Peru Tilaus', 'Cancel Order')}
+                {t("orderTracking.cancelOrder")}
               </button>
             ) : (
               <div className="flex items-start gap-3 bg-gray-900 border border-white/5 rounded-xl px-4 py-3.5">
                 <XCircle size={16} className="text-gray-600 mt-0.5 shrink-0" />
                 <p className="text-gray-500 text-sm">
-                  {t(
-                    'Tilausta ei voi enaa peruuttaa - ravintola on jo aloittanut valmistuksen.',
-                    'Order can no longer be cancelled - the restaurant has already started preparation.'
-                  )}
+                  {t("orderTracking.cancelNotAllowed")}
                 </p>
               </div>
             )}
@@ -254,7 +246,7 @@ export default function OrderTrackingPage() {
           className="flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 border border-white/10 text-white font-semibold py-3.5 rounded-xl transition-colors"
         >
           <Home size={17} />
-          {t('Takaisin Etusivulle', 'Back to Home')}
+          {t("orderTracking.backHome")}
         </Link>
       </div>
     </main>

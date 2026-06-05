@@ -1,5 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-
+import { BASE } from "./base";
 // ─── Types (mirror your Django serializers exactly) ───────────────────────────
 
 export interface ExtraOption {
