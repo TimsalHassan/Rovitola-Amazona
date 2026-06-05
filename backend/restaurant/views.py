@@ -1,0 +1,77 @@
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from django.core.cache import cache
+
+from .models import RestaurantSettings
+from .serializers import RestaurantSettingsSerializer, DeliveryCheckSerializer
+from .utils import get_delivery_fee, is_restaurant_open
+
+
+class RestaurantInfoView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        CACHE_KEY = 'restaurant_info'
+
+        cached = cache.get(CACHE_KEY)
+        if cached:
+            return Response(cached)
+
+        settings = RestaurantSettings.get_settings()
+        if not settings:
+            return Response({"detail": "Not configured."}, status=503)
+
+        serializer = RestaurantSettingsSerializer(settings)
+        open_now, message = is_restaurant_open(settings.opening_hours.all())
+
+        data = {
+            **serializer.data,
+            "is_open_now": open_now,
+            "open_status_message": message,
+        }
+
+        cache.set(CACHE_KEY, data, timeout=60 * 15)
+        return Response(data)
+
+
+class DeliveryCheckView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = DeliveryCheckSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        settings = RestaurantSettings.get_settings()
+        if not settings:
+            return Response({"detail": "Not configured."}, status=503)
+
+        if not settings.is_delivery_enabled:
+            return Response({
+                "is_eligible": False,
+                "delivery_fee": None,
+                "distance_km": None,
+                "message": "Delivery is currently not available.",
+            })
+
+        lat = serializer.validated_data['latitude']
+        lon = serializer.validated_data['longitude']
+        fee, distance = get_delivery_fee(lat, lon, settings)
+        distance_rounded = round(distance, 1)
+
+        if fee is None:
+            return Response({
+                "is_eligible": False,
+                "delivery_fee": None,
+                "distance_km": distance_rounded,
+                "message": f"Sorry, delivery is not available to your location ({distance_rounded}km). Maximum delivery radius is {settings.paid_delivery_radius_km}km.",
+            })
+
+        message = f"Free delivery! ({distance_rounded}km)" if fee == 0 else f"€{fee} delivery fee. ({distance_rounded}km)"
+        return Response({
+            "is_eligible": True,
+            "delivery_fee": fee,
+            "distance_km": distance_rounded,
+            "message": message,
+        })

@@ -24,18 +24,18 @@ class Category(models.Model):
     def __str__(self):
         return self.name or self.name_fi
 
-    # def save(self, *args, **kwargs):
-    #     if self.name and not self.name_fi:
-    #         self.name_fi = translate_text(self.name, 'en', 'fi')
-    #     elif self.name_fi and not self.name:
-    #         self.name = translate_text(self.name_fi, 'fi', 'en')
-    #     if self.description and not self.description_fi:
-    #         self.description_fi = translate_text(self.description, 'en', 'fi')
-    #     elif self.description_fi and not self.description:
-    #         self.description = translate_text(self.description_fi, 'fi', 'en')
-    #     if self.deal_label and not self.deal_label_fi:
-    #         self.deal_label_fi = translate_text(self.deal_label, 'en', 'fi')
-    #     super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.name and not self.name_fi:
+            self.name_fi = translate_text(self.name, 'en', 'fi')
+        elif self.name_fi and not self.name:
+            self.name = translate_text(self.name_fi, 'fi', 'en')
+        if self.description and not self.description_fi:
+            self.description_fi = translate_text(self.description, 'en', 'fi')
+        elif self.description_fi and not self.description:
+            self.description = translate_text(self.description_fi, 'fi', 'en')
+        if self.deal_label and not self.deal_label_fi:
+            self.deal_label_fi = translate_text(self.deal_label, 'en', 'fi')
+        super().save(*args, **kwargs)
 
 
 class MenuItem(models.Model):
@@ -78,16 +78,16 @@ class MenuItem(models.Model):
     def is_on_sale(self):
         return self.sale_price is not None
 
-    # def save(self, *args, **kwargs):
-    #     if self.name and not self.name_fi:
-    #         self.name_fi = translate_text(self.name, 'en', 'fi')
-    #     elif self.name_fi and not self.name:
-    #         self.name = translate_text(self.name_fi, 'fi', 'en')
-    #     if self.description and not self.description_fi:
-    #         self.description_fi = translate_text(self.description, 'en', 'fi')
-    #     elif self.description_fi and not self.description:
-    #         self.description = translate_text(self.description_fi, 'fi', 'en')
-    #     super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.name and not self.name_fi:
+            self.name_fi = translate_text(self.name, 'en', 'fi')
+        elif self.name_fi and not self.name:
+            self.name = translate_text(self.name_fi, 'fi', 'en')
+        if self.description and not self.description_fi:
+            self.description_fi = translate_text(self.description, 'en', 'fi')
+        elif self.description_fi and not self.description:
+            self.description = translate_text(self.description_fi, 'fi', 'en')
+        super().save(*args, **kwargs)
 
 
 class Extra(models.Model):
@@ -126,12 +126,12 @@ class Extra(models.Model):
     def __str__(self):
         return f"{self.category} → {self.name or self.name_fi}"
 
-    # def save(self, *args, **kwargs):
-    #     if self.name and not self.name_fi:
-    #         self.name_fi = translate_text(self.name, 'en', 'fi')
-    #     elif self.name_fi and not self.name:
-    #         self.name = translate_text(self.name_fi, 'fi', 'en')
-    #     super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.name and not self.name_fi:
+            self.name_fi = translate_text(self.name, 'en', 'fi')
+        elif self.name_fi and not self.name:
+            self.name = translate_text(self.name_fi, 'fi', 'en')
+        super().save(*args, **kwargs)
 
 
 class ExtraOption(models.Model):
@@ -170,9 +170,9 @@ class ExtraOption(models.Model):
     def is_on_sale(self):
         return self.sale_price is not None
     
-    # def save(self, *args, **kwargs):
-    #     if self.name and not self.name_fi:
-    #         self.name_fi = translate_text(self.name, 'en', 'fi')
-    #     elif self.name_fi and not self.name:
-    #         self.name = translate_text(self.name_fi, 'fi', 'en')
-    #     super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.name and not self.name_fi:
+            self.name_fi = translate_text(self.name, 'en', 'fi')
+        elif self.name_fi and not self.name:
+            self.name = translate_text(self.name_fi, 'fi', 'en')
+        super().save(*args, **kwargs)

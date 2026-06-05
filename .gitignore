@@ -1,0 +1,66 @@
+﻿# Database
+backend/db.sqlite3
+
+# Ignored folders
+backend2
+frontend2
+
+# Vite cache
+frontend/.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Environment variables
+.env
+.env.*
+*.env
+!*.env.example
+
+# Django
+backend/staticfiles/
+backend/mediafiles/
+backend/media/
+*/migrations/*
+!*/migrations/__init__.py
+*.log
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Zip / archives
+*.zip
+*.tar.gz
+
+.env
+
+__pycache__/
+
+*.pyc

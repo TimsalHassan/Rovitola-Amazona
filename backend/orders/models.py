@@ -2,20 +2,10 @@ from django.db import models
 from django.conf import settings
 from .utils import generate_order_number
 
-STATUS_CHOICES = [
-    ("pending",   "Pending"),
-    ("confirmed", "Confirmed"),
-    ("preparing", "Preparing"),
-    ("on_the_way","On the Way"),
-    ("delivered", "Delivered"),
-    ("cancelled", "Cancelled"),
-]
-
 ORDER_TYPE_CHOICES = [
     ("delivery", "Delivery"),
     ("pickup",   "Pickup"),
 ]
-
 
 class Order(models.Model):
     customer = models.ForeignKey(
@@ -29,15 +19,18 @@ class Order(models.Model):
         ("paid",      "Paid"),
         ("refunded",  "Refunded"),
     ]
+    PAYMENT_METHOD_CHOICES = [
+        ("online",           "Online (Paytrail)"),
+        ("cash_on_delivery", "Cash on Delivery"),
+        ("card_on_delivery", "Card on Delivery"),
+    ]
     # Guest fields (used when customer is None)
     guest_name  = models.CharField(max_length=100, blank=True)
     guest_phone = models.CharField(max_length=20, blank=True)
     guest_email = models.EmailField(blank=True)
 
     order_number = models.CharField(max_length=20, unique=True)
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default="pending"
-    )
+    status = models.CharField(max_length=20, default="pending")
     order_type = models.CharField(
         max_length=10, choices=ORDER_TYPE_CHOICES, default="delivery"
     )
@@ -46,6 +39,7 @@ class Order(models.Model):
 
     # Order class mein add karo
     payment_status   = models.CharField(max_length=20, choices=PAYMENT_STATUS, default="unpaid")
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default="online")
     paytrail_stamp   = models.CharField(max_length=200, blank=True)
     paytrail_tx_id   = models.CharField(max_length=200, blank=True)
 
