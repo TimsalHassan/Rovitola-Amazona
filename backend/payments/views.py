@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny
 from orders.models import Order
 from .paytrail import create_payment, verify_callback
 from .tasks import send_payment_notification_email, send_payment_failed_email
-from backend.orders.tasks import send_restaurant_notification_email
+from orders.tasks import send_restaurant_notification_email
 
 logger = logging.getLogger(__name__)
 
