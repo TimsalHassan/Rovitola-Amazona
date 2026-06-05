@@ -35,6 +35,8 @@ env/
 backend/staticfiles/
 backend/mediafiles/
 backend/media/
+*/migrations/*
+!*/migrations/__init__.py
 *.log
 
 # Node / React
