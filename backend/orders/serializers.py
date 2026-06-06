@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Order, OrderItem, OrderItemSelectedOption
-
+from .tasks import send_order_received_email, send_restaurant_notification_email
 
 # ── Read serializers ──────────────────────────────────────────────────────────
 
@@ -124,8 +124,17 @@ class CreateOrderSerializer(serializers.Serializer):
 
         # Wrap emails so a config error never kills a valid order
         try:
-            send_order_confirmation(order)
-            send_restaurant_notification(order)
+            send_order_received_email.delay(
+                order_id=order.id,
+                user_email=order.guest_email or (customer.email if customer else ""),
+                user_name=order.guest_name or (customer.get_full_name() if customer else "Guest"),
+                order_type=order.order_type,
+                total=str(order.total)
+            )
+            send_restaurant_notification_email.delay(
+                order_id=order.id,
+                order_details=f"Order #{order.id}\nTotal: €{order.total}\nType: {order.order_type}"
+            )
         except Exception:
             pass  # log this in production
 
