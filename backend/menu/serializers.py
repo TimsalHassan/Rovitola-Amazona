@@ -74,6 +74,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
     category_slug = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     current_price = serializers.ReadOnlyField()
     is_on_sale = serializers.ReadOnlyField()
     extras = serializers.SerializerMethodField()
@@ -88,10 +89,15 @@ class MenuItemSerializer(serializers.ModelSerializer):
             "base_price", "sale_price",
             "current_price", "is_on_sale",
             "image",
-            "is_available", "is_lunch_item",
+            "is_available", "is_menu_item", "is_lunch_item",
             "created_at",
             "extras",
         ]
+
+    def get_image(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
 
     def _lang(self, request):
         if request:
