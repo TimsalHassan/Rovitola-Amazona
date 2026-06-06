@@ -10,7 +10,7 @@ const CUSTOMER_AVATARS = [
 ];
 
 export default function AuthLayout() {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -56,9 +56,7 @@ export default function AuthLayout() {
         <div className="absolute inset-0 flex items-center justify-center px-12">
           <blockquote className="text-center">
             <p className="text-white/90 text-xl italic font-light leading-relaxed">
-              {isEn
-                ? '"Food is the ingredient that binds us together."'
-                : '"Ruoka on ainesosa, joka yhdistää meidät."'}
+              {t("authLayout.quote")}
             </p>
           </blockquote>
         </div>
@@ -66,24 +64,12 @@ export default function AuthLayout() {
         {/* Bottom copy */}
         <div className="absolute bottom-0 left-0 right-0 px-10 pb-10">
           <h1 className="text-white text-4xl font-bold leading-tight mb-3">
-            {isEn ? (
-              <>
-                Authentic flavours,
-                <br />
-                delivered fast.
-              </>
-            ) : (
-              <>
-                Aitoja makuja,
-                <br />
-                toimitettu nopeasti.
-              </>
-            )}
+            {t("authLayout.headlineLine1")}
+            <br />
+            {t("authLayout.headlineLine2")}
           </h1>
           <p className="text-gray-300 text-base mb-6 max-w-sm">
-            {isEn
-              ? "Wood-fired pizzas and more — straight from our kitchen to your door."
-              : "Puulämmitteiset pizzat ja muuta — suoraan keittiöstämme ovellesi."}
+            {t("authLayout.subhead")}
           </p>
 
           {/* Social proof */}
@@ -115,9 +101,7 @@ export default function AuthLayout() {
                 </span>
               </div>
               <p className="text-gray-400 text-xs">
-                {isEn
-                  ? "Loved by 2,000+ customers"
-                  : "2,000+ tyytyväistä asiakasta"}
+                {t("authLayout.socialProof")}
               </p>
             </div>
           </div>
@@ -140,7 +124,7 @@ export default function AuthLayout() {
             </div>
           </div>
           <h1 className="text-white text-2xl font-bold">
-            {isEn ? "Authentic flavours, fast." : "Aitoja makuja, nopeasti."}
+            {t("authLayout.mobileHeadline")}
           </h1>
         </div>
       </div>
@@ -154,7 +138,7 @@ export default function AuthLayout() {
             className="px-3 flex items-center gap-2 py-1.5 rounded-md bg-gray-800 text-sm font-medium text-gray-300 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
           >
             <Globe className="w-4 h-4" />
-            {isEn ? "English" : "Suomi"}
+            {isEn ? t("authLayout.languageEnglish") : t("authLayout.languageFinnish")}
           </button>
 
           {dropdownOpen && (
@@ -173,7 +157,7 @@ export default function AuthLayout() {
                         : "text-gray-300 hover:bg-gray-700"
                     }`}
                 >
-                  {lang === "en" ? "🇬🇧 English" : "🇫🇮 Suomi"}
+                  {lang === "en" ? `🇬🇧 ${t("authLayout.languageEnglish")}` : `🇫🇮 ${t("authLayout.languageFinnish")}`}
                 </button>
               ))}
             </div>

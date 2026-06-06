@@ -6,15 +6,16 @@ import { findOrdersByPhone } from '../data/orders';
 import { Order, OrderStatus } from '../types';
 
 function StatusBadge({ status }: { status: OrderStatus }) {
+  const { t } = useLanguage();
   const config = {
-    pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: { fi: 'Odottaa', en: 'Pending' } },
-    confirmed: { bg: 'bg-blue-500/20', text: 'text-blue-400', label: { fi: 'Vahvistettu', en: 'Confirmed' } },
-    preparing: { bg: 'bg-amber-500/20', text: 'text-amber-400', label: { fi: 'Valmistetaan', en: 'Preparing' } },
-    on_the_way: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: { fi: 'Matkalla', en: 'On the Way' } },
-    delivered: { bg: 'bg-green-500/20', text: 'text-green-400', label: { fi: 'Toimitettu', en: 'Delivered' } },
-  };
-  const { bg, text, label } = config[status];
-  return <span className={`${bg} ${text} text-xs font-medium px-2 py-0.5 rounded-full`}>{label.fi}</span>;
+    pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', key: "orderStatus.pending" },
+    confirmed: { bg: 'bg-blue-500/20', text: 'text-blue-400', key: "orderStatus.confirmed" },
+    preparing: { bg: 'bg-amber-500/20', text: 'text-amber-400', key: "orderStatus.preparing" },
+    on_the_way: { bg: 'bg-purple-500/20', text: 'text-purple-400', key: "orderStatus.onTheWay" },
+    delivered: { bg: 'bg-green-500/20', text: 'text-green-400', key: "orderStatus.delivered" },
+  } as const;
+  const { bg, text, key } = config[status];
+  return <span className={`${bg} ${text} text-xs font-medium px-2 py-0.5 rounded-full`}>{t(key)}</span>;
 }
 
 export default function GuestOrdersPage() {
@@ -33,8 +34,8 @@ export default function GuestOrdersPage() {
     <main className="bg-gray-950 min-h-screen pt-16">
       <div className="bg-gray-900 border-b border-white/5 pt-8 pb-4">
         <div className="max-w-[1200px] mx-auto px-4">
-          <h1 className="text-2xl font-bold text-white">{t('Etsi Tilauksiasi', 'Find Your Orders')}</h1>
-          <p className="text-gray-400 text-sm mt-1">{t('Syötä puhelinnumerosi nähdäksesi tilauksesi.', 'Enter your phone number to see your orders.')}</p>
+          <h1 className="text-2xl font-bold text-white">{t("guestOrders.title")}</h1>
+          <p className="text-gray-400 text-sm mt-1">{t("guestOrders.subtitle")}</p>
         </div>
       </div>
 
@@ -43,11 +44,11 @@ export default function GuestOrdersPage() {
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-6 flex items-center gap-4">
           <UserPlus size={24} className="text-amber-400 shrink-0" />
           <div className="flex-1">
-            <p className="text-amber-400 font-medium text-sm">{t('Luo tili helpompaa hallintaa varten', 'Create an account for easier management')}</p>
-            <p className="text-gray-400 text-xs">{t('Tilaa, seuraa ja hallitse kaikkia tilauksiasi yhdessä paikassa.', 'Order, track and manage all your orders in one place.')}</p>
+            <p className="text-amber-400 font-medium text-sm">{t("guestOrders.registerPromptTitle")}</p>
+            <p className="text-gray-400 text-xs">{t("guestOrders.registerPromptBody")}</p>
           </div>
           <Link to="/register" className="bg-amber-500 hover:bg-amber-400 text-gray-900 font-semibold px-4 py-2 rounded-lg text-sm shrink-0 transition-colors">
-            {t('Rekisteröidy', 'Register')}
+            {t("guestOrders.registerCta")}
           </Link>
         </div>
 
@@ -70,7 +71,7 @@ export default function GuestOrdersPage() {
               className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
             >
               <Search size={16} />
-              {t('Etsi', 'Find')}
+              {t("guestOrders.findButton")}
             </button>
           </div>
         </div>
@@ -81,7 +82,7 @@ export default function GuestOrdersPage() {
             {orders.length === 0 ? (
               <div className="bg-gray-900 border border-white/5 rounded-xl p-8 text-center">
                 <Package size={40} className="text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-400">{t('Ei tilauksia tällä puhelinnumerolla.', 'No orders found for this phone number.')}</p>
+                <p className="text-gray-400">{t("guestOrders.noOrders")}</p>
               </div>
             ) : (
               <div className="space-y-4">

@@ -10,31 +10,25 @@ type T = (fi: string, en: string) => string;
 function validateSingle(field: FormKey, value: string, form: Record<FormKey, string>, t: T): string | null {
   switch (field) {
     case "name":
-      return !value.trim() ? t("Koko nimi vaaditaan.", "Full name is required.") : null;
+      return !value.trim() ? t("register.nameRequired") : null;
     case "email":
-      if (!value.trim()) return t("Sähköposti vaaditaan.", "Email is required.");
+      if (!value.trim()) return t("register.emailRequired");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-        return t(
-          "Sähköpostiosoite ei ole kelvollinen. Kokeile muotoa sinä@esimerkki.com",
-          "That doesn't look like a valid email. Try something like you@example.com"
-        );
+        return t("register.emailInvalid");
       return null;
     case "phone":
       if (value && !/^\+?[\d\s\-()]{7,20}$/.test(value))
-        return t("Syötä kelvollinen puhelinnumero.", "Enter a valid phone number.");
+        return t("register.phoneInvalid");
       return null;
     case "password":
-      if (!value) return t("Salasana vaaditaan.", "Password is required.");
+      if (!value) return t("register.passwordRequired");
       if (value.length < 8)
-        return t(
-          "Salasanan täytyy olla vähintään 8 merkkiä.",
-          "Password must be at least 8 characters."
-        );
+        return t("register.passwordMinLength");
       return null;
     case "confirmPassword":
-      if (!value) return t("Vahvista salasanasi.", "Please confirm your password.");
+      if (!value) return t("register.confirmPasswordRequired");
       if (value !== form.password)
-        return t("Salasanat eivät täsmää.", "Passwords do not match.");
+        return t("register.passwordMismatch");
       return null;
   }
 }
@@ -114,7 +108,7 @@ export default function RegisterPage() {
       if (e.field) {
         setFieldErrors({ [e.field]: e.message });
       } else {
-        setError(t("Jokin meni pieleen. Yritä uudelleen.", "Something went wrong. Please try again."));
+        setError(t("register.errorGeneric"));
       }
     } finally {
       setLoading(false);
@@ -125,10 +119,10 @@ export default function RegisterPage() {
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t("Luo tili", "Create your account")}
+          {t("register.title")}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {t("Tilaa Amazonasta minuuteissa", "Order from Amazona in minutes")}
+          {t("register.subtitle")}
         </p>
       </div>
 
@@ -141,9 +135,9 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <FormField
-            label={t("Koko nimi", "Full name")}
+            label={t("register.fullNameLabel")}
             type="text"
-            placeholder={t("Nimesi", "Your name")}
+            placeholder={t("register.namePlaceholder")}
             value={form.name}
             onChange={handleChange("name")}
             onBlur={() => handleBlur("name")}
@@ -152,9 +146,9 @@ export default function RegisterPage() {
             required
           />
           <FormField
-            label={t("Sähköposti", "Email")}
+            label={t("register.emailLabel")}
             type="email"
-            placeholder={t("sinä@esimerkki.com", "you@example.com")}
+            placeholder={t("register.emailPlaceholder")}
             value={form.email}
             onChange={handleChange("email")}
             onBlur={() => handleBlur("email")}
@@ -163,7 +157,7 @@ export default function RegisterPage() {
             required
           />
           <FormField
-            label={t("Puhelinnumero", "Phone number")}
+            label={t("register.phoneLabel")}
             type="tel"
             placeholder="+358 40 000 0000"
             value={form.phone}
@@ -171,14 +165,11 @@ export default function RegisterPage() {
             onBlur={() => handleBlur("phone")}
             error={fieldErrors.phone}
             autoComplete="tel"
-            hint={t(
-              "Valinnainen — tarvitaan toimitusilmoituksiin",
-              "Optional — needed for delivery updates"
-            )}
+            hint={t("register.phoneHint")}
           />
           <PasswordField
-            label={t("Salasana", "Password")}
-            placeholder={t("Väh. 8 merkkiä", "Min. 8 characters")}
+            label={t("register.passwordLabel")}
+            placeholder={t("register.passwordPlaceholder")}
             value={form.password}
             onChange={handleChange("password")}
             onBlur={() => handleBlur("password")}
@@ -187,8 +178,8 @@ export default function RegisterPage() {
             required
           />
           <PasswordField
-            label={t("Vahvista salasana", "Confirm password")}
-            placeholder={t("Toista salasanasi", "Repeat your password")}
+            label={t("register.confirmPasswordLabel")}
+            placeholder={t("register.confirmPasswordPlaceholder")}
             value={form.confirmPassword}
             onChange={handleChange("confirmPassword")}
             onBlur={() => handleBlur("confirmPassword")}
@@ -198,17 +189,17 @@ export default function RegisterPage() {
           />
 
           <Button type="submit" size="lg" loading={loading} className="w-full mt-2">
-            {loading ? t("Luodaan tiliä…", "Creating account…") : t("Luo tili", "Create account")}
+            {loading ? t("register.creatingAccount") : t("register.createAccount")}
           </Button>
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
-          {t("Onko sinulla jo tili? ", "Already have an account? ")}
+          {t("register.haveAccount")}
           <Link
             to="/login"
             className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
           >
-            {t("Kirjaudu sisään", "Sign in")}
+            {t("register.signIn")}
           </Link>
         </p>
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { MapPin, Star, Pencil, Trash2, Plus, X, Check } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../hooks/useLanguage";
 import type { Address } from "../api/auth";
 import { FormField, Button, Alert } from "./FormElements";
 
@@ -13,6 +14,7 @@ interface AddressCardProps {
 
 export function AddressCard({ address, onEdit }: AddressCardProps) {
   const { deleteAddress, setDefaultAddress } = useAuth();
+  const { t } = useLanguage();
   const [deleting, setDeleting] = useState(false);
   const [settingDefault, setSettingDefault] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -56,7 +58,7 @@ export function AddressCard({ address, onEdit }: AddressCardProps) {
       {address.is_default && (
         <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">
           <Star className="w-3 h-3 fill-current" />
-          Default
+          {t("account.addresses.defaultBadge")}
         </span>
       )}
 
@@ -91,14 +93,14 @@ export function AddressCard({ address, onEdit }: AddressCardProps) {
               ) : (
                 <Star className="w-3.5 h-3.5" />
               )}
-              Set as default
+              {t("account.addresses.setDefault")}
             </button>
           )}
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={() => onEdit(address)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Edit address"
+              aria-label={t("account.addresses.editAria")}
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -111,7 +113,7 @@ export function AddressCard({ address, onEdit }: AddressCardProps) {
                   ? "text-red-600 bg-red-50 dark:bg-red-900/30"
                   : "text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20",
               ].join(" ")}
-              aria-label={confirmDelete ? "Confirm delete" : "Delete address"}
+              aria-label={confirmDelete ? t("account.addresses.confirmDeleteAria") : t("account.addresses.deleteAria")}
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -121,7 +123,7 @@ export function AddressCard({ address, onEdit }: AddressCardProps) {
 
       {/* Optimistic loading shimmer */}
       {address.id < 0 && (
-        <div className="mt-2 text-xs text-gray-400 italic">Saving…</div>
+        <div className="mt-2 text-xs text-gray-400 italic">{t("account.addresses.saving")}</div>
       )}
     </div>
   );
@@ -152,6 +154,7 @@ const EMPTY_FORM: FormData = {
 
 export function AddressModal({ address, onClose }: AddressModalProps) {
   const { addAddress, updateAddress } = useAuth();
+  const { t } = useLanguage();
   const isEdit = !!address;
 
   const [form, setForm] = useState<FormData>(
@@ -194,10 +197,10 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
   function validate(): Record<string, string> {
     const errors: Record<string, string> = {};
     if (!form.street_address.trim())
-      errors.street_address = "Street address is required.";
-    if (!form.city.trim()) errors.city = "City is required.";
-    if (!form.postal_code.trim()) errors.postal_code = "Postal code is required.";
-    if (!form.country.trim()) errors.country = "Country is required.";
+      errors.street_address = t("account.addresses.modal.streetRequired");
+    if (!form.city.trim()) errors.city = t("account.addresses.modal.cityRequired");
+    if (!form.postal_code.trim()) errors.postal_code = t("account.addresses.modal.postalRequired");
+    if (!form.country.trim()) errors.country = t("account.addresses.modal.countryRequired");
     return errors;
   }
 
@@ -220,7 +223,7 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
       onClose();
     } catch (err: unknown) {
       const e = err as Error;
-      setError(e.message || "Failed to save address. Please try again.");
+      setError(e.message || t("account.addresses.modal.saveError"));
     } finally {
       setLoading(false);
     }
@@ -242,7 +245,7 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
             id="address-modal-title"
             className="text-base font-semibold text-gray-900 dark:text-white"
           >
-            {isEdit ? "Edit address" : "Add new address"}
+            {isEdit ? t("account.addresses.modal.editTitle") : t("account.addresses.modal.addTitle")}
           </h2>
           <button
             onClick={onClose}
@@ -258,7 +261,7 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
           {error && <Alert type="error" message={error} />}
 
           <FormField
-            label="Street address"
+            label={t("account.addresses.modal.streetLabel")}
             type="text"
             placeholder="Aleksanterinkatu 3"
             value={form.street_address}
@@ -269,7 +272,7 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
           />
           <div className="grid grid-cols-2 gap-3">
             <FormField
-              label="City"
+              label={t("account.addresses.modal.cityLabel")}
               type="text"
               placeholder="Lahti"
               value={form.city}
@@ -279,7 +282,7 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
               required
             />
             <FormField
-              label="Postal code"
+              label={t("account.addresses.modal.postalLabel")}
               type="text"
               placeholder="15110"
               value={form.postal_code}
@@ -290,7 +293,7 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
             />
           </div>
           <FormField
-            label="Country"
+            label={t("account.addresses.modal.countryLabel")}
             type="text"
             placeholder="Finland"
             value={form.country}
@@ -326,10 +329,10 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                Set as default address
+                {t("account.addresses.modal.defaultLabel")}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Used automatically at checkout
+                {t("account.addresses.modal.defaultHelp")}
               </p>
             </div>
           </label>
@@ -342,10 +345,10 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
               className="flex-1"
               onClick={onClose}
             >
-              Cancel
+              {t("account.addresses.modal.cancel")}
             </Button>
             <Button type="submit" loading={loading} className="flex-1">
-              {loading ? "Saving…" : isEdit ? "Save changes" : "Add address"}
+              {loading ? t("account.addresses.saving") : isEdit ? t("account.addresses.modal.saveChanges") : t("account.addresses.modal.addAddress")}
             </Button>
           </div>
         </form>
@@ -357,13 +360,14 @@ export function AddressModal({ address, onClose }: AddressModalProps) {
 // ─── Add Address Button ────────────────────────────────────────────────────
 
 export function AddAddressButton({ onClick }: { onClick: () => void }) {
+  const { t } = useLanguage();
   return (
     <button
       onClick={onClick}
       className="w-full rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:border-amber-300 hover:text-amber-600 dark:hover:border-amber-600 dark:hover:text-amber-400 transition-all duration-150 group"
     >
       <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
-      Add new address
+      {t("account.addresses.addNew")}
     </button>
   );
 }

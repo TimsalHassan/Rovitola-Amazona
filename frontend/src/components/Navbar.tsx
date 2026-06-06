@@ -5,7 +5,7 @@ import {
   ChevronDown, LogOut, Settings, ShoppingBag,
   LogIn
 } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../hooks/useCart';
 import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from '../hooks/useAuth';
 
@@ -49,10 +49,10 @@ export default function Navbar() {
   const solidBg = scrolled || !isHome;
 
   const navLinks = [
-    { to: '/', label: t('Koti', 'Home') },
-    { to: '/menu', label: t('Ruokalista', 'Menu') },
-    { to: '/about', label: t('Tietoa', 'About') },
-    { to: '/contact', label: t('Yhteystiedot', 'Contact') },
+    { to: '/', label: t("nav.home") },
+    { to: '/menu', label: t("nav.menu") },
+    { to: '/about', label: t("nav.about") },
+    { to: '/contact', label: t("nav.contact") },
   ];
 
   function handleLogout() {
@@ -151,7 +151,7 @@ export default function Navbar() {
                 {userDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-white/10 rounded-xl shadow-xl overflow-hidden">
                     <div className="px-4 py-2.5 border-b border-white/10">
-                      <p className="text-xs text-gray-400">{t('Kirjautunut sisään', 'Signed in as')}</p>
+                      <p className="text-xs text-gray-400">{t("nav.signedInAs")}</p>
                       <p className="text-sm font-medium text-white truncate">{user.email}</p>
                     </div>
                     <Link
@@ -159,14 +159,14 @@ export default function Navbar() {
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
                     >
                       <Settings size={16} />
-                      {t('Oma Tili', 'My Account')}
+                      {t("nav.myAccount")}
                     </Link>
                     <Link
                       to="/my-orders"
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
                     >
                       <ShoppingBag size={16} />
-                      {t('Tilaukseni', 'My Orders')}
+                      {t("nav.myOrders")}
                     </Link>
                     <div className="border-t border-white/10">
                       <button
@@ -174,7 +174,7 @@ export default function Navbar() {
                         className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
                       >
                         <LogOut size={16} />
-                        {t('Kirjaudu Ulos', 'Sign out')}
+                        {t("nav.signOut")}
                       </button>
                     </div>
                   </div>
@@ -186,7 +186,7 @@ export default function Navbar() {
                 className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium px-4 py-2 rounded-lg transition-all text-sm"
               >
                 <LogIn size={16} />
-                <span className="hidden sm:inline">{t('Kirjaudu', 'Login')}</span>
+                <span className="hidden sm:inline">{t("nav.login")}</span>
               </Link>
             )}
 
@@ -225,7 +225,7 @@ export default function Navbar() {
 
           {/* Language switcher (mobile) */}
           <div className="flex items-center gap-2 px-4 py-2 border-t border-white/10 mt-2 pt-3">
-            <span className="text-gray-400 text-xs">{t('Kieli', 'Language')}:</span>
+            <span className="text-gray-400 text-xs">{t("nav.language")}:</span>
             {(['fi', 'en'] as const).map(lang => (
               <button
                 key={lang}
@@ -234,7 +234,7 @@ export default function Navbar() {
                   language === lang ? 'bg-amber-500 text-gray-900' : 'text-gray-300 hover:text-white'
                 }`}
               >
-                {lang === 'fi' ? 'Suomi' : 'English'}
+                {lang === 'fi' ? t("nav.langFi") : t("nav.langEn")}
               </button>
             ))}
           </div>
@@ -247,21 +247,21 @@ export default function Navbar() {
                 className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10"
               >
                 <Settings size={16} />
-                {t('Oma Tili', 'My Account')}
+                {t("nav.myAccount")}
               </Link>
               <Link
                 to="/my-orders"
                 className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10"
               >
                 <ShoppingBag size={16} />
-                {t('Tilaukseni', 'My Orders')}
+                {t("nav.myOrders")}
               </Link>
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300"
               >
                 <LogOut size={16} />
-                {t('Kirjaudu Ulos', 'Sign out')}
+                {t("nav.signOut")}
               </button>
             </>
           )}

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { User, Lock, MapPin, LogOut, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../hooks/useLanguage";
 import {
   FormField,
   PasswordField,
@@ -20,6 +21,7 @@ type Tab = "profile" | "security" | "addresses";
 
 export default function AccountPage() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
 
   if (isLoading) {
@@ -38,7 +40,7 @@ export default function AccountPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-16">
       <div className="max-w-2xl mx-auto px-4 py-10">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          My Account
+          {t("account.title")}
         </h1>
 
         {/* Tab bar */}
@@ -61,7 +63,13 @@ export default function AccountPage() {
               ].join(" ")}
             >
               <Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{label}</span>
+              <span className="hidden sm:inline">
+                {id === "profile"
+                  ? t("account.tabs.profile")
+                  : id === "security"
+                  ? t("account.tabs.security")
+                  : t("account.tabs.addresses")}
+              </span>
             </button>
           ))}
         </div>
@@ -81,6 +89,7 @@ export default function AccountPage() {
 
 function ProfileTab() {
   const { user, updateProfile, logout } = useAuth();
+  const { t } = useLanguage();
   const [name, setName] = useState(user?.name ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [loading, setLoading] = useState(false);
@@ -99,7 +108,7 @@ function ProfileTab() {
     setFieldErrors({});
 
     if (!name.trim()) {
-      setFieldErrors({ name: "Name is required." });
+      setFieldErrors({ name: t("account.profile.nameRequired") });
       return;
     }
 
@@ -111,7 +120,7 @@ function ProfileTab() {
     } catch (err: unknown) {
       const e = err as Error & { field?: string };
       if (e.field) setFieldErrors({ [e.field]: e.message });
-      else setError(e.message || "Failed to update profile.");
+      else setError(e.message || t("account.profile.updateError"));
     } finally {
       setLoading(false);
     }
@@ -125,34 +134,34 @@ function ProfileTab() {
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-          Personal information
+          {t("account.profile.title")}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          Update your name and phone number
+          {t("account.profile.subtitle")}
         </p>
       </div>
 
       {/* Email (read-only) */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Email
+          {t("account.profile.emailLabel")}
         </label>
         <div className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
           {user?.email}
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500">
-          Email cannot be changed
+          {t("account.profile.emailHint")}
         </p>
       </div>
 
       {success && (
-        <Alert type="success" message="Profile updated successfully!" />
+        <Alert type="success" message={t("account.profile.success")} />
       )}
       {error && <Alert type="error" message={error} />}
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <FormField
-          label="Full name"
+          label={t("account.profile.fullNameLabel")}
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -161,14 +170,14 @@ function ProfileTab() {
           required
         />
         <FormField
-          label="Phone number"
+          label={t("account.profile.phoneLabel")}
           type="tel"
           placeholder="+358 40 000 0000"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           error={fieldErrors.phone}
           autoComplete="tel"
-          hint="Used for delivery notifications"
+          hint={t("account.profile.phoneHint")}
         />
         <div className="flex items-center gap-3 pt-1">
           <Button
@@ -179,9 +188,9 @@ function ProfileTab() {
           >
             {loading ? "Saving…" : success ? (
               <span className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" /> Saved
+                <CheckCircle2 className="w-4 h-4" /> {t("account.profile.saved")}
               </span>
-            ) : "Save changes"}
+            ) : t("account.profile.saveChanges")}
           </Button>
         </div>
       </form>
@@ -194,7 +203,7 @@ function ProfileTab() {
           onClick={handleLogout}
           className="text-gray-500 dark:text-gray-400"
         >
-          Sign out
+          {t("account.profile.signOut")}
         </Button>
       </div>
     </div>
@@ -205,6 +214,7 @@ function ProfileTab() {
 
 function SecurityTab() {
   const { changePassword } = useAuth();
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     current_password: "",
     new_password: "",
@@ -233,12 +243,12 @@ function SecurityTab() {
 
     const errors: Record<string, string> = {};
     if (!form.current_password)
-      errors.current_password = "Current password is required.";
-    if (!form.new_password) errors.new_password = "New password is required.";
+      errors.current_password = t("account.security.errors.currentRequired");
+    if (!form.new_password) errors.new_password = t("account.security.errors.newRequired");
     else if (form.new_password.length < 8)
-      errors.new_password = "Must be at least 8 characters.";
+      errors.new_password = t("account.security.errors.minLength");
     if (form.new_password !== form.confirm_password)
-      errors.confirm_password = "Passwords do not match.";
+      errors.confirm_password = t("account.security.errors.mismatch");
 
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
@@ -256,7 +266,7 @@ function SecurityTab() {
     } catch (err: unknown) {
       const e = err as Error & { field?: string };
       if (e.field) setFieldErrors({ [e.field]: e.message });
-      else setError(e.message || "Failed to change password.");
+      else setError(e.message || t("account.security.updateError"));
     } finally {
       setLoading(false);
     }
@@ -266,21 +276,21 @@ function SecurityTab() {
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-          Change password
+          {t("account.security.title")}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          Choose a strong password with at least 8 characters
+          {t("account.security.subtitle")}
         </p>
       </div>
 
       {success && (
-        <Alert type="success" message="Password changed successfully!" />
+        <Alert type="success" message={t("account.security.success")} />
       )}
       {error && <Alert type="error" message={error} />}
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <PasswordField
-          label="Current password"
+          label={t("account.security.currentPassword")}
           value={form.current_password}
           onChange={set("current_password")}
           error={fieldErrors.current_password}
@@ -288,8 +298,8 @@ function SecurityTab() {
           required
         />
         <PasswordField
-          label="New password"
-          placeholder="Min. 8 characters"
+          label={t("account.security.newPassword")}
+          placeholder={t("account.security.newPasswordHint")}
           value={form.new_password}
           onChange={set("new_password")}
           error={fieldErrors.new_password}
@@ -297,8 +307,8 @@ function SecurityTab() {
           required
         />
         <PasswordField
-          label="Confirm new password"
-          placeholder="Repeat new password"
+          label={t("account.security.confirmPassword")}
+          placeholder={t("account.security.confirmPasswordHint")}
           value={form.confirm_password}
           onChange={set("confirm_password")}
           error={fieldErrors.confirm_password}
@@ -306,7 +316,7 @@ function SecurityTab() {
           required
         />
         <Button type="submit" loading={loading} className="self-start">
-          {loading ? "Updating…" : "Update password"}
+          {loading ? t("account.security.updating") : t("account.security.update")}
         </Button>
       </form>
     </div>
@@ -317,6 +327,7 @@ function SecurityTab() {
 
 function AddressesTab() {
   const { addresses } = useAuth();
+  const { t } = useLanguage();
   const [editTarget, setEditTarget] = useState<Address | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -334,10 +345,10 @@ function AddressesTab() {
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-          Saved addresses
+          {t("account.addresses.title")}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          Manage your delivery addresses
+          {t("account.addresses.subtitle")}
         </p>
       </div>
 
