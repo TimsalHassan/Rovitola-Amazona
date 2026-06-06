@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAdminAuth } from "../../context/admin/AdminAuthContext";
+import { useAdminAuth } from "../../hooks/useAuth";
 
 export default function AdminLoginPage() {
   const { login } = useAdminAuth();

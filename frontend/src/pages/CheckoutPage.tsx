@@ -117,7 +117,7 @@ export default function CheckoutPage() {
 
       const order = await ordersApi.create(payload);
       clearCart();
-      navigate(`/order/${order.order_number}`, { replace: true });
+      navigate(`/confirm/order/${order.order_number}`, { replace: true });
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : t("cart.placeOrderFailed"),

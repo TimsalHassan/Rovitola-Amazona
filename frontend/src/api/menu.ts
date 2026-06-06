@@ -64,7 +64,11 @@ async function get<T>(
   params: Record<string, string> = {},
 ): Promise<T> {
   const qs = new URLSearchParams(params).toString();
-  const res = await fetch(`${BASE}${path}${qs ? `?${qs}` : ""}`);
+  const res = await fetch(`${BASE}${path}${qs ? `?${qs}` : ""}`, {
+    headers: {
+      "ngrok-skip-browser-warning": "true",
+    },
+  });
   if (!res.ok) throw new Error(`Menu API error: ${res.status}`);
   return res.json() as Promise<T>;
 }

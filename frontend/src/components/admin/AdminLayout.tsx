@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAdminAuth } from "../../context/admin/AdminAuthContext";
+import { useAdminAuth } from "../../hooks/useAuth";
 
 const NAV = [
   { label: "Dashboard", path: "/admin/dashboard", icon: "📊" },

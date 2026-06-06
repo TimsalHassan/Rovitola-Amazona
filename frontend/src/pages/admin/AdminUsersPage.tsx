@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAdminAuth } from "../../context/admin/AdminAuthContext";
+import { useAdminAuth } from "../../hooks/useAuth";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 

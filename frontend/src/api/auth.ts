@@ -1,11 +1,19 @@
 import { BASE as BASE_URL } from "./base";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export interface User {
   id: number;
   name: string;
   email: string;
   phone: string;
+  is_staff: boolean; 
 }
 
 export interface Address {
@@ -33,12 +41,13 @@ export interface ApiError {
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  token?: string | null
+  token?: string | null,
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Token ${token}` } : {}),
     ...(options.headers as Record<string, string>),
+    "ngrok-skip-browser-warning": "true",
   };
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
@@ -71,7 +80,10 @@ async function request<T>(
       // Response wasn't JSON — use HTTP status message
     }
 
-    const err = new Error(errorMessage) as Error & { field?: string; status: number };
+    const err = new Error(errorMessage) as Error & {
+      field?: string;
+      status: number;
+    };
     err.field = fieldError;
     err.status = res.status;
     throw err;
@@ -91,6 +103,7 @@ export const authApi = {
     email: string;
     phone: string;
     password: string;
+    confirm_password: string;
   }) =>
     request<AuthTokens>("/auth/register/", {
       method: "POST",
@@ -113,17 +126,17 @@ export const authApi = {
     request<User>(
       "/auth/profile/",
       { method: "PATCH", body: JSON.stringify(data) },
-      token
+      token,
     ),
 
   changePassword: (
     token: string,
-    data: { current_password: string; new_password: string }
+    data: { current_password: string; new_password: string },
   ) =>
     request<{ detail: string }>(
       "/auth/change-password/",
       { method: "POST", body: JSON.stringify(data) },
-      token
+      token,
     ),
 };
 
@@ -131,27 +144,25 @@ export const authApi = {
 
 export const addressApi = {
   list: (token: string) =>
-    request<Address[]>("/auth/addresses/", { method: "GET" }, token),
+    request<PaginatedResponse<Address>>("/auth/addresses/", { method: "GET" }, token)
+      .then((res) => res.results),
 
-  create: (
-    token: string,
-    data: Omit<Address, "id" | "created_at">
-  ) =>
+  create: (token: string, data: Omit<Address, "id" | "created_at">) =>
     request<Address>(
       "/auth/addresses/",
       { method: "POST", body: JSON.stringify(data) },
-      token
+      token,
     ),
 
   update: (
     token: string,
     id: number,
-    data: Partial<Omit<Address, "id" | "created_at">>
+    data: Partial<Omit<Address, "id" | "created_at">>,
   ) =>
     request<Address>(
       `/auth/addresses/${id}/`,
       { method: "PATCH", body: JSON.stringify(data) },
-      token
+      token,
     ),
 
   delete: (token: string, id: number) =>
@@ -161,6 +172,6 @@ export const addressApi = {
     request<Address>(
       `/auth/addresses/${id}/`,
       { method: "PATCH", body: JSON.stringify({ is_default: true }) },
-      token
+      token,
     ),
 };

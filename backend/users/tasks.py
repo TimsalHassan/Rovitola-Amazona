@@ -2,6 +2,7 @@ from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
 
+
 @shared_task
 def send_registration_email(user_email, user_name):
     send_mail(
@@ -20,6 +21,7 @@ Enjoy your meal!
         recipient_list=[user_email],
         fail_silently=False,
     )
+
 
 @shared_task
 def send_forgot_password_email(user_email, user_name, reset_link):
@@ -42,6 +44,7 @@ If you did not request this, ignore this email.
         recipient_list=[user_email],
         fail_silently=False,
     )
+
 
 @shared_task
 def send_password_changed_email(user_email, user_name):

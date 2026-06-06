@@ -5,6 +5,10 @@ import uuid
 import requests
 from datetime import datetime, timezone
 from django.conf import settings
+import logging
+from decimal import Decimal, ROUND_HALF_UP
+
+logger = logging.getLogger(__name__)
 
 
 def make_headers(method: str) -> dict:
@@ -35,31 +39,33 @@ def compute_signature(headers: dict, body: str = "") -> str:
 
 
 def create_payment(order, success_url: str, cancel_url: str) -> str | None:
-    """
-    Creates a Paytrail payment and returns the redirect href.
-    Saves paytrail_stamp and paytrail_tx_id on the order.
-    Returns None if the API call fails.
-    """
     headers = make_headers("POST")
 
-    # Split customer name safely
     full_name = order.get_customer_name().strip().split()
     first_name = full_name[0] if full_name else "Guest"
     last_name = full_name[-1] if len(full_name) > 1 else "-"
 
     stamp = f"order-{order.id}-{uuid.uuid4().hex[:8]}"
 
+    # FIX 1: safe cents conversion from Decimal
+    total_cents = int(Decimal(str(order.total)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) * 100)
+
+    # FIX 2: email is required by Paytrail — fallback to placeholder if missing
+    customer_email = order.get_customer_email() or "noreply@example.com"
+    customer_phone = order.get_customer_phone() or ""
+
     body = {
         "stamp":     stamp,
         "reference": f"ORDER-{order.order_number}",
-        "amount":    int(order.total * 100),   # Paytrail expects cents
+        "amount":    total_cents,
         "currency":  "EUR",
         "language":  "FI",
         "customer": {
-            "email":     order.get_customer_email(),
+            "email":     customer_email,
             "firstName": first_name,
             "lastName":  last_name,
-            "phone":     order.get_customer_phone(),
+            # FIX 3: phone is optional in Paytrail — only include if present
+            **({"phone": customer_phone} if customer_phone else {}),
         },
         "redirectUrls": {
             "success": success_url,
@@ -81,14 +87,15 @@ def create_payment(order, success_url: str, cancel_url: str) -> str | None:
             data=body_str,
             timeout=10,
         )
+        # FIX 4: log the actual Paytrail error response
+        if not response.ok:
+            logger.error("Paytrail error response: %s", response.text)
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as e:
-        import logging
-        logging.getLogger(__name__).error("Paytrail create_payment failed: %s", e)
+        logger.error("Paytrail create_payment failed: %s", e)
         return None
 
-    # Save stamp and transaction ID on order
     order.paytrail_stamp = stamp
     order.paytrail_tx_id = data.get("transactionId", "")
     order.save(update_fields=["paytrail_stamp", "paytrail_tx_id"])

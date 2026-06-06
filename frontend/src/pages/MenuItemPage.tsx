@@ -78,6 +78,7 @@ const MenuItemPage = () => {
 
   useEffect(() => {
     const foundItem = items.find((i) => i.id === Number(id));
+    console.log("Found item:", foundItem);
     setItem(foundItem || null);
     // Reset state when item changes
     setSelections({});

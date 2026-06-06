@@ -1,18 +1,48 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAdminAuth } from "../../context/admin/AdminAuthContext";
+import { useAdminAuth } from "../../hooks/useAuth";
+import { BASE } from "../../api/base";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-
-interface MenuItem {
+interface ExtraOption {
   id: number;
   name: string;
-  name_en: string;
-  category: { id: number; name: string };
-  price: string;
+  name_fi: string;
+  additional_price: string;
+  sale_price: string | null;
+  display_price: number;
+  is_on_sale: boolean;
+  order: number;
+}
+
+interface Extra{
+  id: number;
+  category: number;
+  name: string;
+  name_fi: string;
+  extra_type: string;
+  is_required: boolean;
+  max_selections: number | null;
+  order: number;
+  options: ExtraOption[];
+}
+interface MenuItem {
+  id: number;
+  category: number;
+  category_name: string;
+  category_slug: string;
+  name: string;
+  name_en?: string;
+  description: string;
+  description_en?: string;
+  base_price: string;
+  sale_price: string | null;
+  current_price: number;
+  is_on_sale: boolean;
+  image: string | null;
   is_available: boolean;
   is_lunch_item: boolean;
-  image: string | null;
+  created_at: string;
+  extras: Extra[];
 }
 
 export default function AdminMenuPage() {
@@ -23,28 +53,29 @@ export default function AdminMenuPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
-  async function fetchItems() {
+  const fetchItems = useCallback(async function fetchItems() {
     try {
-      const res = await fetch(`${BASE_URL}/admin/menu/items/`, {
+      const res = await fetch(`${BASE}/menu/items/`, {
         headers: { Authorization: `Token ${token}` },
       });
       const data = await res.json();
+      console.log("Fetched items:", data);
       setItems(data.results ?? data);
     } catch {
       console.error("Failed to load items");
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);  
 
   useEffect(() => {
     fetchItems();
-  }, []);
+  }, [fetchItems]);
 
   async function toggleAvailability(item: MenuItem) {
     setTogglingId(item.id);
     try {
-      await fetch(`${BASE_URL}/admin/menu/items/${item.id}/`, {
+      await fetch(`${BASE}/menu/items/${item.id}/`, {
         method: "PATCH",
         headers: {
           Authorization: `Token ${token}`,
@@ -68,7 +99,7 @@ export default function AdminMenuPage() {
     if (!confirm("Delete this item?")) return;
     setDeletingId(id);
     try {
-      await fetch(`${BASE_URL}/admin/menu/items/${id}/`, {
+      await fetch(`${BASE}/menu/items/${id}/`, {
         method: "DELETE",
         headers: { Authorization: `Token ${token}` },
       });
@@ -84,7 +115,7 @@ export default function AdminMenuPage() {
     (i) =>
       i.name.toLowerCase().includes(search.toLowerCase()) ||
       i.name_en?.toLowerCase().includes(search.toLowerCase()) ||
-      i.category?.name?.toLowerCase().includes(search.toLowerCase())
+      i.category_name?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -157,11 +188,11 @@ export default function AdminMenuPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 bg-gray-800 text-gray-300 text-xs rounded-lg">
-                        {item.category?.name}
+                        {item.category_name}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-white font-semibold">
-                      €{Number(item.price).toFixed(2)}
+                      €{Number(item.base_price).toFixed(2)}
                     </td>
                     <td className="px-4 py-3">
                       {item.is_lunch_item ? (

@@ -1,9 +1,324 @@
-import React from 'react'
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Link } from "react-router-dom";
+import {
+  ShoppingBag,
+  ChevronDown,
+  Truck,
+  Package,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ChefHat,
+  MapPin,
+  RefreshCw,
+} from "lucide-react";
+import { ordersApi, type Order, type OrderStatus } from "../api/order";
+import { useLanguage } from "../hooks/useLanguage";
 
-const MyOrdersPage = () => {
+// ── Status config ─────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<
+  OrderStatus,
+  { label: string; color: string; bg: string; border: string; Icon: React.ElementType }
+> = {
+  pending:    { label: "Pending",     color: "text-yellow-400",  bg: "bg-yellow-500/10",  border: "border-yellow-500/20",  Icon: Clock        },
+  confirmed:  { label: "Confirmed",   color: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20",    Icon: CheckCircle2 },
+  preparing:  { label: "Preparing",   color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20",   Icon: ChefHat      },
+  on_the_way: { label: "On the way",  color: "text-purple-400",  bg: "bg-purple-500/10",  border: "border-purple-500/20",  Icon: Truck        },
+  delivered:  { label: "Delivered",   color: "text-green-400",   bg: "bg-green-500/10",   border: "border-green-500/20",   Icon: CheckCircle2 },
+  cancelled:  { label: "Cancelled",   color: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/20",     Icon: XCircle      },
+};
+
+function StatusBadge({ status }: { status: OrderStatus }) {
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
   return (
-    <div>MyOrdersPage</div>
-  )
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
+      <cfg.Icon size={11} />
+      {cfg.label}
+    </span>
+  );
 }
 
-export default MyOrdersPage
+// ── Order card ────────────────────────────────────────────────────────────────
+
+function OrderCard({ order, language }: { order: Order; language: string }) {
+  const [open, setOpen] = useState(false);
+  const total = parseFloat(order.total);
+  const date = new Date(order.created_at);
+
+  return (
+    <motion.div
+      layout
+      className="bg-gray-900 border border-white/5 rounded-xl overflow-hidden"
+    >
+      {/* Header row */}
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-lg bg-gray-800 border border-white/10 flex items-center justify-center shrink-0">
+            {order.order_type === "delivery" ? (
+              <Truck size={15} className="text-amber-400" />
+            ) : (
+              <Package size={15} className="text-amber-400" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-white text-sm font-bold font-mono">
+              #{order.order_number}
+            </p>
+            <p className="text-gray-500 text-xs mt-0.5">
+              {date.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}
+              {" · "}
+              {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <StatusBadge status={order.status} />
+          <span className="text-amber-400 font-bold text-sm">
+            €{total.toFixed(2)}
+          </span>
+          <motion.div
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown size={16} className="text-gray-500" />
+          </motion.div>
+        </div>
+      </button>
+
+      {/* Expandable details */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="detail"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 border-t border-white/5 pt-4 space-y-4">
+
+              {/* Delivery address */}
+              {order.order_type === "delivery" && order.delivery_address && (
+                <div className="flex items-start gap-2 text-sm text-gray-400">
+                  <MapPin size={13} className="text-gray-600 mt-0.5 shrink-0" />
+                  <span>{order.delivery_address}</span>
+                </div>
+              )}
+
+              {/* Items */}
+              <div className="space-y-2.5">
+                {order.items.map((item) => {
+                  const name =
+                    language === "fi" && item.menu_item_name_fi
+                      ? item.menu_item_name_fi
+                      : item.menu_item_name;
+                  return (
+                    <div key={item.id} className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                            {item.quantity}
+                          </span>
+                          <p className="text-white text-sm truncate">{name}</p>
+                        </div>
+                        {item.selected_options.length > 0 && (
+                          <p className="text-gray-600 text-xs mt-0.5 ml-7">
+                            {item.selected_options
+                              .map((o) =>
+                                language === "fi" && o.option_name_fi
+                                  ? o.option_name_fi
+                                  : o.option_name
+                              )
+                              .join(", ")}
+                          </p>
+                        )}
+                        {item.special_instruction && (
+                          <p className="text-gray-600 text-xs mt-0.5 ml-7 italic">
+                            "{item.special_instruction}"
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-gray-400 text-sm shrink-0">
+                        €{parseFloat(item.total_price).toFixed(2)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Totals */}
+              <div className="border-t border-white/5 pt-3 space-y-1 text-sm">
+                <div className="flex justify-between text-gray-500">
+                  <span>Subtotal</span>
+                  <span>€{parseFloat(order.subtotal).toFixed(2)}</span>
+                </div>
+                {order.order_type === "delivery" && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Delivery</span>
+                    <span>
+                      {parseFloat(order.delivery_charge) === 0 ? (
+                        <span className="text-green-400">Free</span>
+                      ) : (
+                        `€${parseFloat(order.delivery_charge).toFixed(2)}`
+                      )}
+                    </span>
+                  </div>
+                )}
+                {parseFloat(order.discount_amount) > 0 && (
+                  <div className="flex justify-between text-green-400">
+                    <span>Discount</span>
+                    <span>-€{parseFloat(order.discount_amount).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-white pt-1.5 border-t border-white/5">
+                  <span>Total</span>
+                  <span className="text-amber-400">€{total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {order.order_notes && (
+                <p className="text-gray-600 text-xs italic border-t border-white/5 pt-3">
+                  Note: {order.order_notes}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function MyOrdersPage() {
+  const { language } = useLanguage();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchOrders = () => {
+    setLoading(true);
+    setError(null);
+    ordersApi
+      .list()
+      .then((data) => setOrders(data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())))
+      .catch((err) => setError(err.message ?? "Failed to load orders."))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  return (
+    <main className="bg-gray-950 min-h-screen pt-16 text-white">
+      {/* Header */}
+      <div className="bg-gray-900 border-b border-white/5 pt-8 pb-5">
+        <div className="max-w-2xl mx-auto px-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">My Orders</h1>
+            <p className="text-gray-500 text-sm mt-0.5">
+              {!loading && !error && `${orders.length} order${orders.length !== 1 ? "s" : ""}`}
+            </p>
+          </div>
+          <button
+            onClick={fetchOrders}
+            disabled={loading}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors disabled:opacity-40"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Loading */}
+        {loading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="bg-gray-900 border border-white/5 rounded-xl p-5 animate-pulse"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gray-800" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 bg-gray-800 rounded w-1/3" />
+                    <div className="h-3 bg-gray-800 rounded w-1/4" />
+                  </div>
+                  <div className="h-6 w-20 bg-gray-800 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error */}
+        {error && !loading && (
+          <div className="text-center py-16 space-y-3">
+            <XCircle size={36} className="text-red-400 mx-auto" />
+            <p className="text-white font-semibold">Failed to load orders</p>
+            <p className="text-gray-500 text-sm">{error}</p>
+            <button
+              onClick={fetchOrders}
+              className="mt-2 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold text-sm rounded-xl transition-colors"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Empty */}
+        {!loading && !error && orders.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-20 space-y-3"
+          >
+            <div className="w-16 h-16 rounded-full bg-gray-900 border border-white/5 flex items-center justify-center mx-auto">
+              <ShoppingBag size={28} className="text-gray-600" />
+            </div>
+            <p className="text-white font-semibold">No orders yet</p>
+            <p className="text-gray-500 text-sm">Your order history will appear here.</p>
+            <Link
+              to="/menu"
+              className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold text-sm rounded-xl transition-colors"
+            >
+              Browse Menu
+            </Link>
+          </motion.div>
+        )}
+
+        {/* Orders list */}
+        {!loading && !error && orders.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-3"
+          >
+            {orders.map((order, i) => (
+              <motion.div
+                key={order.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.3 }}
+              >
+                <OrderCard order={order} language={language} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </div>
+    </main>
+  );
+}

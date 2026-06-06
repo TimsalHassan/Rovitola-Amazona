@@ -20,7 +20,7 @@ Estimated time: 45–60 minutes.
 Thank you for ordering from Ravintola Amazona!
 — Ravintola Amazona
         ''',
-        from_email='Ravintola Amazona <order@timsalhassan.me>',
+        from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[user_email],
         fail_silently=False,
     )
@@ -38,7 +38,7 @@ NEW ORDER RECEIVED
 Please prepare this order as soon as possible.
 — Ravintola Amazona System
         """,
-        from_email='Ravintola Amazona <order@timsalhassan.me>',
+        from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[settings.RESTAURANT_EMAIL],
         fail_silently=False,
     )

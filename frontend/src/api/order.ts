@@ -1,5 +1,4 @@
 import { BASE } from "./base";
-// ─── Types (mirror your Django serializers exactly) ───────────────────────────
 
 export type OrderStatus =
   | "pending"
@@ -12,6 +11,8 @@ export type OrderStatus =
 export type OrderType = "delivery" | "pickup";
 
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
+
+export type PaymentMethod = "online" | "cash_on_delivery" | "card_on_delivery";
 
 export interface SelectedOptionRead {
   extra_name: string;
@@ -40,6 +41,8 @@ export interface Order {
   guest_name: string;
   guest_phone: string;
   status: OrderStatus;
+  payment_status: PaymentStatus;
+  payment_method: PaymentMethod;
   order_type: OrderType;
   delivery_address: string;
   order_notes: string;
@@ -51,8 +54,6 @@ export interface Order {
   updated_at: string;
   items: OrderItemRead[];
 }
-
-// ─── Write payloads ───────────────────────────────────────────────────────────
 
 export interface CreateSelectedOption {
   extra_name: string;
@@ -86,7 +87,12 @@ export interface CreateOrderPayload {
   items: CreateOrderItem[];
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
 
 async function request<T>(
   path: string,
@@ -101,9 +107,9 @@ async function request<T>(
     ...options,
     headers: {
       "Content-Type": "application/json",
-      // ✅ Must be "Token <token>" to match DRF TokenAuthentication / Knox
       ...(token ? { Authorization: `Token ${token}` } : {}),
       ...(options.headers ?? {}),
+      "ngrok-skip-browser-warning": "true",
     },
   });
 
@@ -118,32 +124,28 @@ async function request<T>(
   return res.json() as Promise<T>;
 }
 
-// ─── API ──────────────────────────────────────────────────────────────────────
-
 export const ordersApi = {
-  /** Create a new order (auth optional — guests allowed) */
   create: (payload: CreateOrderPayload) =>
     request<Order>("/orders/create/", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
 
-  /** Retrieve a single order by order_number */
   getByNumber: (orderNumber: string) =>
     request<Order>(`/orders/${orderNumber}/`),
 
-  /** List orders for the current user (or by guest_phone/guest_email) */
+  // FIX: unwrap paginated response
   list: (params?: { guest_phone?: string; guest_email?: string }) => {
     const qs = params
       ? "?" + new URLSearchParams(params as Record<string, string>).toString()
       : "";
-    return request<Order[]>(`/orders/${qs}`);
+    return request<PaginatedResponse<Order>>(`/orders/${qs}`)
+      .then((res) => res.results);
   },
 
-  /** Initiate Paytrail payment for an order */
   initiatePayment: (orderNumber: string) =>
     request<{ payment_url: string }>(
-      `/orders/payment/${orderNumber}/initiate/`,
+      `/payments/${orderNumber}/initiate/`,
       { method: "POST" },
     ),
 };

@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import {
+  createContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
+import { authApi } from "../../api/auth";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AdminUser {
   id: number;
@@ -15,33 +23,56 @@ interface AdminAuthContextType {
   isLoading: boolean;
 }
 
-const AdminAuthContext = createContext<AdminAuthContextType | null>(null);
+// ─── Context ──────────────────────────────────────────────────────────────────
+
+export const AdminAuthContext = createContext<AdminAuthContextType | null>(null);
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Hydrate from localStorage on mount
   useEffect(() => {
     const savedToken = localStorage.getItem("admin_token");
     const savedAdmin = localStorage.getItem("admin_user");
     if (savedToken && savedAdmin) {
-      setToken(savedToken);
-      setAdmin(JSON.parse(savedAdmin));
+      try {
+        const parsed = JSON.parse(savedAdmin) as AdminUser;
+        // Re-validate is_staff in case storage was tampered
+        if (parsed.is_staff) {
+          setToken(savedToken);
+          setAdmin(parsed);
+        } else {
+          localStorage.removeItem("admin_token");
+          localStorage.removeItem("admin_user");
+        }
+      } catch {
+        localStorage.removeItem("admin_token");
+        localStorage.removeItem("admin_user");
+      }
     }
     setIsLoading(false);
   }, []);
 
   async function login(email: string, password: string) {
-    if (email === "admin@test.com" && password === "admin123") {
-      const mockAdmin = { id: 1, email: "admin@test.com", name: "Admin", is_staff: true };
-      const mockToken = "mock-token-123";
-      setToken(mockToken);
-      setAdmin(mockAdmin);
-      localStorage.setItem("admin_token", mockToken);
-      localStorage.setItem("admin_user", JSON.stringify(mockAdmin));
-    } else {
-      throw new Error("Invalid credentials");
+    setIsLoading(true);
+    try {
+      const data = await authApi.login({ email, password });
+
+      // Guard: only allow staff users into the admin panel
+      if (!data.user.is_staff) {
+        throw new Error("You do not have permission to access the admin panel.");
+      }
+
+      setToken(data.token);
+      setAdmin(data.user as AdminUser);
+      localStorage.setItem("admin_token", data.token);
+      localStorage.setItem("admin_user", JSON.stringify(data.user));
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -59,8 +90,5 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAdminAuth() {
-  const ctx = useContext(AdminAuthContext);
-  if (!ctx) throw new Error("useAdminAuth must be used inside AdminAuthProvider");
-  return ctx;
-}
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+

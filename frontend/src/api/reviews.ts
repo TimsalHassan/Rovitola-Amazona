@@ -20,7 +20,11 @@ export interface CreateReviewPayload {
 // ─── API calls ────────────────────────────────────────────────────────────────
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+  const res = await fetch(`${BASE}${path}`, {
+    headers:{
+      "ngrok-skip-browser-warning": "true",
+    }
+  });
   if (!res.ok) throw new Error(`Reviews API error: ${res.status}`);
   return res.json() as Promise<T>;
 }

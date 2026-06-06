@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAdminAuth } from "../../context/admin/AdminAuthContext";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+import { useAdminAuth } from "../../hooks/useAuth";
+import { BASE } from "../../api/base";
 
 interface Category {
   id: number;
   name: string;
+  slug: string;
 }
 
 interface FormData {
   name: string;
-  name_en: string;
+  name_fi: string;
   description: string;
-  description_en: string;
-  price: string;
+  description_fi: string;
+  base_price: string;
+  sale_price: string;
   category: string;
   is_available: boolean;
   is_lunch_item: boolean;
@@ -22,10 +23,11 @@ interface FormData {
 
 const EMPTY: FormData = {
   name: "",
-  name_en: "",
+  name_fi: "",
   description: "",
-  description_en: "",
-  price: "",
+  description_fi: "",
+  base_price: "",
+  sale_price: "",
   category: "",
   is_available: true,
   is_lunch_item: false,
@@ -42,35 +44,51 @@ export default function AdminMenuFormPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Fetch categories + item data ───────────────────────────────────────────
+
   useEffect(() => {
-    fetch(`${BASE_URL}/menu/categories/`)
+    fetch(`${BASE}/menu/categories/`)
       .then((r) => r.json())
-      .then(setCategories)
+      .then((data) => setCategories(data.results ?? data))
       .catch(console.error);
 
     if (isEdit) {
-      fetch(`${BASE_URL}/admin/menu/items/${id}/`, {
+      setFetching(true);
+      fetch(`${BASE}/menu/items/${id}/`, {
         headers: { Authorization: `Token ${token}` },
       })
-        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) throw new Error(`${r.status}`);
+          return r.json();
+        })
         .then((data) => {
           setForm({
             name: data.name ?? "",
-            name_en: data.name_en ?? "",
+            name_fi: data.name_fi ?? "",
             description: data.description ?? "",
-            description_en: data.description_en ?? "",
-            price: data.price ?? "",
-            category: data.category?.id?.toString() ?? "",
+            description_fi: data.description_fi ?? "",
+            base_price: data.base_price ?? "",
+            sale_price: data.sale_price ?? "",
+            // FIX: ensure category is always a string so <select> pre-selects correctly
+            category: data.category != null ? String(data.category) : "",
             is_available: data.is_available ?? true,
             is_lunch_item: data.is_lunch_item ?? false,
           });
           if (data.image) setImagePreview(data.image);
         })
-        .catch(console.error);
+        .catch((err) => setError(`Failed to load item: ${err.message}`))
+        .finally(() => setFetching(false));
     }
-  }, [id]);
+  }, [id, isEdit, token]);
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  function set(key: keyof FormData, value: string | boolean) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -86,12 +104,31 @@ export default function AdminMenuFormPage() {
 
     try {
       const body = new FormData();
-      Object.entries(form).forEach(([k, v]) => body.append(k, String(v)));
+
+      const textFields: (keyof FormData)[] = [
+        "name", "name_fi",
+        "description", "description_fi",
+        "base_price",
+        "category",
+      ];
+
+      // FIX: handle sale_price separately so empty string clears it on the backend
+      textFields.forEach((k) => {
+        const v = form[k] as string;
+        if (v !== "") body.append(k, v);
+      });
+
+      // Always send sale_price — empty string tells backend to clear it
+      body.append("sale_price", form.sale_price);
+
+      body.append("is_available", String(form.is_available));
+      body.append("is_lunch_item", String(form.is_lunch_item));
+
       if (imageFile) body.append("image", imageFile);
 
       const url = isEdit
-        ? `${BASE_URL}/admin/menu/items/${id}/`
-        : `${BASE_URL}/admin/menu/items/`;
+        ? `${BASE}/menu/items/${id}/`
+        : `${BASE}/menu/items/`;
 
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
@@ -100,21 +137,48 @@ export default function AdminMenuFormPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(JSON.stringify(data));
       }
 
       navigate("/admin/menu");
     } catch (err) {
+      console.log(err)
       setError((err as Error).message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   }
 
-  function set(key: keyof FormData, value: string | boolean) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  // ── Loading state ──────────────────────────────────────────────────────────
+
+  if (fetching) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-white transition-colors">
+            <svg viewBox="0 0 20 20" className="w-5 h-5 fill-current">
+              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <h1 className="text-white font-bold text-lg">Edit Menu Item</h1>
+        </div>
+        <div className="space-y-5">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-gray-900 border border-white/5 rounded-xl p-5 animate-pulse">
+              <div className="h-4 bg-gray-800 rounded w-1/4 mb-4" />
+              <div className="space-y-3">
+                <div className="h-9 bg-gray-800 rounded-xl" />
+                <div className="h-9 bg-gray-800 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
+
+  // ── Form ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -135,11 +199,11 @@ export default function AdminMenuFormPage() {
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-            <p className="text-red-400 text-sm">{error}</p>
+            <p className="text-red-400 text-sm font-mono">{error}</p>
           </div>
         )}
 
-        {/* Image upload */}
+        {/* Image */}
         <div className="bg-gray-900 border border-white/5 rounded-xl p-5">
           <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-3">Image</p>
           <div className="flex items-center gap-4">
@@ -150,84 +214,122 @@ export default function AdminMenuFormPage() {
                 <span className="text-3xl">🍽️</span>
               )}
             </div>
-            <label className="cursor-pointer px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-white/10 text-gray-300 text-sm rounded-xl transition-colors">
-              {imagePreview ? "Change image" : "Upload image"}
-              <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-            </label>
+            <div className="space-y-1">
+              <label className="cursor-pointer inline-flex px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-white/10 text-gray-300 text-sm rounded-xl transition-colors">
+                {imagePreview ? "Change image" : "Upload image"}
+                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+              </label>
+              {imagePreview && (
+                <button
+                  type="button"
+                  onClick={() => { setImagePreview(null); setImageFile(null); }}
+                  className="block text-xs text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Remove image
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Basic info */}
+        {/* Names */}
         <div className="bg-gray-900 border border-white/5 rounded-xl p-5 space-y-4">
-          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Details</p>
-
+          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Name</p>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-400 text-xs mb-1.5">Name (Finnish)</label>
+              <label className="block text-gray-400 text-xs mb-1.5">English</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
-                required
-                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors"
+                placeholder="e.g. Margherita Pizza"
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-xs mb-1.5">Name (English)</label>
+              <label className="block text-gray-400 text-xs mb-1.5">Finnish</label>
               <input
                 type="text"
-                value={form.name_en}
-                onChange={(e) => set("name_en", e.target.value)}
-                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors"
+                value={form.name_fi}
+                onChange={(e) => set("name_fi", e.target.value)}
+                placeholder="e.g. Margherita Pizza"
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
               />
             </div>
           </div>
+        </div>
 
+        {/* Descriptions */}
+        <div className="bg-gray-900 border border-white/5 rounded-xl p-5 space-y-4">
+          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Description</p>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-400 text-xs mb-1.5">Description (Finnish)</label>
+              <label className="block text-gray-400 text-xs mb-1.5">English</label>
               <textarea
                 value={form.description}
                 onChange={(e) => set("description", e.target.value)}
                 rows={3}
-                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors resize-none"
+                placeholder="Describe the item..."
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-colors resize-none placeholder:text-gray-600"
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-xs mb-1.5">Description (English)</label>
+              <label className="block text-gray-400 text-xs mb-1.5">Finnish</label>
               <textarea
-                value={form.description_en}
-                onChange={(e) => set("description_en", e.target.value)}
+                value={form.description_fi}
+                onChange={(e) => set("description_fi", e.target.value)}
                 rows={3}
-                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors resize-none"
+                placeholder="Kuvaile tuotetta..."
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-colors resize-none placeholder:text-gray-600"
               />
             </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
+        {/* Pricing + category */}
+        <div className="bg-gray-900 border border-white/5 rounded-xl p-5 space-y-4">
+          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Pricing & Category</p>
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-gray-400 text-xs mb-1.5">Price (€)</label>
+              <label className="block text-gray-400 text-xs mb-1.5">Base price (€) <span className="text-red-400">*</span></label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                value={form.price}
-                onChange={(e) => set("price", e.target.value)}
+                value={form.base_price}
+                onChange={(e) => set("base_price", e.target.value)}
                 required
-                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors"
+                placeholder="0.00"
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-xs mb-1.5">Category</label>
+              <label className="block text-gray-400 text-xs mb-1.5">
+                Sale price (€)
+                <span className="ml-1 text-gray-600 text-[10px]">optional</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.sale_price}
+                onChange={(e) => set("sale_price", e.target.value)}
+                placeholder="Leave blank if no sale"
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-xs mb-1.5">Category <span className="text-red-400">*</span></label>
               <select
                 value={form.category}
                 onChange={(e) => set("category", e.target.value)}
                 required
-                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors"
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-colors"
               >
-                <option value="">Select category</option>
+                <option value="">Select...</option>
+                {/* FIX: value must be String so it matches form.category (string state) */}
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -237,11 +339,12 @@ export default function AdminMenuFormPage() {
         {/* Toggles */}
         <div className="bg-gray-900 border border-white/5 rounded-xl p-5 space-y-3">
           <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Settings</p>
-
-          {[
-            { key: "is_available" as const, label: "Available", desc: "Show this item on the menu" },
-            { key: "is_lunch_item" as const, label: "Lunch item", desc: "Show in the lunch menu section" },
-          ].map(({ key, label, desc }) => (
+          {(
+            [
+              { key: "is_available" as const, label: "Available", desc: "Show this item on the menu" },
+              { key: "is_lunch_item" as const, label: "Lunch item", desc: "Show in the lunch menu section" },
+            ] as const
+          ).map(({ key, label, desc }) => (
             <div key={key} className="flex items-center justify-between">
               <div>
                 <p className="text-white text-sm font-medium">{label}</p>
@@ -264,7 +367,7 @@ export default function AdminMenuFormPage() {
           ))}
         </div>
 
-        {/* Submit */}
+        {/* Actions */}
         <div className="flex gap-3">
           <button
             type="button"

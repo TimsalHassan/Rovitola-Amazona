@@ -51,7 +51,7 @@ export default function AccountPage() {
               { id: "security", label: "Security", icon: Lock },
               { id: "addresses", label: "Addresses", icon: MapPin },
             ] as const
-          ).map(({ id, label, icon: Icon }) => (
+          ).map(({ id, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
@@ -96,8 +96,6 @@ function ProfileTab() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  console.log(user);
 
   const isDirty = name !== user?.name || phone !== user?.phone;
 

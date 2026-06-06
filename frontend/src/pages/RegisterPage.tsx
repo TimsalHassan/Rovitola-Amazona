@@ -5,7 +5,7 @@ import { useLanguage } from "../hooks/useLanguage";
 import { FormField, PasswordField, Button, Alert } from "../components/FormElements";
 
 type FormKey = "name" | "email" | "phone" | "password" | "confirmPassword";
-type T = (fi: string, en: string) => string;
+type T = (field: string) => string;
 
 function validateSingle(field: FormKey, value: string, form: Record<FormKey, string>, t: T): string | null {
   switch (field) {
@@ -101,8 +101,9 @@ export default function RegisterPage() {
         email: form.email.trim(),
         phone: form.phone.trim(),
         password: form.password,
+        confirm_password: form.confirmPassword,
       });
-      navigate("/", { replace: true });
+      navigate("/verify", { replace: true });
     } catch (err: unknown) {
       const e = err as Error & { field?: string };
       if (e.field) {

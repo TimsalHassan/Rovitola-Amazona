@@ -13,6 +13,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 from decouple import config
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "ngrok-skip-browser-warning",
+]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,8 +32,10 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',') + ['.ngrok-free.dev']
-
+# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',') + ['.ngrok-free.dev']
+ALLOWED_HOSTS = ["*"]
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
 # Application definition
 
 INSTALLED_APPS = [
@@ -169,9 +176,8 @@ AUTH_USER_MODEL = 'users.User'
 # CORS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "http://localhost:5174",
     "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
+    "https://eceb-2406-d00-aaaa-879b-21d0-fd3a-d02d-79ef.ngrok-free.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -229,7 +235,7 @@ else:
     EMAIL_HOST_USER    = 'resend'                          # hamesha 'resend' hi rehta hai
     EMAIL_HOST_PASSWORD = config('RESEND_API_KEY')         # .env se
 
-DEFAULT_FROM_EMAIL  = 'Ravintola Amazona <order@timsalhassan.me>'      # verified domain wala
+DEFAULT_FROM_EMAIL  = config('DEFAULT_FROM_EMAIL')      # verified domain wala
 RESTAURANT_EMAIL    = config('RESTAURANT_EMAIL')       # owner ka email
 
 # # settings.py mein add karo

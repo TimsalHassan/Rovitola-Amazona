@@ -29,7 +29,7 @@ import AdminMenuFormPage from "./pages/admin/AdminMenuFormPage";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import Footer from "./components/Footer";
-import OrderPage from "./pages/OrderConfirmationPage";
+import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 
 function AppLayout() {
   return (
@@ -87,15 +87,15 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/order/:orderId"
+                      path="/confirm/order/:orderId"
                       element={
                         <ProtectedRoute>
-                          <OrderPage />
+                          <OrderConfirmationPage />
                         </ProtectedRoute>
                       }
                     />
                     <Route
-                      path="/order-confirmed"
+                      path="/order/:orderId"
                       element={
                         <ProtectedRoute>
                           <OrderConfirmedPage />

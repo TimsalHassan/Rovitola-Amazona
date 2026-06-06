@@ -23,7 +23,7 @@ build/
 venv/
 .venv/
 env/
-.env/
+.env
 
 # Environment variables
 .env
