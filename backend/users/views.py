@@ -19,6 +19,7 @@ from .serializers import (
 )
 from .tasks import (
     send_registration_email,
+    send_verification_email,
     send_forgot_password_email,
     send_password_changed_email,
 )
@@ -35,18 +36,20 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        token, _ = Token.objects.get_or_create(user=user)
 
-        send_registration_email.delay(
+        # Verification link generate karo (same token generator as password reset)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        verification_link = f"{settings.FRONTEND_URL}/verify-email/{uid}/{token}/"
+
+        send_verification_email.delay(
             user_email=user.email,
             user_name=user.name or user.email,
+            verification_link=verification_link,
         )
 
         return Response(
-            {
-                "token": token.key,
-                "user": UserSerializer(user).data,
-            },
+            {"detail": "Registration successful. Please check your email to verify your account."},
             status=status.HTTP_201_CREATED,
         )
 
@@ -68,6 +71,12 @@ class LoginView(APIView):
             return Response(
                 {"error": "Invalid email or password."},
                 status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not user.is_email_verified:
+            return Response(
+                {"error": "Please verify your email before logging in."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         token, _ = Token.objects.get_or_create(user=user)
@@ -191,6 +200,58 @@ class ResetPasswordView(APIView):
 
         return Response({'message': 'Password reset successfully.'})
     
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, uid, token):
+        try:
+            user_id = urlsafe_base64_decode(uid).decode()
+            user = User.objects.get(pk=user_id)
+        except (User.DoesNotExist, Exception):
+            return Response({'error': 'Invalid verification link.'}, status=400)
+
+        if user.is_email_verified:
+            return Response({'detail': 'Email is already verified.'})
+
+        if not default_token_generator.check_token(user, token):
+            return Response({'error': 'Verification link is expired or invalid.'}, status=400)
+
+        user.is_email_verified = True
+        user.save(update_fields=['is_email_verified'])
+
+        return Response({'detail': 'Email verified successfully. You can now log in.'})
+
+
+class ResendVerificationView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({'error': 'Email is required.'}, status=400)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Security: existence reveal mat karo
+            return Response({'detail': 'If this email exists and is unverified, a new link has been sent.'})
+
+        if user.is_email_verified:
+            return Response({'detail': 'This email is already verified.'})
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        verification_link = f"{settings.FRONTEND_URL}/verify-email/{uid}/{token}/"
+
+        send_verification_email.delay(
+            user_email=user.email,
+            user_name=user.name or user.email,
+            verification_link=verification_link,
+        )
+
+        return Response({'detail': 'If this email exists and is unverified, a new link has been sent.'})
+
 
 class AddressViewSet(viewsets.ModelViewSet):
     serializer_class = AddressSerializer

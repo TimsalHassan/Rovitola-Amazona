@@ -35,11 +35,19 @@ class CoreTasks:
     debug_task = "core.celery.debug_task"
 
 
+class NotificationsTasks:
+    """Notifications module Celery tasks"""
+    create_notification = "notifications.tasks.create_notification"
+    send_bulk_notification = "notifications.tasks.send_bulk_notification"
+    send_notification_email = "notifications.tasks.send_notification_email"
+
+
 # Export task collections for easy importing
 ORDERS_TASKS = OrdersTasks()
 PAYMENTS_TASKS = PaymentsTasks()
 USERS_TASKS = UsersTasks()
 CORE_TASKS = CoreTasks()
+# NOTIFICATIONS_TASKS = NotificationsTasks()
 
 # All tasks in one place
 ALL_TASKS = {
@@ -47,4 +55,5 @@ ALL_TASKS = {
     "payments": PAYMENTS_TASKS,
     "users": USERS_TASKS,
     "core": CORE_TASKS,
+    # "notifications": NOTIFICATIONS_TASKS,
 }

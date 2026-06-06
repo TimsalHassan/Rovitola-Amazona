@@ -2,11 +2,18 @@ from django.core.cache import cache
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Category, MenuItem, Extra, ExtraOption
 from .serializers import CategorySerializer, MenuItemSerializer, ExtraSerializer, ExtraOptionSerializer
 
 CACHE_TTL = 60 * 15  # 15 minutes
+
+
+class MenuPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'  # frontend ?page_size=20 se change kar sake
+    max_page_size = 100
 
 
 class CategoryListView(generics.ListAPIView):
@@ -29,19 +36,17 @@ class CategoryListView(generics.ListAPIView):
 class MenuItemListView(generics.ListAPIView):
     serializer_class = MenuItemSerializer
     permission_classes = [AllowAny]
+    pagination_class = MenuPagination  # Cache nahi — pagination har page ke liye alag response deta hai
 
-    def list(self, request, *args, **kwargs):
+    def get_queryset(self):
+        request = self.request
         category_slug = request.query_params.get("category", "all")
         is_lunch = request.query_params.get("is_lunch_item", "any")
         is_available = request.query_params.get("is_available", "any")
-        lang = request.query_params.get('language', 'en').lower()
 
-        cache_key = f'menu_items_{category_slug}_{is_lunch}_{is_available}_{lang}'
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return Response(cached)
-
-        queryset = MenuItem.objects.select_related("category").all()
+        queryset = MenuItem.objects.select_related("category").prefetch_related(
+            "category__extras__options"
+        ).all()
 
         if category_slug != "all":
             queryset = queryset.filter(category__slug=category_slug)
@@ -50,9 +55,9 @@ class MenuItemListView(generics.ListAPIView):
         if is_available != "any":
             queryset = queryset.filter(is_available=is_available.lower() == "true")
 
-        serializer = self.get_serializer(queryset, many=True)
-        cache.set(cache_key, serializer.data, CACHE_TTL)
-        return Response(serializer.data)
+        return queryset
+
+    # list() override nahi — DRF apni pagination automatically apply karega
 
 
 class MenuItemDetailView(generics.RetrieveUpdateAPIView):

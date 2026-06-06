@@ -1,5 +1,6 @@
 from django.db import models
 from core.translation import translate_text
+from cloudinary.models import CloudinaryField
 
 
 class Category(models.Model):
@@ -57,7 +58,7 @@ class MenuItem(models.Model):
         help_text='Sale price. Agar set hai toh base price ki jagah yeh show hoga'
     )
 
-    image = models.ImageField(upload_to="menu/", blank=True, null=True)
+    image = CloudinaryField('Image', folder='menu/', blank=True, null=True)
     is_available = models.BooleanField(default=True)
     is_menu_item = models.BooleanField(default=True)
     is_lunch_item = models.BooleanField(default=False)
