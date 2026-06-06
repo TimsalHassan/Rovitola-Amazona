@@ -4,6 +4,27 @@ from django.conf import settings
 
 
 @shared_task
+def send_verification_email(user_email, user_name, verification_link):
+    send_mail(
+        subject='Verify your email – Ravintola Amazona',
+        message=f'''Hi {user_name},
+
+Thank you for registering! Please verify your email address by clicking the link below:
+
+{verification_link}
+
+This link will expire in 24 hours.
+
+If you did not create an account, you can ignore this email.
+— Ravintola Amazona
+        ''',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user_email],
+        fail_silently=False,
+    )
+
+
+@shared_task
 def send_registration_email(user_email, user_name):
     send_mail(
         subject='Welcome to Ravintola Amazona!',
