@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Clock, ShoppingBag, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import {
+  Clock,
+  ShoppingBag,
+  ShoppingCart,
+  UtensilsCrossed,
+} from "lucide-react";
 import {
   MenuItem as ApiMenuItem,
   type Category as ApiCategory,
@@ -13,25 +18,35 @@ import { Link } from "react-router-dom";
 const PAGE_SIZE = 8;
 
 const CATEGORY_ICONS: Record<string, string> = {
-  burgerateriat: "🍔",
-  burgers: "🍔",
-  desserts: "🍰",
-  drinks: "🥤",
-  falafel: "🧆",
-  juomat: "🥤",
-  kanafileet: "🍗",
-  kanaburgerateriat: "🍔",
-  kanakebabit: "🍗",
+  // slugs from DB (underscored, English)
+  pizzas: "🍕",
+  vegan_pizzas: "🌱",
+  new_pizzas: "🍕",
   kebab: "🥙",
-  kebabit: "🥙",
-  nugetit: "🍟",
-  pihvit: "🥩",
-  pizza: "🍕",
+  kebabi: "🥙",
+  chicken_kebab: "🍗",
+  salads: "🥗",
+  falafel: "🧆",
+  vegan_food: "🥦",
+  chicken_fillets: "🍗",
+  burger_meals: "🍔",
+  chicken_burger_meals: "🍔",
+  steaks: "🥩",
+  nuggets: "🍟",
+  beverages: "🥤",
+  // legacy Finnish slugs (kept for safety)
   pizzat: "🍕",
-  salaatti: "🥗",
-  salaatit: "🥗",
   vegaanipizzat: "🌱",
+  kebabit: "🥙",
+  kanakebabit: "🍗",
+  salaatit: "🥗",
   vegaaniruoka: "🥦",
+  kanafileet: "🍗",
+  burgerateriat: "🍔",
+  kanaburgerateriat: "🍔",
+  pihvit: "🥩",
+  nugetit: "🍟",
+  juomat: "🥤",
 };
 
 const getCategoryKey = (category: ApiCategory) =>
@@ -57,11 +72,21 @@ const getLocalizedText = (
 
 export function ItemCard({ item }: { item: ApiMenuItem }) {
   const { language, t } = useLanguage();
-  const name = getLocalizedText(language, item.name, item.name_fi, t("unnamedItem"));
-  const description = getLocalizedText(language, item.description, item.description_fi, t("unnamedItemDesc"));
+  const name = getLocalizedText(
+    language,
+    item.name,
+    item.name_fi,
+    t("unnamedItem"),
+  );
+  const description = getLocalizedText(
+    language,
+    item.description,
+    item.description_fi,
+    t("unnamedItemDesc"),
+  );
   const price = toNumber(item.current_price);
   const basePrice = toNumber(item.base_price);
- 
+
   return (
     <Link
       to={`/menu/${item.id}`}
@@ -81,14 +106,14 @@ export function ItemCard({ item }: { item: ApiMenuItem }) {
             🍽️
           </div>
         )}
- 
+
         {/* Sale badge */}
         {item.is_on_sale && (
           <span className="absolute top-2.5 left-2.5 bg-amber-500 text-gray-900 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
             Sale
           </span>
         )}
- 
+
         {/* Unavailable overlay */}
         {!item.is_available && (
           <div className="absolute inset-0 bg-gray-950/70 flex items-center justify-center">
@@ -98,7 +123,7 @@ export function ItemCard({ item }: { item: ApiMenuItem }) {
           </div>
         )}
       </div>
- 
+
       {/* Content */}
       <div className="flex flex-col flex-1 p-4 gap-3">
         <div className="flex-1 min-w-0">
@@ -111,7 +136,7 @@ export function ItemCard({ item }: { item: ApiMenuItem }) {
             </p>
           )}
         </div>
- 
+
         {/* Footer: price + CTA */}
         <div className="flex items-center justify-between pt-3 border-t border-white/5">
           <div className="flex items-baseline gap-1.5">
@@ -124,7 +149,7 @@ export function ItemCard({ item }: { item: ApiMenuItem }) {
               €{price.toFixed(2)}
             </span>
           </div>
- 
+
           {item.is_available ? (
             <span className="flex items-center gap-1.5 bg-amber-500 group-hover:bg-amber-400 text-gray-900 font-semibold text-xs px-3 py-1.5 rounded-xl transition-colors">
               <ShoppingBag size={13} />
@@ -151,7 +176,9 @@ function EmptyCard() {
         <UtensilsCrossed size={24} className="text-gray-600" />
       </div>
       <div>
-        <p className="text-gray-500 text-sm font-medium">{t("menu.emptyTitle")}</p>
+        <p className="text-gray-500 text-sm font-medium">
+          {t("menu.emptyTitle")}
+        </p>
         <p className="text-gray-600 text-xs mt-1">{t("menu.emptyBody")}</p>
       </div>
     </div>
@@ -162,8 +189,18 @@ function EmptyCard() {
 
 function LunchUnavailableCard({ item }: { item: ApiMenuItem }) {
   const { language, t } = useLanguage();
-  const name = getLocalizedText(language, item.name, item.name_fi, t("unnamedItem"));
-  const description = getLocalizedText(language, item.description, item.description_fi, t("unnamedItemDesc"));
+  const name = getLocalizedText(
+    language,
+    item.name,
+    item.name_fi,
+    t("unnamedItem"),
+  );
+  const description = getLocalizedText(
+    language,
+    item.description,
+    item.description_fi,
+    t("unnamedItemDesc"),
+  );
   const price = toNumber(item.current_price);
 
   return (
@@ -176,7 +213,11 @@ function LunchUnavailableCard({ item }: { item: ApiMenuItem }) {
       </div>
       <div className="flex gap-4 opacity-40">
         {item.image ? (
-          <img src={item.image} alt={name} className="w-20 h-20 object-cover rounded-lg shrink-0" />
+          <img
+            src={item.image}
+            alt={name}
+            className="w-20 h-20 object-cover rounded-lg shrink-0"
+          />
         ) : (
           <div className="w-20 h-20 bg-gray-800 rounded-lg flex items-center justify-center shrink-0 text-gray-600">
             🍕
@@ -186,7 +227,9 @@ function LunchUnavailableCard({ item }: { item: ApiMenuItem }) {
           <h3 className="text-white font-semibold text-sm truncate">{name}</h3>
           <p className="text-gray-400 text-xs mt-1">{description}</p>
           <div className="mt-3">
-            <span className="text-amber-400 font-bold">€{price.toFixed(2)}</span>
+            <span className="text-amber-400 font-bold">
+              €{price.toFixed(2)}
+            </span>
           </div>
         </div>
       </div>
@@ -219,12 +262,13 @@ export default function MenuPage() {
   const { items, isItemsLoading, categories } = useMenu();
   const [tab, setTab] = useState<"main" | "lunch">("main");
   const [activeCategory, setActiveCategory] = useState("");
-  const [visibleByCategory, setVisibleByCategory] = useState<Record<string, number>>({});
+  const [visibleByCategory, setVisibleByCategory] = useState<
+    Record<string, number>
+  >({});
 
-  // Refs for IntersectionObserver
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
   const observerRef = useRef<IntersectionObserver | null>(null);
-  // Suppress observer updates while user is clicking sidebar (prevents flicker)
+  const visibleSectionsRef = useRef<Set<string>>(new Set());
   const isScrollingRef = useRef(false);
 
   const isLunch = isLunchHours();
@@ -239,11 +283,12 @@ export default function MenuPage() {
     [items],
   );
 
-  // Initialise active category and visible counts when categories load
   useEffect(() => {
     if (!sortedCategories.length) return;
     setActiveCategory((prev) => {
-      const exists = sortedCategories.some((cat) => getCategoryKey(cat) === prev);
+      const exists = sortedCategories.some(
+        (cat) => getCategoryKey(cat) === prev,
+      );
       return exists ? prev : getCategoryKey(sortedCategories[0]);
     });
     setVisibleByCategory((prev) => {
@@ -256,22 +301,34 @@ export default function MenuPage() {
     });
   }, [sortedCategories]);
 
-  // Set up IntersectionObserver to track which category section is in view
   useEffect(() => {
     observerRef.current?.disconnect();
+    // WITH this:
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        // Ignore observer events while a sidebar click is driving the scroll
         if (isScrollingRef.current) return;
+
+        // Collect all currently-intersecting sections and pick the topmost one
         entries.forEach((entry) => {
+          const key = entry.target.id.replace("cat-", "");
           if (entry.isIntersecting) {
-            setActiveCategory(entry.target.id.replace("cat-", ""));
+            visibleSectionsRef.current.add(key);
+          } else {
+            visibleSectionsRef.current.delete(key);
           }
         });
-      },
-      { rootMargin: "-80px 0px -55% 0px", threshold: 0 },
-    );
 
+        if (visibleSectionsRef.current.size === 0) return;
+
+        // Pick the category whose section is closest to the top of the viewport
+        const topmost = sortedCategories
+          .map((cat) => getCategoryKey(cat))
+          .find((key) => visibleSectionsRef.current.has(key));
+
+        if (topmost) setActiveCategory(topmost);
+      },
+      { rootMargin: "-80px 0px -40% 0px", threshold: 0 },
+    );
     sortedCategories.forEach((cat) => {
       const key = getCategoryKey(cat);
       const el = categoryRefs.current[key];
@@ -281,39 +338,34 @@ export default function MenuPage() {
     return () => observerRef.current?.disconnect();
   }, [tab, sortedCategories]);
 
-  // Scroll to category section and immediately set active (no observer lag)
   const scrollToCategory = (id: string) => {
     const el = document.getElementById("cat-" + id);
     if (!el) return;
-
-    // Mark that we're programmatically scrolling so observer doesn't fight us
     isScrollingRef.current = true;
     setActiveCategory(id);
-
     window.scrollTo({ top: el.offsetTop - 120, behavior: "smooth" });
-
-    // Re-enable observer after scroll animation completes (~600ms)
+    // Unblock after scroll animation completes (~600ms for smooth scroll)
     setTimeout(() => {
       isScrollingRef.current = false;
-    }, 700);
+    }, 800);
   };
-
-  // ── Shared skeletons ───────────────────────────────────────────────────────
 
   const skeletons = (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {[1, 2, 3, 4].map((i) => <ItemSkeleton key={i} />)}
+      {[1, 2, 3, 4].map((i) => (
+        <ItemSkeleton key={i} />
+      ))}
     </div>
   );
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
   return (
     <main className="bg-gray-950 min-h-screen pt-16">
-      {/* ── Tab header ──────────────────────────────────────────────────── */}
+      {/* Tab header */}
       <div className="pt-8 pb-4">
         <div className="max-w-[1200px] mx-auto px-4">
-          <h1 className="text-3xl font-bold text-white mb-4">{t("menu.title")}</h1>
+          <h1 className="text-3xl font-bold text-white mb-4">
+            {t("menu.title")}
+          </h1>
           <div className="flex gap-2">
             <button
               onClick={() => setTab("main")}
@@ -339,11 +391,10 @@ export default function MenuPage() {
         </div>
       </div>
 
-      {/* ── Main menu tab ────────────────────────────────────────────────── */}
+      {/* Main menu tab */}
       {tab === "main" && (
         <div className="max-w-[1200px] mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6">
-
             {/* Desktop sidebar */}
             <aside className="hidden lg:block">
               <div className="sticky top-24 bg-gray-900 border border-white/5 rounded-xl p-2 max-h-[calc(100vh-7rem)] overflow-y-auto">
@@ -407,16 +458,29 @@ export default function MenuPage() {
               ) : !sortedCategories.length ? (
                 <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-10 text-center">
                   <div className="text-3xl mb-3">🍽️</div>
-                  <h2 className="text-xl font-bold mb-2">{t("menu.noItemsTitle")}</h2>
-                  <p className="text-gray-400 text-sm">{t("menu.noItemsBody")}</p>
+                  <h2 className="text-xl font-bold mb-2">
+                    {t("menu.noItemsTitle")}
+                  </h2>
+                  <p className="text-gray-400 text-sm">
+                    {t("menu.noItemsBody")}
+                  </p>
                 </div>
               ) : (
                 sortedCategories.map((cat) => {
                   const key = getCategoryKey(cat);
                   const icon = CATEGORY_ICONS[cat.slug] ?? "🍽️";
-                  const categoryItems = items.filter(
-                    (item) => item.category === cat.id && !item.is_lunch_item,
-                  );
+
+                  // ── FIX: coerce both sides to Number before comparing ──────
+                  // item.category comes from the API as a number or string depending
+                  // on the serializer. cat.id is always a number. Using == (loose)
+                  // or explicit Number() conversion handles both cases safely.
+                  const categoryItems = items.filter((item) => {
+                    return (
+                      Number(item.category) === Number(cat.id) &&
+                      !item.is_lunch_item
+                    );
+                  });
+
                   const visibleCount = visibleByCategory[key] ?? PAGE_SIZE;
                   const visibleItems = categoryItems.slice(0, visibleCount);
 
@@ -424,11 +488,15 @@ export default function MenuPage() {
                     <section
                       key={key}
                       id={`cat-${key}`}
-                      ref={(el) => { categoryRefs.current[key] = el; }}
+                      ref={(el) => {
+                        categoryRefs.current[key] = el;
+                      }}
                     >
                       <div className="flex items-center gap-2 mb-4">
                         <span className="text-2xl">{icon}</span>
-                        <h2 className="text-xl font-bold text-white">{cat.name}</h2>
+                        <h2 className="text-xl font-bold text-white">
+                          {cat.name}
+                        </h2>
                         <span className="text-gray-600 text-sm ml-1">
                           ({categoryItems.length})
                         </span>
@@ -438,10 +506,7 @@ export default function MenuPage() {
                         <>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {visibleItems.map((item) => (
-                              <ItemCard
-                                key={item.id}
-                                item={item}
-                              />
+                              <ItemCard key={item.id} item={item} />
                             ))}
                           </div>
                           {categoryItems.length > visibleCount && (
@@ -454,7 +519,9 @@ export default function MenuPage() {
                               }
                               className="mt-4 w-full py-3 bg-gray-800 hover:bg-gray-700 border border-white/10 text-gray-300 rounded-xl text-sm font-medium transition-colors"
                             >
-                              {t("menu.loadMore")} ({categoryItems.length - visibleCount} {t("menu.remaining")})
+                              {t("menu.loadMore")} (
+                              {categoryItems.length - visibleCount}{" "}
+                              {t("menu.remaining")})
                             </button>
                           )}
                         </>
@@ -472,11 +539,13 @@ export default function MenuPage() {
         </div>
       )}
 
-      {/* ── Lunch tab ────────────────────────────────────────────────────── */}
+      {/* Lunch tab */}
       {tab === "lunch" && (
         <div className="max-w-[1200px] mx-auto px-4 py-6">
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-6 text-center">
-            <p className="text-amber-400 font-semibold">{t("menu.lunchAvailable")}</p>
+            <p className="text-amber-400 font-semibold">
+              {t("menu.lunchAvailable")}
+            </p>
             <p className="text-gray-400 text-sm">{t("menu.lunchHours")}</p>
           </div>
 
@@ -486,10 +555,7 @@ export default function MenuPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {lunchItems.map((item) =>
                 isLunch ? (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                  />
+                  <ItemCard key={item.id} item={item} />
                 ) : (
                   <LunchUnavailableCard key={item.id} item={item} />
                 ),
@@ -498,7 +564,9 @@ export default function MenuPage() {
           ) : (
             <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-10 text-center">
               <div className="text-3xl mb-3">🍽️</div>
-              <h2 className="text-xl font-bold mb-2">{t("menu.noItemsTitle")}</h2>
+              <h2 className="text-xl font-bold mb-2">
+                {t("menu.noItemsTitle")}
+              </h2>
               <p className="text-gray-400 text-sm">{t("menu.noItemsBody")}</p>
             </div>
           )}

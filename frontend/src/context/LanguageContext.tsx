@@ -18,12 +18,13 @@ function getSavedLanguage(): string {
 const resources = {
   fi: {
     home: {
-      // Carousel
+      // ── Carousel / generic ────────────────────────────────────────────────
       order: "Tilaa",
       onSale: "ALE",
       unnamedItem: "Nimeton annos",
       unnamedItemDesc: "Kuvaus puuttuu",
-      // Review modal
+
+      // ── Review modal ──────────────────────────────────────────────────────
       leaveReview: "Jätä Arvostelu",
       rating: "Arvosana",
       review: "Arvostelu",
@@ -31,30 +32,34 @@ const resources = {
       submitting: "Lähetetään...",
       submit: "Lähetä",
       thankYou: "Kiitos arvostelustaasi!",
-      // Status pill
+
+      // ── Status pill ───────────────────────────────────────────────────────
       openNow: "Nyt Auki — Tilaa heti!",
       closedNow: "Suljettu nyt",
-      // Hero
+
+      // ── Hero ──────────────────────────────────────────────────────────────
       heroTagline: "Aitojen makujen ravintola Lahden sydämessä",
       orderNow: "Tilaa Nyt",
       viewMenu: "Katso Ruokalista",
       scrollDown: "Vieritä alas",
-      // Features strip
+
+      // ── Features strip ────────────────────────────────────────────────────
       fastDelivery: "Nopea Toimitus",
       fastDeliveryDesc: "Ilmainen alle 9km • €4 yli 9km",
       discount: "5% Alennus",
       discountDesc: "Automaattinen alennus jokaisesta tilauksesta",
       deliveryTime: "~60 min toimitus",
       deliveryTimeDesc: "Minimitilaus €13 • Max 14km säde",
-      // Carousel section
+
+      // ── Carousel section ──────────────────────────────────────────────────
       fromMenu: "Ruokalistalta",
       popularDishes: "Suosituimmat annokset",
       newSelectionEveryVisit: "Uusi järjestys joka latauskerralla",
       fullMenu: "Koko ruokalista",
       emptyMenuTitle: "Ei näytettäviä annoksia",
-      emptyMenuBody:
-        "Ruokalista päivittyy pian. Tarkista uudelleen hetken päästä.",
-      // About
+      emptyMenuBody: "Ruokalista päivittyy pian. Tarkista uudelleen hetken päästä.",
+
+      // ── About ─────────────────────────────────────────────────────────────
       aboutUs: "Tietoa meistä",
       yearsInLahti: "vuotta Lahdessa",
       aboutHeading: "Lahden sydämessä\nvuodesta 2010",
@@ -65,6 +70,23 @@ const resources = {
       delivery: "Toimitus",
       minOrder: "Minitilaus",
       noReviewsYet: "Ei arvosteluja vielä",
+
+      // ── Reviews ───────────────────────────────────────────────────────────
+      reviewsLabel: "Asiakaspalautteet",
+      reviewsHeading: "Mitä asiakkaamme sanovat",
+      signInToReview: "Kirjaudu arvostellaksesi",
+
+      // ── App download ──────────────────────────────────────────────────────
+      mobileApp: "Sovellus",
+      orderEasier: "Tilaa helpommin",
+      downloadDesc: "Lataa sovellus ja tilaa suoraan puhelimellasi.",
+      downloadOn: "Lataa",
+
+      // ── Opening hours ─────────────────────────────────────────────────────
+      openingHours: "Aukioloajat",
+      closed: "Suljettu",
+
+      // ── Menu page ─────────────────────────────────────────────────────────
       menu: {
         title: "Ruokalista",
         mainTab: "Pääruokalista",
@@ -84,7 +106,7 @@ const resources = {
         cart: "Ostoskori",
         emptyTitle: "Tuotteita tulossa pian",
         emptyBody: "Tämä kategoria avataan pian.",
-        lunchUnavailable: "Ei saatavilla",
+        lunchUnavailable: "Ei saatavilla tällä hetkellä",
         loadMore: "Lataa lisää",
         remaining: "jäljellä",
         lunchAvailable: "Lounas saatavilla",
@@ -92,51 +114,12 @@ const resources = {
         noItemsTitle: "Ruokalista päivittyy",
         noItemsBody: "Annoksia lisätään pian. Tarkista uudelleen myöhemmin.",
       },
-      // Reviews
-      reviewsLabel: "Asiakaspalautteet",
-      reviewsHeading: "Mitä asiakkaamme sanovat",
-      signInToReview: "Kirjaudu arvostellaksesi",
-      review1: "Paras kebab Lahdessa! Nopeaa toimitus ja ruoka aina tuoretta.",
-      review2: "Amazona-pizza on rehellisesti parasta pizzaa mitä olen syönyt.",
-      review3: "Erinomainen valikoima ja hinnat kohdillaan.",
-      // App download
-      mobileApp: "Sovellus",
-      orderEasier: "Tilaa helpommin",
-      downloadDesc: "Lataa sovellus ja tilaa suoraan puhelimellasi.",
-      downloadOn: "Lataa",
-      // Opening hours
-      openingHours: "Aukioloajat",
-      monTue: "Ma–Ti",
-      wedSun: "Ke–Su",
-      wedFri: "Ke–Pe",
-      // Footer
-      footer: {
-        brandPrefix: "Ravintola",
-        brandName: "Amazona",
-        description:
-          "Lahteen paras pizzeria ja kebab-ravintola. Tuoreita raaka-aineita ja aitoja makuja vuodesta 2010.",
-        openingHours: "Aukioloajat",
-        lunch: "Lounas Ma-Pe 10:30-14:30",
-        contact: "Yhteystiedot",
-        addressLine1: "Aleksanterinkatu 3",
-        addressLine2: "15110 Lahti, Finland",
-        rights: "Kaikki oikeudet pidätetään.",
-        findOrders: "Etsi tilauksesi",
-        days: {
-          monday: "Maanantai",
-          tuesday: "Tiistai",
-          wednesday: "Keskiviikko",
-          thursday: "Torstai",
-          friday: "Perjantai",
-          saturday: "Lauantai",
-          sunday: "Sunnuntai",
-        },
-      },
+
+      // ── Menu item page ────────────────────────────────────────────────────
       menuItem: {
         backToMenu: "Takaisin ruokalistaan",
         notFoundTitle: "Annoksen tiedot puuttuvat",
-        notFoundBody:
-          "Tätä annosta ei löytynyt. Se on voinut poistua ruokalistalta.",
+        notFoundBody: "Tätä annosta ei löytynyt. Se on voinut poistua ruokalistalta.",
         details: "Annoksen tiedot",
         lunchItem: "Lounasannos",
         available: "Saatavilla",
@@ -159,12 +142,13 @@ const resources = {
         noReviewsTitle: "Ei arvosteluja vielä",
         noReviewsBody: "Ole ensimmäinen, joka arvioi tämän annoksen.",
         addToCart: "Lisää koriin",
-        // ── New keys used in MenuItemPage ──
         specialInstruction: "Erityisohjeet",
         specialInstructionPlaceholder: "Esim. ei sipulia, extra kastiketta…",
         addedToCart: "Lisätty!",
         requiredExtraError: "Tee valinta kohdassa",
       },
+
+      // ── Nav ───────────────────────────────────────────────────────────────
       nav: {
         home: "Koti",
         menu: "Ruokalista",
@@ -179,6 +163,32 @@ const resources = {
         langFi: "Suomi",
         langEn: "English",
       },
+
+      // ── Footer ────────────────────────────────────────────────────────────
+      footer: {
+        brandPrefix: "Ravintola",
+        brandName: "Amazona",
+        description:
+          "Lahteen paras pizzeria ja kebab-ravintola. Tuoreita raaka-aineita ja aitoja makuja vuodesta 2010.",
+        openingHours: "Aukioloajat",
+        lunch: "Lounas Ma-Pe 10:30-14:30",
+        contact: "Yhteystiedot",
+        addressLine1: "Aleksanterinkatu 3",
+        addressLine2: "15110 Lahti, Finland",
+        rights: "Kaikki oikeudet pidätetään.",
+        findOrders: "Etsi tilauksesi",
+        days: {
+          monday: "Maanantai",
+          tuesday: "Tiistai",
+          wednesday: "Keskiviikko",
+          thursday: "Torstai",
+          friday: "Perjantai",
+          saturday: "Lauantai",
+          sunday: "Sunnuntai",
+        },
+      },
+
+      // ── Cart page ─────────────────────────────────────────────────────────
       cart: {
         emptyTitle: "Ostoskori on tyhjä",
         emptyBody: "Et ole vielä lisännyt tuotteita koriin.",
@@ -208,9 +218,10 @@ const resources = {
         payOnDelivery: "Maksu toimituksen yhteydessä.",
         itemNoteAdd: "Lisää huomautus",
         itemNoteHide: "Piilota huomautus",
-        itemNotePlaceholder: "esim. ei sipulia, extra tulista…",
+        itemNotePlaceholder: "Esim. ei sipulia, extra tulista…",
         removeItem: "Poista tuote",
         proceedToCheckout: "Siirry kassalle",
+        choosePaymentNext: "Valitset maksutavan seuraavaksi.",
         placeOrderFailed: "Tilauksen tekeminen epäonnistui.",
         errors: {
           nameRequired: "Nimi vaaditaan.",
@@ -218,29 +229,20 @@ const resources = {
           deliveryAddressRequired: "Toimitusosoite vaaditaan.",
         },
       },
+
+      // ── Checkout page ─────────────────────────────────────────────────────
       checkout: {
         back: "Takaisin",
         title: "Kassa",
+        reviewAndPay: "Tarkista tilauksesi ja valitse maksu",
+        secureCheckout: "Turvallinen kassa",
         customerDetails: "Asiakastiedot",
         name: "Nimi",
         phone: "Puhelin",
-        delivery: "Toimitus",
+        deliveringTo: "Toimitetaan osoitteeseen",
         pickup: "Nouto",
-        address: "Osoite",
         orderNotes: "Lisätiedot",
         optional: "valinnainen",
-        paymentViaPaytrail: "Maksu Paytrailin kautta.",
-        summary: "Yhteenveto",
-        subtotal: "Välisumma",
-        discount: "5% alennus",
-        total: "Yhteensä",
-        processing: "Käsitellään...",
-        placeOrder: "Tee Tilaus",
-        reviewAndPay: "Tarkista tilauksesi ja valitse maksu",
-        secureCheckout: "Turvallinen kassa",
-        nothingToCheckout: "Ei tilattavaa",
-        addItemsFirst: "Lisää ensin tuotteita ostoskoriin.",
-        deliveringTo: "Toimitetaan osoitteeseen",
         paymentMethod: "Maksutapa",
         payOnline: "Maksa verkossa",
         payOnlineDesc: "Visa, Mastercard, OP, Nordea Paytrailin kautta",
@@ -248,14 +250,100 @@ const resources = {
         cashOnDeliveryDesc: "Maksa käteisellä kun tilaus saapuu",
         cardOnDelivery: "Kortti toimituksessa",
         cardOnDeliveryDesc: "Maksa kortilla kun tilaus saapuu",
-        paytrailRedirectNote:
-          "Sinut ohjataan Paytrailin turvalliselle maksusivulle.",
+        paytrailRedirectNote: "Sinut ohjataan Paytrailin turvalliselle maksusivulle.",
+        summary: "Yhteenveto",
+        subtotal: "Välisumma",
+        delivery: "Toimitus",
+        discount: "5% alennus",
+        total: "Yhteensä",
         redirectingToPayment: "Ohjataan maksuun…",
         payViaPaytrail: "Maksa €{{amount}} Paytraililla",
-        paytrailFootnote:
-          "Ohjattu Paytrailiin — korttitietojasi ei tallenneta.",
+        paytrailFootnote: "Ohjattu Paytrailiin — korttitietojasi ei tallenneta.",
+        processing: "Käsitellään...",
+        placeOrder: "Tee Tilaus",
         offlinePaymentNote: "Tilauksesi vahvistetaan välittömästi.",
+        nothingToCheckout: "Ei tilattavaa",
+        addItemsFirst: "Lisää ensin tuotteita ostoskoriin.",
       },
+
+      // ── My Orders page ────────────────────────────────────────────────────
+      myOrders: {
+        title: "Tilaukseni",
+        ordersCount_one: "{{count}} tilaus",
+        ordersCount_other: "{{count}} tilausta",
+        awaitingPayment: "odottaa maksua",
+        refresh: "Päivitä",
+        loadFailed: "Tilausten lataaminen epäonnistui",
+        tryAgain: "Yritä uudelleen",
+        noOrdersTitle: "Ei tilauksia vielä",
+        noOrdersBody: "Tilaushistoriasi näkyy täällä.",
+        browseMenu: "Selaa ruokalistaa",
+        subtotal: "Välisumma",
+        deliveryCharge: "Toimitus",
+        free: "Ilmainen",
+        discount: "Alennus",
+        total: "Yhteensä",
+        trackOrder: "Seuraa tilausta",
+        pendingPaymentBanner: "Maksu vaaditaan tilauksen vahvistamiseksi",
+        completePayment: "Suorita maksu — €{{amount}}",
+        redirectingToPaytrail: "Ohjataan Paytrailiin…",
+        paymentPendingNote: "Maksu on kesken — suorita se tilauksen vahvistamiseksi.",
+        paymentError: "Maksuvirhe. Yritä uudelleen.",
+        notes: "Huomio",
+      },
+
+      // ── Order confirmation page (/confirm/order/:id) ───────────────────────
+      orderConfirmation: {
+        loading: "Ladataan tilaustasi…",
+        notFoundTitle: "Tilausta ei löydy",
+        backToMenu: "Takaisin ruokalistaan",
+        placedTitle: "Tilaus vastaanotettu!",
+        placedSubtitle:
+          "Tilaus {{number}} on vastaanotettu. Suorita maksu alla vahvistaaksesi sen.",
+        orderDetails: "Tilauksen tiedot",
+        orderNumber: "Tilausnumero",
+        placedAt: "Tilattu klo",
+        orderType: "Toimitustapa",
+        deliverTo: "Toimitetaan",
+        notes: "Lisätiedot",
+        items: "Tuotteet",
+        subtotal: "Välisumma",
+        delivery: "Toimitus",
+        free: "Ilmainen",
+        discount: "Alennus",
+        total: "Yhteensä",
+        paymentTitle: "Maksu",
+        paymentBody:
+          "Tilauksesi on varattu. Suorita maksu Paytrailin kautta vahvistaaksesi sen.",
+        payNow: "Maksa €{{amount}} nyt",
+        redirectingToPaytrail: "Ohjataan Paytrailiin…",
+        paytrailNote: "Sinut ohjataan Paytrailin turvalliselle maksusivulle",
+        paymentError: "Maksuyhdyskäytävävirhe. Yritä uudelleen.",
+        delivery_type: "toimitus",
+        pickup_type: "nouto",
+      },
+
+      // ── Order confirmed page (/order/:id/confirmed) ───────────────────────
+      orderConfirmed: {
+        // Success state
+        paymentSuccessTitle: "Maksu onnistui",
+        paymentSuccessBody: "Tilauksesi on vahvistettu ja sen valmistus on aloitettu.",
+        orderLabel: "Tilaus",
+        summaryTitle: "Yhteenveto",
+        paidBadge: "Maksettu",
+        myOrders: "Tilaukseni",
+        backHome: "Etusivulle",
+        // Cancel state
+        paymentCancelledTitle: "Maksu peruutettu",
+        paymentCancelledBody:
+          "Maksuasi ei suoritettu loppuun. Tilaustasi ei ole vahvistettu.",
+        tryAgain: "Yritä uudelleen",
+        backToMenu: "Takaisin ruokalistaan",
+        // Shared
+        total: "Yhteensä",
+      },
+
+      // ── Login ─────────────────────────────────────────────────────────────
       login: {
         emailRequired: "Sähköposti vaaditaan.",
         emailInvalid:
@@ -270,6 +358,7 @@ const resources = {
         emailPlaceholder: "sinä@esimerkki.com",
         passwordLabel: "Salasana",
         passwordPlaceholder: "Salasanasi",
+        forgotPassword: "Unohditko salasanasi?",
         signingIn: "Kirjaudutaan…",
         signIn: "Kirjaudu sisään",
         noAccount: "Ei tiliä? ",
@@ -277,6 +366,8 @@ const resources = {
         termsPrefix: "Kirjautumalla hyväksyt ",
         termsLink: "Käyttöehdot",
       },
+
+      // ── Register ──────────────────────────────────────────────────────────
       register: {
         nameRequired: "Koko nimi vaaditaan.",
         emailRequired: "Sähköposti vaaditaan.",
@@ -305,11 +396,35 @@ const resources = {
         haveAccount: "Onko sinulla jo tili? ",
         signIn: "Kirjaudu sisään",
       },
+
+      // ── Verify email ──────────────────────────────────────────────────────
+      verifyEmail: {
+        checkTitle: "Tarkista sähköpostisi",
+        checkBody:
+          "Lähetimme vahvistuslinkin sähköpostiisi. Klikkaa linkkiä aktivoidaksesi tilisi.",
+        spamNote:
+          "Etkö saanut viestiä? Tarkista roskapostikansio tai lähetä uusi linkki.",
+        resendButton: "Lähetä vahvistussähköposti uudelleen",
+        resentSuccess: "Uusi vahvistussähköposti lähetetty!",
+        noEmailFallback:
+          "Rekisteröidy uudelleen saadaksesi uuden vahvistuslinkin.",
+        backToLogin: "Takaisin kirjautumiseen",
+        verifyingTitle: "Vahvistetaan sähköposti…",
+        verifyingBody: "Tämä kestää vain hetken.",
+        successTitle: "Sähköposti vahvistettu!",
+        successBody: "Tilisi on valmis. Voit nyt kirjautua sisään.",
+        signIn: "Kirjaudu tilillesi",
+        errorTitle: "Vahvistus epäonnistui",
+        errorBody: "Linkki on virheellinen tai vanhentunut.",
+      },
+
+      // ── Contact page ──────────────────────────────────────────────────────
       contact: {
         title: "Yhteystiedot",
         sendMessageTitle: "Lähetä Viesti",
         messageSentTitle: "Viesti lähetetty!",
         messageSentBody: "Olemme yhteydessä pian.",
+        sendAnother: "Lähetä uusi viesti",
         fullNameLabel: "Koko nimi",
         emailLabel: "Sähköposti",
         phoneLabel: "Puhelin",
@@ -319,18 +434,22 @@ const resources = {
         subjectFeedback: "Palaute",
         subjectPartnership: "Kumppanuus",
         messageLabel: "Viesti",
+        sending: "Lähetetään…",
         sendMessageButton: "Lähetä Viesti",
         restaurantInfoTitle: "Ravintolan Tiedot",
         addressLabel: "Osoite",
         openingHoursTitle: "Aukioloajat",
         lunchLabel: "Lounas Ma-Pe:",
+        closed: "Suljettu",
         mapLabel: "Kartta",
       },
+
+      // ── About page ────────────────────────────────────────────────────────
       aboutPage: {
         title: "Tietoa Meistä",
         welcomeTitle: "Tervetuloa Ravintola Amazonaan",
         body1:
-          "Ravintola Amazona on Lahden suosituin pizzeria ja kebab-ravintola. Perustettu vuonna 2010, olemme palvelleet asiakkaitamme laadukkailla raaka-aineilla ja aidoilla resepteillä. Tarjoamme parhaat pizzat, kebabit ja kanaruokia Lahti.",
+          "Ravintola Amazona on Lahden suosituin pizzeria ja kebab-ravintola. Perustettu vuonna 2010, olemme palvelleet asiakkaitamme laadukkailla raaka-aineilla ja aidoilla resepteillä. Tarjoamme parhaat pizzat, kebabit ja kanaruokia Lahdessa.",
         body2:
           "Teemme kaiken ruoan tuoreista raaka-aineista joka päivä. Meidän tavoitteemme on tarjota parasta laatua ja palvelua.",
         established: "Perustettu 2010",
@@ -342,7 +461,10 @@ const resources = {
         fastDeliveryBody: "Toimitus 30-45 minuutissa.",
         centralLocationTitle: "Keskellä Lahtea",
         centralLocationBody: "Aleksanterinkatu 3, helposti saavutettavissa.",
+        closed: "Suljettu",
       },
+
+      // ── Guest orders page ─────────────────────────────────────────────────
       guestOrders: {
         title: "Etsi Tilauksiasi",
         subtitle: "Syötä puhelinnumerosi nähdäksesi tilauksesi.",
@@ -353,28 +475,15 @@ const resources = {
         findButton: "Etsi",
         noOrders: "Ei tilauksia tällä puhelinnumerolla.",
       },
-      orderConfirmed: {
-        title: "Tilaus Vahvistettu!",
-        thankYouPrefix: "Kiitos tilauksestasi,",
-        estimatedDelivery: "Arvioitu toimitusaika",
-        minutes: "minuuttia",
-        orderedItems: "Tilatut Tuotteet",
-        size: "Koko",
-        toppings: "lisäkettä",
-        subtotal: "Välisumma",
-        delivery: "Toimitus",
-        discount: "5% alennus",
-        total: "Yhteensä",
-        myAccount: "Oma Tili",
-        backHome: "Etusivulle",
-      },
+
+      // ── Order tracking page ───────────────────────────────────────────────
       orderTracking: {
         orderNumber: "Tilausnumero",
         orderCancelled: "Tilaus Peruttu",
         trackOrder: "Seuraa Tilaustasi",
         cancelledTitle: "Tilaus on peruttu",
         cancelledBody: "Jos sinulla on kysyttävää, ota yhteyttä ravintolaan.",
-        orderStatusTitle: "Tilauksen Status",
+        orderStatusTitle: "Tilauksen tila",
         currentStatus: "Nykyinen tila",
         deliveryInfo: "Toimitustiedot",
         pickupFromRestaurant: "Nouto ravintolasta",
@@ -386,27 +495,34 @@ const resources = {
         total: "Yhteensä",
         cancelOrder: "Peru Tilaus",
         cancelNotAllowed:
-          "Tilausta ei voi enää peruuttaa - ravintola on jo aloittanut valmistuksen.",
+          "Tilausta ei voi enää peruuttaa — ravintola on jo aloittanut valmistuksen.",
         backHome: "Takaisin Etusivulle",
       },
+
+      // ── Order status labels ───────────────────────────────────────────────
       orderStatus: {
         pending: "Tilaus Vastaanotettu",
         confirmed: "Vahvistettu",
         preparing: "Valmistetaan",
         onTheWay: "Matkalla",
         delivered: "Toimitettu",
+        cancelled: "Peruttu",
       },
+
+      // ── Auth layout ───────────────────────────────────────────────────────
       authLayout: {
         quote: '"Ruoka on ainesosa, joka yhdistää meidät."',
         headlineLine1: "Aitoja makuja,",
         headlineLine2: "toimitettu nopeasti.",
         subhead:
           "Puulämmitteiset pizzat ja muuta — suoraan keittiöstämme ovellesi.",
-        socialProof: "2,000+ tyytyväistä asiakasta",
+        socialProof: "2 000+ tyytyväistä asiakasta",
         mobileHeadline: "Aitoja makuja, nopeasti.",
         languageEnglish: "English",
         languageFinnish: "Suomi",
       },
+
+      // ── Account page ──────────────────────────────────────────────────────
       account: {
         title: "Oma tili",
         tabs: {
@@ -481,12 +597,16 @@ const resources = {
       },
     },
   },
+
   en: {
     home: {
+      // ── Carousel / generic ────────────────────────────────────────────────
       order: "Order",
       onSale: "SALE",
       unnamedItem: "Unnamed item",
       unnamedItemDesc: "Description not available",
+
+      // ── Review modal ──────────────────────────────────────────────────────
       leaveReview: "Leave a Review",
       rating: "Rating",
       review: "Review",
@@ -494,24 +614,34 @@ const resources = {
       submitting: "Submitting...",
       submit: "Submit",
       thankYou: "Thanks for your review!",
+
+      // ── Status pill ───────────────────────────────────────────────────────
       openNow: "Open Now — Order Now!",
       closedNow: "Currently Closed",
+
+      // ── Hero ──────────────────────────────────────────────────────────────
       heroTagline: "Authentic flavors in the heart of Lahti",
       orderNow: "Order Now",
       viewMenu: "View Menu",
       scrollDown: "Scroll down",
+
+      // ── Features strip ────────────────────────────────────────────────────
       fastDelivery: "Fast Delivery",
       fastDeliveryDesc: "Free under 9km • €4 over 9km",
       discount: "5% Off Every Order",
       discountDesc: "Automatic discount on every order",
       deliveryTime: "~60 min delivery",
       deliveryTimeDesc: "Min order €13 • Max 14km radius",
+
+      // ── Carousel section ──────────────────────────────────────────────────
       fromMenu: "From the menu",
       popularDishes: "Popular dishes",
       newSelectionEveryVisit: "A new selection every time you visit",
       fullMenu: "Full menu",
       emptyMenuTitle: "No items to show",
       emptyMenuBody: "The menu will be back soon. Please check again later.",
+
+      // ── About ─────────────────────────────────────────────────────────────
       aboutUs: "About us",
       yearsInLahti: "years in Lahti",
       aboutHeading: "In the heart of Lahti\nsince 2010",
@@ -522,6 +652,23 @@ const resources = {
       delivery: "Delivery",
       minOrder: "Min. order",
       noReviewsYet: "No reviews yet",
+
+      // ── Reviews ───────────────────────────────────────────────────────────
+      reviewsLabel: "Reviews",
+      reviewsHeading: "What our customers say",
+      signInToReview: "Sign in to leave a review",
+
+      // ── App download ──────────────────────────────────────────────────────
+      mobileApp: "Mobile App",
+      orderEasier: "Order Easier",
+      downloadDesc: "Download our app and order directly from your phone.",
+      downloadOn: "Download on",
+
+      // ── Opening hours ─────────────────────────────────────────────────────
+      openingHours: "Opening Hours",
+      closed: "Closed",
+
+      // ── Menu page ─────────────────────────────────────────────────────────
       menu: {
         title: "Menu",
         mainTab: "Main Menu",
@@ -549,42 +696,8 @@ const resources = {
         noItemsTitle: "Menu is updating",
         noItemsBody: "New items are coming soon. Please check back later.",
       },
-      reviewsLabel: "Reviews",
-      reviewsHeading: "What our customers say",
-      signInToReview: "Sign in to leave a review",
-      review1: "Best kebab in Lahti! Fast delivery and food always fresh.",
-      review2: "Amazona pizza is honestly the best pizza I've ever had.",
-      review3: "Excellent selection and prices are right.",
-      mobileApp: "Mobile App",
-      orderEasier: "Order Easier",
-      downloadDesc: "Download our app and order directly from your phone.",
-      downloadOn: "Download on",
-      openingHours: "Opening Hours",
-      monTue: "Mon–Tue",
-      wedSun: "Wed–Sun",
-      wedFri: "Wed–Fri",
-      footer: {
-        brandPrefix: "Ravintola",
-        brandName: "Amazona",
-        description:
-          "Lahti's best pizzeria and kebab restaurant. Fresh ingredients and authentic flavors since 2010.",
-        openingHours: "Opening Hours",
-        lunch: "Lunch Mon-Fri 10:30-14:30",
-        contact: "Contact",
-        addressLine1: "Aleksanterinkatu 3",
-        addressLine2: "15110 Lahti, Finland",
-        rights: "All rights reserved.",
-        findOrders: "Find your orders",
-        days: {
-          monday: "Monday",
-          tuesday: "Tuesday",
-          wednesday: "Wednesday",
-          thursday: "Thursday",
-          friday: "Friday",
-          saturday: "Saturday",
-          sunday: "Sunday",
-        },
-      },
+
+      // ── Menu item page ────────────────────────────────────────────────────
       menuItem: {
         backToMenu: "Back to menu",
         notFoundTitle: "Item not found",
@@ -611,12 +724,13 @@ const resources = {
         noReviewsTitle: "No reviews yet",
         noReviewsBody: "Be the first to review this item.",
         addToCart: "Add to cart",
-        // ── New keys used in MenuItemPage ──
         specialInstruction: "Special instructions",
         specialInstructionPlaceholder: "E.g. no onions, extra sauce…",
         addedToCart: "Added!",
         requiredExtraError: "Please make a selection for",
       },
+
+      // ── Nav ───────────────────────────────────────────────────────────────
       nav: {
         home: "Home",
         menu: "Menu",
@@ -631,6 +745,32 @@ const resources = {
         langFi: "Suomi",
         langEn: "English",
       },
+
+      // ── Footer ────────────────────────────────────────────────────────────
+      footer: {
+        brandPrefix: "Ravintola",
+        brandName: "Amazona",
+        description:
+          "Lahti's best pizzeria and kebab restaurant. Fresh ingredients and authentic flavors since 2010.",
+        openingHours: "Opening Hours",
+        lunch: "Lunch Mon-Fri 10:30-14:30",
+        contact: "Contact",
+        addressLine1: "Aleksanterinkatu 3",
+        addressLine2: "15110 Lahti, Finland",
+        rights: "All rights reserved.",
+        findOrders: "Find your orders",
+        days: {
+          monday: "Monday",
+          tuesday: "Tuesday",
+          wednesday: "Wednesday",
+          thursday: "Thursday",
+          friday: "Friday",
+          saturday: "Saturday",
+          sunday: "Sunday",
+        },
+      },
+
+      // ── Cart page ─────────────────────────────────────────────────────────
       cart: {
         emptyTitle: "Your cart is empty",
         emptyBody: "You have not added any items yet.",
@@ -649,20 +789,21 @@ const resources = {
         emailPlaceholder: "Email (optional)",
         guestEmailNote: "Email helps us send your order confirmation.",
         orderNotes: "Order notes",
-        notesPlaceholder: "e.g. no onions, extra spicy…",
+        notesPlaceholder: "E.g. no onions, extra spicy…",
         summary: "Summary",
         subtotal: "Subtotal",
         free: "Free",
         freeDeliveryHint: "Add €{{amount}} more for free delivery.",
         total: "Total",
         placing: "Placing...",
-        proceedToCheckout: "Proceed to Checkout",
         placeOrder: "Place order",
         payOnDelivery: "Pay on delivery.",
         itemNoteAdd: "Add note",
         itemNoteHide: "Hide note",
-        itemNotePlaceholder: "e.g. no onions, extra spicy…",
+        itemNotePlaceholder: "E.g. no onions, extra spicy…",
         removeItem: "Remove item",
+        proceedToCheckout: "Proceed to Checkout",
+        choosePaymentNext: "You'll choose your payment method next.",
         placeOrderFailed: "Failed to place order.",
         errors: {
           nameRequired: "Name is required.",
@@ -670,29 +811,20 @@ const resources = {
           deliveryAddressRequired: "Delivery address is required.",
         },
       },
+
+      // ── Checkout page ─────────────────────────────────────────────────────
       checkout: {
         back: "Back",
         title: "Checkout",
+        reviewAndPay: "Review your order and choose payment",
+        secureCheckout: "Secure checkout",
         customerDetails: "Customer Details",
         name: "Name",
         phone: "Phone",
-        delivery: "Delivery",
+        deliveringTo: "Delivering to",
         pickup: "Pickup",
-        address: "Address",
         orderNotes: "Order Notes",
         optional: "optional",
-        paymentViaPaytrail: "Payment via Paytrail.",
-        summary: "Summary",
-        subtotal: "Subtotal",
-        discount: "5% discount",
-        total: "Total",
-        processing: "Processing...",
-        placeOrder: "Place Order",
-        reviewAndPay: "Review your order and choose payment",
-        secureCheckout: "Secure checkout",
-        nothingToCheckout: "Nothing to checkout",
-        addItemsFirst: "Please add items to your cart first.",
-        deliveringTo: "Delivering to",
         paymentMethod: "Payment Method",
         payOnline: "Pay Online",
         payOnlineDesc: "Visa, Mastercard, OP, Nordea via Paytrail",
@@ -700,14 +832,99 @@ const resources = {
         cashOnDeliveryDesc: "Pay in cash when your order arrives",
         cardOnDelivery: "Card on Delivery",
         cardOnDeliveryDesc: "Pay by card when your order arrives",
-        paytrailRedirectNote:
-          "You'll be redirected to Paytrail's secure payment page.",
+        paytrailRedirectNote: "You'll be redirected to Paytrail's secure payment page.",
+        summary: "Summary",
+        subtotal: "Subtotal",
+        delivery: "Delivery",
+        discount: "5% discount",
+        total: "Total",
         redirectingToPayment: "Redirecting to payment…",
         payViaPaytrail: "Pay €{{amount}} via Paytrail",
         paytrailFootnote:
           "Redirected to Paytrail — your card details are never stored here.",
+        processing: "Processing...",
+        placeOrder: "Place Order",
         offlinePaymentNote: "Your order will be confirmed immediately.",
+        nothingToCheckout: "Nothing to checkout",
+        addItemsFirst: "Please add items to your cart first.",
       },
+
+      // ── My Orders page ────────────────────────────────────────────────────
+      myOrders: {
+        title: "My Orders",
+        ordersCount_one: "{{count}} order",
+        ordersCount_other: "{{count}} orders",
+        awaitingPayment: "awaiting payment",
+        refresh: "Refresh",
+        loadFailed: "Failed to load orders",
+        tryAgain: "Try again",
+        noOrdersTitle: "No orders yet",
+        noOrdersBody: "Your order history will appear here.",
+        browseMenu: "Browse Menu",
+        subtotal: "Subtotal",
+        deliveryCharge: "Delivery",
+        free: "Free",
+        discount: "Discount",
+        total: "Total",
+        trackOrder: "Track Order",
+        pendingPaymentBanner: "Payment required to confirm this order",
+        completePayment: "Complete Payment — €{{amount}}",
+        redirectingToPaytrail: "Redirecting to Paytrail…",
+        paymentPendingNote: "Payment is pending — complete it to confirm your order.",
+        paymentError: "Payment error. Try again.",
+        notes: "Note",
+      },
+
+      // ── Order confirmation page (/confirm/order/:id) ───────────────────────
+      orderConfirmation: {
+        loading: "Loading your order…",
+        notFoundTitle: "Order not found",
+        backToMenu: "Back to menu",
+        placedTitle: "Order Placed!",
+        placedSubtitle:
+          "Order {{number}} has been received. Complete payment below to confirm it.",
+        orderDetails: "Order Details",
+        orderNumber: "Order number",
+        placedAt: "Placed at",
+        orderType: "Order type",
+        deliverTo: "Deliver to",
+        notes: "Notes",
+        items: "Items",
+        subtotal: "Subtotal",
+        delivery: "Delivery",
+        free: "Free",
+        discount: "Discount",
+        total: "Total",
+        paymentTitle: "Payment",
+        paymentBody:
+          "Your order is reserved. Complete payment via Paytrail to confirm it.",
+        payNow: "Pay €{{amount}} now",
+        redirectingToPaytrail: "Redirecting to Paytrail…",
+        paytrailNote: "You'll be redirected to Paytrail's secure payment page",
+        paymentError: "Payment gateway error. Please try again.",
+        delivery_type: "delivery",
+        pickup_type: "pickup",
+      },
+
+      // ── Order confirmed page (/order/:id/confirmed) ───────────────────────
+      orderConfirmed: {
+        paymentSuccessTitle: "Payment Successful",
+        paymentSuccessBody:
+          "Your order has been confirmed and is being prepared.",
+        orderLabel: "Order",
+        summaryTitle: "Summary",
+        paidBadge: "Paid",
+        myOrders: "My Orders",
+        backHome: "Back Home",
+        paymentCancelledTitle: "Payment Cancelled",
+        paymentCancelledBody:
+          "Your payment was not completed. Your order has not been confirmed.",
+        tryAgain: "Try Again",
+        backToMenu: "Back to Menu",
+        total: "Total",
+      },
+
+      // ── Login ─────────────────────────────────────────────────────────────
       login: {
         emailRequired: "Email is required.",
         emailInvalid:
@@ -722,6 +939,7 @@ const resources = {
         emailPlaceholder: "you@example.com",
         passwordLabel: "Password",
         passwordPlaceholder: "Your password",
+        forgotPassword: "Forgot password?",
         signingIn: "Signing in…",
         signIn: "Sign in",
         noAccount: "Don't have an account? ",
@@ -729,6 +947,8 @@ const resources = {
         termsPrefix: "By signing in you agree to our ",
         termsLink: "Terms of Service",
       },
+
+      // ── Register ──────────────────────────────────────────────────────────
       register: {
         nameRequired: "Full name is required.",
         emailRequired: "Email is required.",
@@ -757,11 +977,35 @@ const resources = {
         haveAccount: "Already have an account? ",
         signIn: "Sign in",
       },
+
+      // ── Verify email ──────────────────────────────────────────────────────
+      verifyEmail: {
+        checkTitle: "Check your email",
+        checkBody:
+          "We've sent a verification link to your email address. Click the link to activate your account.",
+        spamNote:
+          "Didn't receive it? Check your spam folder or resend the link below.",
+        resendButton: "Resend verification email",
+        resentSuccess: "New verification email sent!",
+        noEmailFallback:
+          "Please register again to receive a new verification link.",
+        backToLogin: "Back to login",
+        verifyingTitle: "Verifying your email…",
+        verifyingBody: "This will only take a moment.",
+        successTitle: "Email Verified!",
+        successBody: "Your account is ready. You can now sign in.",
+        signIn: "Sign in to your account",
+        errorTitle: "Verification Failed",
+        errorBody: "This link is invalid or has expired.",
+      },
+
+      // ── Contact page ──────────────────────────────────────────────────────
       contact: {
         title: "Contact Us",
         sendMessageTitle: "Send a Message",
         messageSentTitle: "Message Sent!",
         messageSentBody: "We'll get back to you soon.",
+        sendAnother: "Send another message",
         fullNameLabel: "Full Name",
         emailLabel: "Email",
         phoneLabel: "Phone",
@@ -771,13 +1015,17 @@ const resources = {
         subjectFeedback: "Feedback",
         subjectPartnership: "Partnership",
         messageLabel: "Message",
+        sending: "Sending…",
         sendMessageButton: "Send Message",
         restaurantInfoTitle: "Restaurant Info",
         addressLabel: "Address",
         openingHoursTitle: "Opening Hours",
         lunchLabel: "Lunch Mon-Fri:",
+        closed: "Closed",
         mapLabel: "Map",
       },
+
+      // ── About page ────────────────────────────────────────────────────────
       aboutPage: {
         title: "About Us",
         welcomeTitle: "Welcome to Ravintola Amazona",
@@ -794,7 +1042,10 @@ const resources = {
         fastDeliveryBody: "Delivery in 30-45 minutes.",
         centralLocationTitle: "Central Lahti Location",
         centralLocationBody: "Aleksanterinkatu 3, easily accessible.",
+        closed: "Closed",
       },
+
+      // ── Guest orders page ─────────────────────────────────────────────────
       guestOrders: {
         title: "Find Your Orders",
         subtitle: "Enter your phone number to see your orders.",
@@ -805,21 +1056,8 @@ const resources = {
         findButton: "Find",
         noOrders: "No orders found for this phone number.",
       },
-      orderConfirmed: {
-        title: "Order Confirmed!",
-        thankYouPrefix: "Thank you for your order,",
-        estimatedDelivery: "Estimated Delivery",
-        minutes: "minutes",
-        orderedItems: "Ordered Items",
-        size: "Size",
-        toppings: "toppings",
-        subtotal: "Subtotal",
-        delivery: "Delivery",
-        discount: "5% discount",
-        total: "Total",
-        myAccount: "My Account",
-        backHome: "Back to Home",
-      },
+
+      // ── Order tracking page ───────────────────────────────────────────────
       orderTracking: {
         orderNumber: "Order Number",
         orderCancelled: "Order Cancelled",
@@ -838,16 +1076,21 @@ const resources = {
         total: "Total",
         cancelOrder: "Cancel Order",
         cancelNotAllowed:
-          "Order can no longer be cancelled - the restaurant has already started preparation.",
+          "Order can no longer be cancelled — the restaurant has already started preparation.",
         backHome: "Back to Home",
       },
+
+      // ── Order status labels ───────────────────────────────────────────────
       orderStatus: {
-        pending: "Order Confirmed",
+        pending: "Order Received",
         confirmed: "Confirmed",
         preparing: "Preparing",
         onTheWay: "On the Way",
         delivered: "Delivered",
+        cancelled: "Cancelled",
       },
+
+      // ── Auth layout ───────────────────────────────────────────────────────
       authLayout: {
         quote: '"Food is the ingredient that binds us together."',
         headlineLine1: "Authentic flavours,",
@@ -859,6 +1102,8 @@ const resources = {
         languageEnglish: "English",
         languageFinnish: "Suomi",
       },
+
+      // ── Account page ──────────────────────────────────────────────────────
       account: {
         title: "My Account",
         tabs: {
@@ -940,7 +1185,7 @@ const supportedLanguages: Language[] = ["fi", "en"];
 if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
     resources,
-    lng: getSavedLanguage(), // ← boot from localStorage instead of hardcoded "fi"
+    lng: getSavedLanguage(),
     fallbackLng: "en",
     defaultNS: "home",
     ns: ["home"],
@@ -966,7 +1211,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = (lang: Language) => {
     i18nInstance.changeLanguage(lang);
-    // Persist the choice so the next page load boots in the same language
     try {
       localStorage.setItem(LANG_STORAGE_KEY, lang);
     } catch {

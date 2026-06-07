@@ -1,100 +1,104 @@
-import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Utensils } from "lucide-react";
 import { Link } from "react-router-dom";
+import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
+import { useRestaurant } from "../context/RestaurantContext";
+
+function formatTime(time: string | null) {
+  if (!time) return null;
+  const [h, m] = time.split(":");
+  return `${h}:${m}`;
+}
 
 export default function Footer() {
   const { t } = useLanguage();
-
-  const hours = [
-    { day: t("footer.days.monday"), time: "15:00 – 03:00" },
-    { day: t("footer.days.tuesday"), time: "15:00 – 03:00" },
-    { day: t("footer.days.wednesday"), time: "11:00 – 03:45" },
-    { day: t("footer.days.thursday"), time: "11:00 – 03:45" },
-    { day: t("footer.days.friday"), time: "11:00 – 03:45" },
-    { day: t("footer.days.saturday"), time: "11:00 – 03:45" },
-    { day: t("footer.days.sunday"), time: "11:00 – 03:45" },
-  ];
+  const { info, isOpen, openStatusMessage } = useRestaurant();
 
   return (
-    <footer className="bg-gray-950 border-t border-white/5 text-gray-400">
+    <footer className="bg-gray-900 border-t border-white/5 mt-auto">
       <div className="max-w-[1200px] mx-auto px-4 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Left - Restaurant info */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center">
-                <Utensils size={18} className="text-gray-900" />
-              </div>
-              <div>
-                <div className="text-white font-bold text-sm">{t("footer.brandPrefix")}</div>
-                <div className="text-amber-400 font-bold text-sm">{t("footer.brandName")}</div>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+
+          {/* Brand */}
+          <div>
+            <h3 className="text-white font-bold text-lg mb-1">{info?.name ?? "Ravintola Amazona"}</h3>
+            <div className="flex items-center gap-1.5 mb-4">
+              <span className={`w-2 h-2 rounded-full ${isOpen ? "bg-green-400" : "bg-red-400"}`} />
+              <span className="text-xs text-gray-400">{openStatusMessage}</span>
             </div>
-            <p className="text-sm leading-relaxed">
-              {t("footer.description")}
-            </p>
+            <p className="text-gray-400 text-sm leading-relaxed">{t("footer.tagline")}</p>
           </div>
 
-          {/* Center - Opening hours */}
-          <div className="space-y-4">
-            <h3 className="text-white font-semibold text-sm uppercase tracking-wider flex items-center gap-2">
-              <Clock size={14} className="text-amber-400" />
-              {t("footer.openingHours")}
-            </h3>
-            <div className="space-y-1 text-xs">
-              {hours.map(h => (
-                <div key={h.day} className="flex justify-between gap-2">
-                  <span className="text-gray-500">{h.day}</span>
-                  <span className="text-gray-300 font-medium tabular-nums">{h.time}</span>
+          {/* Contact */}
+          <div>
+            <h4 className="text-white font-semibold text-sm mb-4">{t("footer.contactTitle")}</h4>
+            <div className="space-y-3 text-sm">
+              {info?.address && (
+                <div className="flex items-start gap-2 text-gray-400">
+                  <MapPin size={15} className="text-amber-400 mt-0.5 shrink-0" />
+                  <span>{info.address}</span>
+                </div>
+              )}
+              {info?.phone && (
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Phone size={15} className="text-amber-400 shrink-0" />
+                  <a href={`tel:${info.phone}`} className="hover:text-amber-400 transition-colors">{info.phone}</a>
+                </div>
+              )}
+              {info?.phone_2 && (
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Phone size={15} className="text-amber-400 shrink-0" />
+                  <a href={`tel:${info.phone_2}`} className="hover:text-amber-400 transition-colors">{info.phone_2}</a>
+                </div>
+              )}
+              {info?.email && (
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Mail size={15} className="text-amber-400 shrink-0" />
+                  <a href={`mailto:${info.email}`} className="hover:text-amber-400 transition-colors">{info.email}</a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Opening hours */}
+          <div>
+            <h4 className="text-white font-semibold text-sm mb-4 flex items-center gap-2">
+              <Clock size={15} className="text-amber-400" />
+              {t("contact.openingHoursTitle")}
+            </h4>
+            <div className="space-y-1.5 text-xs">
+              {info?.opening_hours.map((row) => (
+                <div key={row.day} className="flex justify-between gap-4">
+                  <span className="text-gray-400 capitalize">{t(`footer.days.${row.day}`)}</span>
+                  <span className="text-gray-300">
+                    {row.is_closed
+                      ? <span className="text-red-400">{t("contact.closed") ?? "Closed"}</span>
+                      : `${formatTime(row.open_time)} – ${formatTime(row.close_time)}`
+                    }
+                  </span>
                 </div>
               ))}
             </div>
-            <p className="text-amber-400/80 text-xs">{t("footer.lunch")}</p>
           </div>
 
-          {/* Right - Contact */}
-          <div className="space-y-4">
-            <h3 className="text-white font-semibold text-sm uppercase tracking-wider">
-              {t("footer.contact")}
-            </h3>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-start gap-2">
-                <MapPin size={14} className="text-amber-400 mt-0.5 shrink-0" />
-                <span>
-                  {t("footer.addressLine1")}
-                  <br />
-                  {t("footer.addressLine2")}
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Phone size={14} className="text-amber-400 shrink-0" />
-                <a href="tel:+358037333366" className="hover:text-white transition-colors">+358 037 333 366</a>
-              </li>
-              <li className="flex items-center gap-2">
-                <Mail size={14} className="text-amber-400 shrink-0" />
-                <a href="mailto:info@ravintolaamazona.fi" className="hover:text-white transition-colors break-all">info@ravintolaamazona.fi</a>
-              </li>
-            </ul>
-            <div className="flex gap-3 pt-2">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/5 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors group" aria-label="Facebook">
-                <Facebook size={16} className="text-gray-400 group-hover:text-white" />
-              </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/5 hover:bg-pink-600 rounded-lg flex items-center justify-center transition-colors group" aria-label="Instagram">
-                <Instagram size={16} className="text-gray-400 group-hover:text-white" />
-              </a>
+          {/* Links */}
+          <div>
+            <h4 className="text-white font-semibold text-sm mb-4">{t("footer.linksTitle")}</h4>
+            <div className="flex flex-col gap-2 text-sm">
+              <Link to="/menu" className="text-gray-400 hover:text-amber-400 transition-colors">{t("nav.menu")}</Link>
+              <Link to="/about" className="text-gray-400 hover:text-amber-400 transition-colors">{t("nav.about")}</Link>
+              <Link to="/contact" className="text-gray-400 hover:text-amber-400 transition-colors">{t("nav.contact")}</Link>
+              <Link to="/orders" className="text-gray-400 hover:text-amber-400 transition-colors">{t("nav.orders")}</Link>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="border-t border-white/5 py-4">
-        <div className="max-w-[1200px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600">
-          <p>
-            © {new Date().getFullYear()} {t("footer.brandPrefix")} {t("footer.brandName")}. {t("footer.rights")}
-          </p>
-          <Link to="/my-orders" className="hover:text-gray-400">
-            {t("footer.findOrders")}
-          </Link>
+        <div className="border-t border-white/5 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+          <p>© {new Date().getFullYear()} {info?.name ?? "Ravintola Amazona"}. {t("footer.rights")}</p>
+          {info?.is_delivery_enabled && (
+            <p className="text-amber-500/70">
+              {t("footer.deliveryFrom")} €{info.min_order} · {t("footer.deliveryFee")} €{info.delivery_fee}
+            </p>
+          )}
         </div>
       </div>
     </footer>

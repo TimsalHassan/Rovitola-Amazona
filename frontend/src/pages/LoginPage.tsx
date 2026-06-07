@@ -4,7 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { FormField, PasswordField, Button, Alert } from "../components/FormElements";
 
-type T = (fi: string, en: string) => string;
+type T = (text: string) => string;
 
 function validateEmail(value: string, t: T): string | null {
   if (!value) return t("login.emailRequired");
@@ -140,6 +140,9 @@ export default function LoginPage() {
             autoComplete="current-password"
             required
           />
+          <Link to='/forgot-password' className="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 self-end">
+            {t("login.forgotPassword")}
+          </Link>
 
           <Button type="submit" size="lg" loading={loading} className="w-full mt-2">
             {loading ? t("login.signingIn") : t("login.signIn")}

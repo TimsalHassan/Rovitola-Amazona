@@ -164,13 +164,27 @@ function CartItemRow({ item }: { item: CartItem }) {
   );
 }
 
-// ─── Address textarea with manual save ───────────────────────────────────────
+// ─── Address form with structured fields + manual save ──────────────────────
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+interface AddressFields {
+  street: string;
+  city: string;
+  postal: string;
+  country: string;
+}
+
+const EMPTY_ADDRESS: AddressFields = {
+  street: "",
+  city: "",
+  postal: "",
+  country: "Finland",
+};
+
 interface AddressInputProps {
-  value: string;
-  onChange: (v: string) => void;
+  value: AddressFields;
+  onChange: (v: AddressFields) => void;
   onError: (msg: string) => void;
   savedAddresses: Address[];
   token: string | null;
@@ -193,42 +207,57 @@ function AddressInput({
   const isSavingRef = useRef(false);
   const lastSavedRef = useRef<string>("");
 
-  // Reset save status when user edits the address after a save
-  const handleChange = (v: string) => {
-    onChange(v);
-    if (saveStatus === "saved" || saveStatus === "error") {
-      setSaveStatus("idle");
-    }
+  // Format fields → single string for comparison & API
+  const toFormatted = (a: AddressFields) =>
+    [a.street, a.city, a.postal, a.country].filter((s) => s && s !== "-").join(", ");
+
+  const formatted = toFormatted(value);
+
+  const patchField = (field: keyof AddressFields, v: string) => {
+    onChange({ ...value, [field]: v });
+    if (saveStatus === "saved" || saveStatus === "error") setSaveStatus("idle");
   };
 
-  // Check if current value already exists in saved addresses
+  // Select a saved address chip → populate all fields
+  const selectSaved = (addr: Address) => {
+    onChange({
+      street: addr.street_address,
+      city: addr.city === "-" ? "" : addr.city,
+      postal: addr.postal_code === "-" ? "" : addr.postal_code,
+      country: addr.country || "Finland",
+    });
+    setSaveStatus("idle");
+    isSavingRef.current = false;
+  };
+
+  // Already saved if the full formatted string matches any existing address
   const isAlreadySaved = savedAddresses.some((a) => {
-    const formatted = [a.street_address, a.city, a.postal_code, a.country]
-      .filter(Boolean)
+    const f = [a.street_address, a.city, a.postal_code, a.country]
+      .filter((s) => s && s !== "-")
       .join(", ");
-    return formatted === value || a.street_address === value.trim();
+    return f === formatted || a.street_address === value.street.trim();
   });
 
   const showSaveButton =
     isLoggedIn &&
-    value.trim() &&
+    value.street.trim() &&
     !isAlreadySaved &&
     saveStatus !== "saving";
 
   const handleManualSave = async () => {
-    const trimmed = value.trim();
-    if (!token || !trimmed || trimmed === lastSavedRef.current || isSavingRef.current) return;
+    const trimmed = value.street.trim();
+    if (!token || !trimmed || formatted === lastSavedRef.current || isSavingRef.current) return;
 
     isSavingRef.current = true;
-    lastSavedRef.current = trimmed;
+    lastSavedRef.current = formatted;
     setSaveStatus("saving");
 
     try {
       const saved = await addressApi.create(token, {
         street_address: trimmed,
-        city: "-",
-        postal_code: "-",
-        country: "Finland",
+        city: value.city.trim() || "-",
+        postal_code: value.postal.trim() || "-",
+        country: value.country.trim() || "Finland",
         is_default: savedAddresses.length === 0,
       });
       onAddressSaved(saved);
@@ -245,24 +274,24 @@ function AddressInput({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Saved address chips */}
       {savedAddresses.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {savedAddresses.map((addr) => {
-            const formatted = [addr.street_address, addr.city, addr.postal_code, addr.country]
-              .filter(Boolean)
+            const chipFormatted = [addr.street_address, addr.city, addr.postal_code, addr.country]
+              .filter((s) => s && s !== "-")
               .join(", ");
+            const isSelected =
+              value.street === addr.street_address ||
+              formatted === chipFormatted;
             return (
               <button
                 key={addr.id}
                 type="button"
-                onClick={() => {
-                  onChange(formatted);
-                  setSaveStatus("idle");
-                }}
+                onClick={() => selectSaved(addr)}
                 className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
-                  value === formatted || value === addr.street_address
+                  isSelected
                     ? "border-amber-500 bg-amber-500/10 text-amber-400"
                     : "border-white/10 bg-gray-900 text-gray-400 hover:border-white/20"
                 }`}
@@ -275,25 +304,51 @@ function AddressInput({
         </div>
       )}
 
-      {/* Textarea */}
+      {/* Street address */}
       <div className="relative">
-        <MapPin size={16} className="absolute left-3.5 top-3.5 text-gray-500" />
-        <textarea
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
-          rows={2}
-          className={`w-full bg-gray-900 border rounded-xl pl-9 pr-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none transition-colors ${
-            errorMsg
+        <MapPin size={15} className="absolute left-3.5 top-3.5 text-gray-500" />
+        <input
+          type="text"
+          value={value.street}
+          onChange={(e) => patchField("street", e.target.value)}
+          placeholder="Street address *"
+          className={`w-full bg-gray-900 border rounded-xl pl-9 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
+            errorMsg && !value.street.trim()
               ? "border-red-500/60"
               : "border-white/10 focus:border-amber-500/50"
           }`}
-          placeholder="Street address, city, postal code…"
         />
       </div>
 
-      {/* Bottom row: status + save button */}
-      <div className="flex items-center justify-between min-h-[24px]">
-        {/* Status message */}
+      {/* City + Postal in a row */}
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="text"
+          value={value.city}
+          onChange={(e) => patchField("city", e.target.value)}
+          placeholder="City"
+          className="w-full bg-gray-900 border border-white/10 focus:border-amber-500/50 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors"
+        />
+        <input
+          type="text"
+          value={value.postal}
+          onChange={(e) => patchField("postal", e.target.value)}
+          placeholder="Postal code"
+          className="w-full bg-gray-900 border border-white/10 focus:border-amber-500/50 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors"
+        />
+      </div>
+
+      {/* Country */}
+      <input
+        type="text"
+        value={value.country}
+        onChange={(e) => patchField("country", e.target.value)}
+        placeholder="Country"
+        className="w-full bg-gray-900 border border-white/10 focus:border-amber-500/50 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors"
+      />
+
+      {/* Bottom row: validation error / save status / save button */}
+      <div className="flex items-center justify-between min-h-[20px]">
         <div className="flex items-center gap-1.5">
           {saveStatus === "saving" && (
             <>
@@ -315,7 +370,6 @@ function AddressInput({
           )}
         </div>
 
-        {/* Manual save button */}
         {showSaveButton && (
           <button
             type="button"
@@ -327,8 +381,7 @@ function AddressInput({
           </button>
         )}
 
-        {/* Already saved indicator */}
-        {isLoggedIn && value.trim() && isAlreadySaved && (
+        {isLoggedIn && value.street.trim() && isAlreadySaved && (
           <div className="flex items-center gap-1.5">
             <Check size={11} className="text-gray-600" />
             <span className="text-xs text-gray-600">Saved</span>
@@ -342,7 +395,7 @@ function AddressInput({
 
 interface CheckoutFormData {
   orderType: "delivery" | "pickup";
-  deliveryAddress: string;
+  deliveryAddress: AddressFields;
   orderNotes: string;
   guestName: string;
   guestPhone: string;
@@ -359,7 +412,7 @@ export default function CartPage() {
 
   const [form, setForm] = useState<CheckoutFormData>({
     orderType: "delivery",
-    deliveryAddress: "",
+    deliveryAddress: { ...EMPTY_ADDRESS },
     orderNotes: "",
     guestName: user?.name ?? "",
     guestPhone: user?.phone ?? "",
@@ -381,15 +434,15 @@ export default function CartPage() {
         setSavedAddresses(addresses);
         const def = addresses.find((a) => a.is_default) ?? addresses[0];
         if (def) {
-          const formatted = [
-            def.street_address,
-            def.city,
-            def.postal_code,
-            def.country,
-          ]
-            .filter(Boolean)
-            .join(", ");
-          setForm((f) => ({ ...f, deliveryAddress: formatted }));
+          setForm((f) => ({
+            ...f,
+            deliveryAddress: {
+              street: def.street_address,
+              city: def.city === "-" ? "" : def.city,
+              postal: def.postal_code === "-" ? "" : def.postal_code,
+              country: def.country || "Finland",
+            },
+          }));
         }
       })
       .catch(() => {});
@@ -425,7 +478,7 @@ export default function CartPage() {
       e.guestName = t("cart.errors.nameRequired");
     if (!user && !form.guestPhone.trim())
       e.guestPhone = t("cart.errors.phoneRequired");
-    if (form.orderType === "delivery" && !form.deliveryAddress.trim())
+    if (form.orderType === "delivery" && !form.deliveryAddress.street.trim())
       e.deliveryAddress = t("cart.errors.deliveryAddressRequired");
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -433,10 +486,18 @@ export default function CartPage() {
 
   const handleProceed = () => {
     if (!validate()) return;
+    // Format structured address fields into a clean string for the order payload
+    const deliveryAddressStr = [
+      form.deliveryAddress.street,
+      form.deliveryAddress.city,
+      form.deliveryAddress.postal,
+      form.deliveryAddress.country,
+    ].filter((s) => s && s.trim() && s !== "-").join(", ");
+
     navigate("/checkout", {
       state: {
         orderType: form.orderType,
-        deliveryAddress: form.deliveryAddress,
+        deliveryAddress: deliveryAddressStr,
         orderNotes: form.orderNotes,
         subtotal,
         deliveryCharge,
@@ -549,7 +610,7 @@ export default function CartPage() {
                 </h2>
                 <AddressInput
                   value={form.deliveryAddress}
-                  onChange={(v) => patch("deliveryAddress", v)}
+                  onChange={(v) => setForm((f) => ({ ...f, deliveryAddress: v }))}
                   onError={(msg) => setAddressError(msg)}
                   savedAddresses={savedAddresses}
                   token={token}

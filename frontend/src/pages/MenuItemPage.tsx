@@ -1,15 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import {
-  ArrowLeft,
-  Star,
-  ShoppingCart,
-  Plus,
-  Minus,
-  Check,
-} from "lucide-react";
+import { ArrowLeft, ShoppingCart, Plus, Minus, Check } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import type { MenuItem, Extra, ExtraOption } from "../api/menu";
-import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMenu } from "../hooks/useMenu";
 import { useCart } from "../hooks/useCart";
@@ -47,7 +39,6 @@ function validateSelections(
 
 const MenuItemPage = () => {
   const { t, language } = useLanguage();
-  const { user } = useAuth();
   const { items, isItemsLoading } = useMenu();
   const { addItem } = useCart();
   const { id } = useParams();
@@ -61,10 +52,25 @@ const MenuItemPage = () => {
 
   useEffect(() => {
     const foundItem = items.find((i) => i.id === Number(id));
-    console.log("Found item:", foundItem);
     setItem(foundItem || null);
-    // Reset state when item changes
-    setSelections({});
+
+    // Pre-populate selections from default options
+    if (foundItem?.extras?.length) {
+      const defaultSelections: ExtraSelections = {};
+      for (const extra of foundItem.extras) {
+        if (
+          extra.is_required &&
+          extra.extra_type === "choice" &&
+          extra.options.length > 0
+        ) {
+          defaultSelections[extra.id] = new Set([extra.options[0].id]);
+        }
+      }
+      setSelections(defaultSelections);
+    } else {
+      setSelections({});
+    }
+
     setQuantity(1);
     setSpecialInstruction("");
     setValidationError(null);
@@ -511,48 +517,6 @@ const MenuItemPage = () => {
                   </p>
                 </div>
               )}
-            </section>
-
-            {/* ── Reviews ── */}
-            <section className="mt-12">
-              <div className="flex items-end justify-between mb-5">
-                <div>
-                  <p className="text-amber-400 text-sm font-semibold uppercase tracking-widest">
-                    {t("menuItem.reviewsTitle")}
-                  </p>
-                  <h2 className="text-2xl font-black mt-1">
-                    {t("menuItem.reviewsSubtitle")}
-                  </h2>
-                </div>
-                {user ? (
-                  <button
-                    type="button"
-                    className="bg-amber-500/80 text-gray-900 font-semibold text-sm px-4 py-2 rounded-xl cursor-not-allowed opacity-70"
-                    disabled
-                  >
-                    {t("leaveReview")}
-                  </button>
-                ) : (
-                  <Link
-                    to="/login"
-                    className="text-amber-400 hover:text-amber-300 text-sm font-semibold"
-                  >
-                    {t("signInToReview")}
-                  </Link>
-                )}
-              </div>
-
-              <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-8 text-center">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10 text-amber-400 mb-3">
-                  <Star size={18} />
-                </div>
-                <p className="text-white font-semibold mb-2">
-                  {t("menuItem.noReviewsTitle")}
-                </p>
-                <p className="text-gray-400 text-sm">
-                  {t("menuItem.noReviewsBody")}
-                </p>
-              </div>
             </section>
           </>
         )}
