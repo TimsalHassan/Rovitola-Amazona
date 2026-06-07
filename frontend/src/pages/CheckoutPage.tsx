@@ -65,7 +65,7 @@ export default function CheckoutPage() {
       id: "cash_on_delivery" as const,
       label: t("checkout.cashOnDelivery"),
       desc: t("checkout.cashOnDeliveryDesc"),
-    }
+    },
   ];
 
   // ── Guard ─────────────────────────────────────────────────────────────────
@@ -75,7 +75,9 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-4">
         <div className="text-center space-y-4">
           <AlertCircle size={36} className="text-amber-400 mx-auto" />
-          <p className="text-white font-bold">{t("checkout.nothingToCheckout")}</p>
+          <p className="text-white font-bold">
+            {t("checkout.nothingToCheckout")}
+          </p>
           <p className="text-gray-400 text-sm">{t("checkout.addItemsFirst")}</p>
           <Link
             to="/menu"
@@ -88,7 +90,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !loading) {
     navigate("/menu", { replace: true });
     return null;
   }
@@ -156,17 +158,18 @@ export default function CheckoutPage() {
         ...(state.guestEmail && { guest_email: state.guestEmail }),
       };
 
+      // WITH:
       const order = await ordersApi.create(payload);
-      clearCart();
 
       if (paymentMethod === "online") {
         const { payment_url } = await ordersApi.initiatePayment(
           order.order_number,
         );
-        window.location.href = payment_url;
-        // No setLoading(false) — browser is leaving the page
+        clearCart(); // clear before leaving — no re-render matters now
+        window.location.replace(payment_url); // replace so back-button doesn't return to checkout
       } else {
-        navigate(`/order/${order.order_number}`, { replace: true });
+        clearCart();
+        navigate(`/order/${order.order_number}/track`, { replace: true });
       }
     } catch (err) {
       setSubmitError(
@@ -210,10 +213,8 @@ export default function CheckoutPage() {
       <form onSubmit={handleSubmit}>
         <div className="max-w-5xl mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-
             {/* ── Left ────────────────────────────────────────────────── */}
             <div className="lg:col-span-2 space-y-5">
-
               {/* Order details — read-only */}
               <div className="bg-gray-900 border border-white/5 rounded-2xl p-5 space-y-4">
                 <h2 className="font-bold text-sm uppercase tracking-widest text-gray-400">
@@ -226,8 +227,12 @@ export default function CheckoutPage() {
                       <UserIcon size={15} className="text-gray-400" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-0.5">{t("checkout.name")}</p>
-                      <p className="text-white text-sm font-medium">{customerName}</p>
+                      <p className="text-xs text-gray-500 mb-0.5">
+                        {t("checkout.name")}
+                      </p>
+                      <p className="text-white text-sm font-medium">
+                        {customerName}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -238,7 +243,9 @@ export default function CheckoutPage() {
                       <Phone size={15} className="text-gray-400" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-0.5">{t("checkout.phone")}</p>
+                      <p className="text-xs text-gray-500 mb-0.5">
+                        {t("checkout.phone")}
+                      </p>
                       <p className="text-white text-sm">{customerPhone}</p>
                     </div>
                   </div>
@@ -328,7 +335,9 @@ export default function CheckoutPage() {
                       <p className="text-white text-sm font-semibold">
                         {method.label}
                       </p>
-                      <p className="text-gray-400 text-xs mt-0.5">{method.desc}</p>
+                      <p className="text-gray-400 text-xs mt-0.5">
+                        {method.desc}
+                      </p>
                     </div>
                     {method.id === "online" && (
                       <CreditCard
@@ -353,7 +362,10 @@ export default function CheckoutPage() {
               {/* Error */}
               {submitError && (
                 <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                  <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                  <AlertCircle
+                    size={16}
+                    className="text-red-400 shrink-0 mt-0.5"
+                  />
                   <p className="text-red-400 text-sm">{submitError}</p>
                 </div>
               )}
@@ -475,7 +487,6 @@ export default function CheckoutPage() {
                 </p>
               </div>
             </div>
-
           </div>
         </div>
       </form>

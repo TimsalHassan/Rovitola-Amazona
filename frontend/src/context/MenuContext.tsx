@@ -90,21 +90,34 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     }
   }, [language]);
 
-  const fetchItems = useCallback(async (
-    params?: { category?: string; is_lunch_item?: boolean; is_available?: boolean }
-  ) => {
-    dispatch({ type: "FETCH_ITEMS_START" });
-    try {
-      // getItems already unwraps pagination — returns MenuItem[]
-      const items = await menuApi.getItems({ ...params, language });
-      dispatch({ type: "FETCH_ITEMS_SUCCESS", items });
-    } catch (err) {
-      dispatch({
-        type: "FETCH_ERROR",
-        error: err instanceof Error ? err.message : "Failed to load menu items",
-      });
+ const fetchItems = useCallback(async (
+  params?: { category?: string; is_lunch_item?: boolean; is_available?: boolean }
+) => {
+  dispatch({ type: "FETCH_ITEMS_START" });
+  try {
+    // Fetch first page to get total count
+    const first = await menuApi.getItemsPaginated({ ...params, language, page: 1, page_size: 100 });
+    const allItems = [...first.results];
+
+    // If there are more pages, fetch them in parallel
+    if (first.count > allItems.length) {
+      const totalPages = Math.ceil(first.count / 100);
+      const rest = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, i) =>
+          menuApi.getItemsPaginated({ ...params, language, page: i + 2, page_size: 100 })
+        )
+      );
+      rest.forEach((page) => allItems.push(...page.results));
     }
-  }, [language]);
+
+    dispatch({ type: "FETCH_ITEMS_SUCCESS", items: allItems });
+  } catch (err) {
+    dispatch({
+      type: "FETCH_ERROR",
+      error: err instanceof Error ? err.message : "Failed to load menu items",
+    });
+  }
+}, [language]);
 
   const fetchExtras = useCallback(async (params?: { category?: string }) => {
     try {

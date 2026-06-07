@@ -34,6 +34,8 @@ import VerifyEmailPage from "./pages/VerifyEmailPage";
 import { RestaurantProvider } from "./context/RestaurantContext";
 import { OrderProvider } from "./context/OrderContext";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPasswordPage from "./pages/ResetPassword";
 
 function AppLayout() {
   return (
@@ -75,10 +77,34 @@ export default function App() {
                           }
                         />
                         <Route
+                          path="/verify-email"
+                          element={
+                            <RequireGuest>
+                              <VerifyEmailPage />
+                            </RequireGuest>
+                          }
+                        />
+                        <Route
                           path="/verify-email/:uid/:token"
                           element={
                             <RequireGuest>
                               <VerifyEmailPage />
+                            </RequireGuest>
+                          }
+                        />
+                        <Route
+                          path="/forgot-password"
+                          element={
+                            <RequireGuest>
+                              <ForgotPassword />
+                            </RequireGuest>
+                          }
+                        />
+                        <Route
+                          path="/reset-password/:uid/:token"
+                          element={
+                            <RequireGuest>
+                              <ResetPasswordPage />
                             </RequireGuest>
                           }
                         />
