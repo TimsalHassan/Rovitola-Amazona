@@ -4,6 +4,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   UtensilsCrossed,
+  Flame, Tag
 } from "lucide-react";
 import {
   MenuItem as ApiMenuItem,
@@ -237,6 +238,119 @@ function LunchUnavailableCard({ item }: { item: ApiMenuItem }) {
   );
 }
 
+// ─── Deals banner ─────────────────────────────────────────────────────────────
+
+function DealsBanner({ items }: { items: ApiMenuItem[] }) {
+  const { language } = useLanguage();
+
+  // Collect unique categories that have a deal label
+  const dealCategories = useMemo(() => {
+    const seen = new Set<number>();
+    const result: { id: number; name: string; label: string }[] = [];
+    for (const item of items) {
+      if (item.category_has_deal && item.category_deal_label && !seen.has(item.category as number)) {
+        seen.add(item.category as number);
+        result.push({
+          id: item.category as number,
+          name: item.category_name,
+          label: item.category_deal_label,
+        });
+      }
+    }
+    return result;
+  }, [items]);
+
+  // Sale items to spotlight
+  const saleItems = useMemo(
+    () => items.filter((i) => i.is_on_sale).slice(0, 6),
+    [items],
+  );
+
+  if (!dealCategories.length && !saleItems.length) return null;
+
+  return (
+    <div className="mb-8 space-y-4">
+      {/* Category deal labels */}
+      {dealCategories.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {dealCategories.map((cat) => (
+            <span
+              key={cat.id}
+              className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold px-3 py-1.5 rounded-full"
+            >
+              <Tag size={11} />
+              {cat.name}: {cat.label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Sale items strip */}
+      {saleItems.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Flame size={15} className="text-amber-400" />
+            <p className="text-amber-400 text-sm font-bold uppercase tracking-wider">
+              Special Deals
+            </p>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {saleItems.map((item) => {
+              const name = getLocalizedText(
+                language,
+                item.name,
+                item.name_fi,
+                "Item",
+              );
+              const base = toNumber(item.base_price);
+              const current = toNumber(item.current_price);
+              const savePct = base > 0 ? Math.round(((base - current) / base) * 100) : 0;
+
+              return (
+                <Link
+                  key={item.id}
+                  to={`/menu/${item.id}`}
+                  className="flex-shrink-0 flex items-center gap-3 bg-gray-900 border border-amber-500/20 hover:border-amber-500/50 rounded-xl px-3 py-2.5 transition-colors group"
+                >
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={name}
+                      className="w-10 h-10 rounded-lg object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-lg shrink-0">
+                      🍽️
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-white text-xs font-semibold truncate max-w-[120px] group-hover:text-amber-400 transition-colors">
+                      {name}
+                    </p>
+                    <div className="flex items-baseline gap-1.5 mt-0.5">
+                      <span className="text-gray-500 text-[10px] line-through">
+                        €{base.toFixed(2)}
+                      </span>
+                      <span className="text-amber-400 text-xs font-bold">
+                        €{current.toFixed(2)}
+                      </span>
+                      {savePct > 0 && (
+                        <span className="text-[9px] font-bold bg-amber-500 text-gray-900 px-1 py-0.5 rounded-full">
+                          -{savePct}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function ItemSkeleton() {
@@ -271,6 +385,7 @@ export default function MenuPage() {
   const visibleSectionsRef = useRef<Set<string>>(new Set());
   const isScrollingRef = useRef(false);
 
+  console.log(items[0])
   const isLunch = isLunchHours();
 
   const sortedCategories = useMemo(
@@ -453,6 +568,8 @@ export default function MenuPage() {
 
             {/* Category sections */}
             <div className="space-y-10 lg:col-start-2">
+              {!isItemsLoading && <DealsBanner items={items} />}
+
               {isItemsLoading ? (
                 skeletons
               ) : !sortedCategories.length ? (

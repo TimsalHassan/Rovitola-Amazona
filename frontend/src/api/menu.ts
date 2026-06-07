@@ -29,6 +29,9 @@ export interface MenuItem {
   category: number;
   category_name: string;
   category_slug: string;
+  category_description: string;
+  category_deal_label: string;
+  category_has_deal: boolean;
   name: string;
   name_fi: string;
   description: string;
@@ -92,15 +95,23 @@ export const menuApi = {
       page_size?: number;
     } = {},
   ) => {
-    const { language = "en", category, is_lunch_item, is_available, page, page_size } = params;
+    const {
+      language = "en",
+      category,
+      is_lunch_item,
+      is_available,
+      page,
+      page_size,
+    } = params;
     const p: Record<string, string> = { language };
     if (category) p.category = category;
     if (is_lunch_item !== undefined) p.is_lunch_item = String(is_lunch_item);
     if (is_available !== undefined) p.is_available = String(is_available);
     if (page !== undefined) p.page = String(page);
     if (page_size !== undefined) p.page_size = String(page_size);
-    return get<PaginatedResponse<MenuItem>>("/menu/items/", p)
-      .then((res) => res.results);
+    return get<PaginatedResponse<MenuItem>>("/menu/items/", p).then(
+      (res) => res.results,
+    );
   },
 
   // For infinite scroll / pagination — returns full paginated response
@@ -114,7 +125,14 @@ export const menuApi = {
       page_size?: number;
     } = {},
   ) => {
-    const { language = "en", category, is_lunch_item, is_available, page, page_size } = params;
+    const {
+      language = "en",
+      category,
+      is_lunch_item,
+      is_available,
+      page,
+      page_size,
+    } = params;
     const p: Record<string, string> = { language };
     if (category) p.category = category;
     if (is_lunch_item !== undefined) p.is_lunch_item = String(is_lunch_item);
