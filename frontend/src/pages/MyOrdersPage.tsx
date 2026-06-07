@@ -12,46 +12,141 @@ import {
   ChefHat,
   MapPin,
   RefreshCw,
+  CreditCard,
+  ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { ordersApi, type Order, type OrderStatus } from "../api/order";
 import { useLanguage } from "../hooks/useLanguage";
 
-// ── Status config ─────────────────────────────────────────────────────────────
+// ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<
   OrderStatus,
-  { label: string; color: string; bg: string; border: string; Icon: React.ElementType }
+  {
+    label: string;
+    color: string;
+    bg: string;
+    border: string;
+    Icon: React.ElementType;
+  }
 > = {
-  pending:    { label: "Pending",     color: "text-yellow-400",  bg: "bg-yellow-500/10",  border: "border-yellow-500/20",  Icon: Clock        },
-  confirmed:  { label: "Confirmed",   color: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20",    Icon: CheckCircle2 },
-  preparing:  { label: "Preparing",   color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20",   Icon: ChefHat      },
-  on_the_way: { label: "On the way",  color: "text-purple-400",  bg: "bg-purple-500/10",  border: "border-purple-500/20",  Icon: Truck        },
-  delivered:  { label: "Delivered",   color: "text-green-400",   bg: "bg-green-500/10",   border: "border-green-500/20",   Icon: CheckCircle2 },
-  cancelled:  { label: "Cancelled",   color: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/20",     Icon: XCircle      },
+  pending:    { label: "Pending",    color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/20", Icon: Clock        },
+  confirmed:  { label: "Confirmed",  color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/20",   Icon: CheckCircle2 },
+  preparing:  { label: "Preparing",  color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/20",  Icon: ChefHat      },
+  on_the_way: { label: "On the way", color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", Icon: Truck        },
+  delivered:  { label: "Delivered",  color: "text-green-400",  bg: "bg-green-500/10",  border: "border-green-500/20",  Icon: CheckCircle2 },
+  cancelled:  { label: "Cancelled",  color: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/20",    Icon: XCircle      },
 };
 
 function StatusBadge({ status }: { status: OrderStatus }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${cfg.color} ${cfg.bg} ${cfg.border}`}
+    >
       <cfg.Icon size={11} />
       {cfg.label}
     </span>
   );
 }
 
-// ── Order card ────────────────────────────────────────────────────────────────
+// ─── Payment CTA ──────────────────────────────────────────────────────────────
+
+function PaymentCta({ order }: { order: Order }) {
+  const [paying, setPaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Only show for online-payment orders that are still unpaid/pending
+  if (
+    order.payment_method !== "online" ||
+    order.payment_status !== "unpaid" ||
+    order.status === "cancelled"
+  ) {
+    return null;
+  }
+
+  const handlePay = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // don't toggle the accordion
+    setPaying(true);
+    setError(null);
+    try {
+      const { payment_url } = await ordersApi.initiatePayment(order.order_number);
+      window.location.href = payment_url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payment error. Try again.");
+      setPaying(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+      {error && (
+        <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+      <button
+        onClick={handlePay}
+        disabled={paying}
+        className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 disabled:cursor-not-allowed text-gray-900 font-bold text-sm rounded-xl transition-all"
+      >
+        {paying ? (
+          <>
+            <Loader2 size={14} className="animate-spin" />
+            Redirecting to Paytrail…
+          </>
+        ) : (
+          <>
+            <CreditCard size={14} />
+            Complete Payment — €{parseFloat(order.total).toFixed(2)}
+            <ArrowRight size={14} />
+          </>
+        )}
+      </button>
+      <p className="text-[10px] text-gray-600 text-center">
+        Payment is pending — complete it to confirm your order.
+      </p>
+    </div>
+  );
+}
+
+// ─── Order card ───────────────────────────────────────────────────────────────
 
 function OrderCard({ order, language }: { order: Order; language: string }) {
   const [open, setOpen] = useState(false);
   const total = parseFloat(order.total);
   const date = new Date(order.created_at);
 
+  // Auto-open pending online-payment orders so the CTA is visible
+  const isPendingPayment =
+    order.status === "pending" &&
+    order.payment_method === "online" &&
+    order.payment_status === "unpaid";
+
+  useEffect(() => {
+    if (isPendingPayment) setOpen(true);
+  }, [isPendingPayment]);
+
   return (
     <motion.div
       layout
-      className="bg-gray-900 border border-white/5 rounded-xl overflow-hidden"
+      className={`bg-gray-900 border rounded-xl overflow-hidden transition-colors ${
+        isPendingPayment
+          ? "border-amber-500/30"
+          : "border-white/5"
+      }`}
     >
+      {/* Pending payment banner */}
+      {isPendingPayment && (
+        <div className="flex items-center gap-2 px-5 py-2 bg-amber-500/10 border-b border-amber-500/20">
+          <Clock size={12} className="text-amber-400 shrink-0" />
+          <p className="text-amber-400 text-xs font-medium">
+            Payment required to confirm this order
+          </p>
+        </div>
+      )}
+
       {/* Header row */}
       <button
         onClick={() => setOpen((p) => !p)}
@@ -70,9 +165,16 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
               #{order.order_number}
             </p>
             <p className="text-gray-500 text-xs mt-0.5">
-              {date.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}
+              {date.toLocaleDateString([], {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
               {" · "}
-              {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </p>
           </div>
         </div>
@@ -120,7 +222,10 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                       ? item.menu_item_name_fi
                       : item.menu_item_name;
                   return (
-                    <div key={item.id} className="flex items-start justify-between gap-3">
+                    <div
+                      key={item.id}
+                      className="flex items-start justify-between gap-3"
+                    >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold flex items-center justify-center shrink-0">
@@ -134,7 +239,7 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                               .map((o) =>
                                 language === "fi" && o.option_name_fi
                                   ? o.option_name_fi
-                                  : o.option_name
+                                  : o.option_name,
                               )
                               .join(", ")}
                           </p>
@@ -174,7 +279,9 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                 {parseFloat(order.discount_amount) > 0 && (
                   <div className="flex justify-between text-green-400">
                     <span>Discount</span>
-                    <span>-€{parseFloat(order.discount_amount).toFixed(2)}</span>
+                    <span>
+                      -€{parseFloat(order.discount_amount).toFixed(2)}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-white pt-1.5 border-t border-white/5">
@@ -189,6 +296,22 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                   Note: {order.order_notes}
                 </p>
               )}
+
+              {/* Track order link — for confirmed/active orders */}
+              {["confirmed", "preparing", "on_the_way"].includes(order.status) && (
+                <Link
+                  to={`/order/${order.order_number}/track`}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-800 hover:bg-gray-700 border border-white/10 text-white text-sm font-medium rounded-xl transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Truck size={14} className="text-amber-400" />
+                  Track Order
+                  <ArrowRight size={13} className="text-gray-400" />
+                </Link>
+              )}
+
+              {/* Payment CTA — for unpaid online orders */}
+              <PaymentCta order={order} />
             </div>
           </motion.div>
         )}
@@ -197,7 +320,7 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyOrdersPage() {
   const { language } = useLanguage();
@@ -210,7 +333,15 @@ export default function MyOrdersPage() {
     setError(null);
     ordersApi
       .list()
-      .then((data) => setOrders(data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())))
+      .then((data) =>
+        setOrders(
+          data.sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime(),
+          ),
+        ),
+      )
       .catch((err) => setError(err.message ?? "Failed to load orders."))
       .finally(() => setLoading(false));
   };
@@ -218,6 +349,14 @@ export default function MyOrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Count of orders needing payment action
+  const pendingPaymentCount = orders.filter(
+    (o) =>
+      o.status === "pending" &&
+      o.payment_method === "online" &&
+      o.payment_status === "unpaid",
+  ).length;
 
   return (
     <main className="bg-gray-950 min-h-screen pt-16 text-white">
@@ -227,7 +366,16 @@ export default function MyOrdersPage() {
           <div>
             <h1 className="text-2xl font-bold">My Orders</h1>
             <p className="text-gray-500 text-sm mt-0.5">
-              {!loading && !error && `${orders.length} order${orders.length !== 1 ? "s" : ""}`}
+              {!loading && !error && (
+                <>
+                  {orders.length} order{orders.length !== 1 ? "s" : ""}
+                  {pendingPaymentCount > 0 && (
+                    <span className="ml-2 text-amber-400 font-medium">
+                      · {pendingPaymentCount} awaiting payment
+                    </span>
+                  )}
+                </>
+              )}
             </p>
           </div>
           <button
@@ -242,7 +390,7 @@ export default function MyOrdersPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Loading */}
+        {/* Loading skeletons */}
         {loading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -289,7 +437,9 @@ export default function MyOrdersPage() {
               <ShoppingBag size={28} className="text-gray-600" />
             </div>
             <p className="text-white font-semibold">No orders yet</p>
-            <p className="text-gray-500 text-sm">Your order history will appear here.</p>
+            <p className="text-gray-500 text-sm">
+              Your order history will appear here.
+            </p>
             <Link
               to="/menu"
               className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold text-sm rounded-xl transition-colors"

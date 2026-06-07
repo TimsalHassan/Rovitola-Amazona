@@ -1,14 +1,17 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  Check,
   ChevronDown,
   ChevronUp,
+  Loader2,
   MapPin,
   Minus,
   Package,
   Phone,
   Plus,
+  Save,
   ShoppingCart,
   StickyNote,
   Trash2,
@@ -16,9 +19,9 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { type CartItem } from "../context/CartContext";
-import { useAuth } from "../hooks/useAuth";
+import { type CartItem } from "../api/cart";
 import { useCart } from "../hooks/useCart";
+import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { addressApi, type Address } from "../api/auth";
 
@@ -30,21 +33,45 @@ const FREE_DELIVERY_THRESHOLD = 30;
 // ─── CartItemRow ──────────────────────────────────────────────────────────────
 
 function CartItemRow({ item }: { item: CartItem }) {
-  const { removeItem, updateQuantity, updateInstruction } = useCart();
+  const { removeItem, updateItem } = useCart();
   const { language, t } = useLanguage();
   const [showNote, setShowNote] = useState(false);
+  const [note, setNote] = useState(item.special_instruction);
+  const [saving, setSaving] = useState(false);
 
   const name =
-    (language === "fi" ? item.menuItem.name_fi : item.menuItem.name) ||
-    item.menuItem.name ||
-    item.menuItem.name_fi;
+    (language === "fi" ? item.menu_item_name_fi : item.menu_item_name) ||
+    item.menu_item_name;
+  const lineTotal = parseFloat(item.line_total);
+
+  async function handleQty(delta: number) {
+    const next = item.quantity + delta;
+    if (next <= 0) {
+      await removeItem(item.id);
+    } else {
+      await updateItem(item.id, { quantity: next });
+    }
+  }
+
+  async function handleNoteSave() {
+    if (note === item.special_instruction) return;
+    setSaving(true);
+    try {
+      await updateItem(item.id, {
+        quantity: item.quantity,
+        special_instruction: note,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="bg-gray-900 border border-white/5 rounded-2xl p-4">
       <div className="flex gap-4">
-        {item.menuItem.image ? (
+        {item.menu_item_image ? (
           <img
-            src={item.menuItem.image}
+            src={item.menu_item_image}
             alt={name}
             className="w-20 h-20 object-cover rounded-xl shrink-0"
           />
@@ -58,26 +85,28 @@ function CartItemRow({ item }: { item: CartItem }) {
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-white font-semibold text-sm leading-snug">{name}</h3>
             <button
-              onClick={() => removeItem(item.cartKey)}
+              onClick={() => removeItem(item.id)}
               className="text-gray-600 hover:text-red-400 transition-colors shrink-0 mt-0.5"
-              aria-label={t("cart.removeItem")}
             >
               <Trash2 size={15} />
             </button>
           </div>
 
-          {item.selectedOptions.length > 0 && (
+          {item.selected_options.length > 0 && (
             <div className="mt-1.5 space-y-0.5">
-              {item.selectedOptions.map((opt) => {
+              {item.selected_options.map((opt) => {
                 const optName =
-                  (language === "fi" ? opt.option_name_fi : opt.option_name) || opt.option_name;
+                  (language === "fi" ? opt.option_name_fi : opt.option_name) ||
+                  opt.option_name;
                 const extraName =
-                  (language === "fi" ? opt.extra_name_fi : opt.extra_name) || opt.extra_name;
+                  (language === "fi" ? opt.extra_name_fi : opt.extra_name) ||
+                  opt.extra_name;
+                const price = parseFloat(opt.additional_price);
                 return (
-                  <p key={`${opt.extra_id}-${opt.option_id}`} className="text-xs text-gray-400">
+                  <p key={opt.id} className="text-xs text-gray-400">
                     <span className="text-gray-500">{extraName}:</span> {optName}
-                    {opt.additional_price > 0 && (
-                      <span className="text-gray-500"> (+€{opt.additional_price.toFixed(2)})</span>
+                    {price > 0 && (
+                      <span className="text-gray-500"> (+€{price.toFixed(2)})</span>
                     )}
                   </p>
                 );
@@ -87,11 +116,11 @@ function CartItemRow({ item }: { item: CartItem }) {
 
           <div className="flex items-center justify-between mt-3">
             <span className="text-amber-400 font-bold text-sm">
-              €{item.totalPrice.toFixed(2)}
+              €{lineTotal.toFixed(2)}
             </span>
             <div className="flex items-center gap-2 bg-gray-800 rounded-xl px-1 py-0.5">
               <button
-                onClick={() => updateQuantity(item.cartKey, item.quantity - 1)}
+                onClick={() => handleQty(-1)}
                 className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
               >
                 <Minus size={13} />
@@ -100,7 +129,7 @@ function CartItemRow({ item }: { item: CartItem }) {
                 {item.quantity}
               </span>
               <button
-                onClick={() => updateQuantity(item.cartKey, item.quantity + 1)}
+                onClick={() => handleQty(1)}
                 className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
               >
                 <Plus size={13} />
@@ -117,13 +146,17 @@ function CartItemRow({ item }: { item: CartItem }) {
             {showNote ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
           {showNote && (
-            <textarea
-              value={item.specialInstruction}
-              onChange={(e) => updateInstruction(item.cartKey, e.target.value)}
-              placeholder={t("cart.itemNotePlaceholder")}
-              className="mt-2 w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 placeholder-gray-600 resize-none focus:outline-none focus:border-amber-500/50"
-              rows={2}
-            />
+            <div className="mt-2 space-y-1">
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                onBlur={handleNoteSave}
+                placeholder={t("cart.itemNotePlaceholder")}
+                className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 placeholder-gray-600 resize-none focus:outline-none focus:border-amber-500/50"
+                rows={2}
+              />
+              {saving && <p className="text-xs text-gray-500">Saving…</p>}
+            </div>
           )}
         </div>
       </div>
@@ -131,6 +164,180 @@ function CartItemRow({ item }: { item: CartItem }) {
   );
 }
 
+// ─── Address textarea with manual save ───────────────────────────────────────
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+interface AddressInputProps {
+  value: string;
+  onChange: (v: string) => void;
+  onError: (msg: string) => void;
+  savedAddresses: Address[];
+  token: string | null;
+  onAddressSaved: (addr: Address) => void;
+  isLoggedIn: boolean;
+  errorMsg?: string;
+}
+
+function AddressInput({
+  value,
+  onChange,
+  onError,
+  savedAddresses,
+  token,
+  onAddressSaved,
+  isLoggedIn,
+  errorMsg,
+}: AddressInputProps) {
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const isSavingRef = useRef(false);
+  const lastSavedRef = useRef<string>("");
+
+  // Reset save status when user edits the address after a save
+  const handleChange = (v: string) => {
+    onChange(v);
+    if (saveStatus === "saved" || saveStatus === "error") {
+      setSaveStatus("idle");
+    }
+  };
+
+  // Check if current value already exists in saved addresses
+  const isAlreadySaved = savedAddresses.some((a) => {
+    const formatted = [a.street_address, a.city, a.postal_code, a.country]
+      .filter(Boolean)
+      .join(", ");
+    return formatted === value || a.street_address === value.trim();
+  });
+
+  const showSaveButton =
+    isLoggedIn &&
+    value.trim() &&
+    !isAlreadySaved &&
+    saveStatus !== "saving";
+
+  const handleManualSave = async () => {
+    const trimmed = value.trim();
+    if (!token || !trimmed || trimmed === lastSavedRef.current || isSavingRef.current) return;
+
+    isSavingRef.current = true;
+    lastSavedRef.current = trimmed;
+    setSaveStatus("saving");
+
+    try {
+      const saved = await addressApi.create(token, {
+        street_address: trimmed,
+        city: "-",
+        postal_code: "-",
+        country: "Finland",
+        is_default: savedAddresses.length === 0,
+      });
+      onAddressSaved(saved);
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2500);
+    } catch (err) {
+      lastSavedRef.current = "";
+      setSaveStatus("error");
+      onError(err instanceof Error ? err.message : "Failed to save address");
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } finally {
+      isSavingRef.current = false;
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Saved address chips */}
+      {savedAddresses.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {savedAddresses.map((addr) => {
+            const formatted = [addr.street_address, addr.city, addr.postal_code, addr.country]
+              .filter(Boolean)
+              .join(", ");
+            return (
+              <button
+                key={addr.id}
+                type="button"
+                onClick={() => {
+                  onChange(formatted);
+                  setSaveStatus("idle");
+                }}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
+                  value === formatted || value === addr.street_address
+                    ? "border-amber-500 bg-amber-500/10 text-amber-400"
+                    : "border-white/10 bg-gray-900 text-gray-400 hover:border-white/20"
+                }`}
+              >
+                {addr.street_address}
+                {addr.is_default && <span className="ml-1 text-amber-500/60">★</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Textarea */}
+      <div className="relative">
+        <MapPin size={16} className="absolute left-3.5 top-3.5 text-gray-500" />
+        <textarea
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          rows={2}
+          className={`w-full bg-gray-900 border rounded-xl pl-9 pr-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none transition-colors ${
+            errorMsg
+              ? "border-red-500/60"
+              : "border-white/10 focus:border-amber-500/50"
+          }`}
+          placeholder="Street address, city, postal code…"
+        />
+      </div>
+
+      {/* Bottom row: status + save button */}
+      <div className="flex items-center justify-between min-h-[24px]">
+        {/* Status message */}
+        <div className="flex items-center gap-1.5">
+          {saveStatus === "saving" && (
+            <>
+              <Loader2 size={11} className="animate-spin text-gray-400" />
+              <span className="text-xs text-gray-400">Saving…</span>
+            </>
+          )}
+          {saveStatus === "saved" && (
+            <>
+              <Check size={11} className="text-green-400" />
+              <span className="text-xs text-green-400">Address saved</span>
+            </>
+          )}
+          {saveStatus === "error" && (
+            <span className="text-xs text-red-400">Failed to save — try again</span>
+          )}
+          {errorMsg && saveStatus === "idle" && (
+            <span className="text-red-400 text-xs">{errorMsg}</span>
+          )}
+        </div>
+
+        {/* Manual save button */}
+        {showSaveButton && (
+          <button
+            type="button"
+            onClick={handleManualSave}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-amber-400 border border-white/10 hover:border-amber-500/40 bg-gray-900 hover:bg-amber-500/5 px-3 py-1.5 rounded-lg transition-all"
+          >
+            <Save size={11} />
+            Save address
+          </button>
+        )}
+
+        {/* Already saved indicator */}
+        {isLoggedIn && value.trim() && isAlreadySaved && (
+          <div className="flex items-center gap-1.5">
+            <Check size={11} className="text-gray-600" />
+            <span className="text-xs text-gray-600">Saved</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CheckoutFormData {
@@ -145,7 +352,7 @@ interface CheckoutFormData {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CartPage() {
-  const { items, subtotal, totalItems } = useCart();
+  const { items, subtotal, totalItems, isLoading } = useCart();
   const { user, token } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -160,7 +367,10 @@ export default function CartPage() {
   });
 
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<keyof CheckoutFormData, string>>>({});
+  const [addressError, setAddressError] = useState<string | undefined>();
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof CheckoutFormData, string>>
+  >({});
 
   // ── Fetch saved addresses ──────────────────────────────────────────────────
   useEffect(() => {
@@ -171,7 +381,12 @@ export default function CartPage() {
         setSavedAddresses(addresses);
         const def = addresses.find((a) => a.is_default) ?? addresses[0];
         if (def) {
-          const formatted = [def.street_address, def.city, def.postal_code, def.country]
+          const formatted = [
+            def.street_address,
+            def.city,
+            def.postal_code,
+            def.country,
+          ]
             .filter(Boolean)
             .join(", ");
           setForm((f) => ({ ...f, deliveryAddress: formatted }));
@@ -180,28 +395,42 @@ export default function CartPage() {
       .catch(() => {});
   }, [user, token]);
 
+  const handleAddressSaved = useCallback((addr: Address) => {
+    setSavedAddresses((prev) => {
+      const exists = prev.find((a) => a.id === addr.id);
+      if (exists) return prev;
+      return [...prev, addr];
+    });
+  }, []);
+
   const deliveryCharge =
     form.orderType === "delivery" && subtotal < FREE_DELIVERY_THRESHOLD
       ? DELIVERY_CHARGE
       : 0;
-  const total = subtotal + deliveryCharge;
+  // Round at source so navigate() state never carries a floating-point artifact
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const total = round2(subtotal + deliveryCharge);
 
-  const patch = useCallback((field: keyof CheckoutFormData, value: string) => {
-    setForm((f) => ({ ...f, [field]: value }));
-    setErrors((e) => ({ ...e, [field]: undefined }));
-  }, []);
+  const patch = useCallback(
+    (field: keyof CheckoutFormData, value: string) => {
+      setForm((f) => ({ ...f, [field]: value }));
+      setErrors((e) => ({ ...e, [field]: undefined }));
+    },
+    [],
+  );
 
   const validate = (): boolean => {
     const e: typeof errors = {};
-    if (!user && !form.guestName.trim()) e.guestName = t("cart.errors.nameRequired");
-    if (!user && !form.guestPhone.trim()) e.guestPhone = t("cart.errors.phoneRequired");
+    if (!user && !form.guestName.trim())
+      e.guestName = t("cart.errors.nameRequired");
+    if (!user && !form.guestPhone.trim())
+      e.guestPhone = t("cart.errors.phoneRequired");
     if (form.orderType === "delivery" && !form.deliveryAddress.trim())
       e.deliveryAddress = t("cart.errors.deliveryAddressRequired");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  // ── Proceed to checkout — NO API call here ─────────────────────────────────
   const handleProceed = () => {
     if (!validate()) return;
     navigate("/checkout", {
@@ -220,7 +449,16 @@ export default function CartPage() {
     });
   };
 
-  // ── Empty state ────────────────────────────────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      </main>
+    );
+  }
+
+  // ── Empty ──────────────────────────────────────────────────────────────────
   if (totalItems === 0) {
     return (
       <main className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-4">
@@ -242,7 +480,7 @@ export default function CartPage() {
     );
   }
 
-  // ── Main layout ────────────────────────────────────────────────────────────
+  // ── Main ───────────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-gray-950 text-white pt-20 pb-24">
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -271,7 +509,7 @@ export default function CartPage() {
               </h2>
               <div className="space-y-3">
                 {items.map((item) => (
-                  <CartItemRow key={item.cartKey} item={item} />
+                  <CartItemRow key={item.id} item={item} />
                 ))}
               </div>
             </section>
@@ -292,7 +530,11 @@ export default function CartPage() {
                         : "border-white/10 bg-gray-900 text-gray-400 hover:border-white/20"
                     }`}
                   >
-                    {type === "delivery" ? <Truck size={16} /> : <Package size={16} />}
+                    {type === "delivery" ? (
+                      <Truck size={16} />
+                    ) : (
+                      <Package size={16} />
+                    )}
                     {t(`cart.${type}`)}
                   </button>
                 ))}
@@ -305,48 +547,16 @@ export default function CartPage() {
                 <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-3">
                   {t("cart.deliveryAddress")}
                 </h2>
-
-                {user && savedAddresses.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {savedAddresses.map((addr) => {
-                      const formatted = [addr.street_address, addr.city, addr.postal_code, addr.country]
-                        .filter(Boolean).join(", ");
-                      return (
-                        <button
-                          key={addr.id}
-                          type="button"
-                          onClick={() => patch("deliveryAddress", formatted)}
-                          className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
-                            form.deliveryAddress === formatted
-                              ? "border-amber-500 bg-amber-500/10 text-amber-400"
-                              : "border-white/10 bg-gray-900 text-gray-400 hover:border-white/20"
-                          }`}
-                        >
-                          {addr.street_address}
-                          {addr.is_default && <span className="ml-1 text-amber-500/60">★</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <div className="relative">
-                  <MapPin size={16} className="absolute left-3.5 top-3.5 text-gray-500" />
-                  <textarea
-                    value={form.deliveryAddress}
-                    onChange={(e) => patch("deliveryAddress", e.target.value)}
-                    placeholder={t("cart.addressPlaceholder")}
-                    rows={2}
-                    className={`w-full bg-gray-900 border rounded-xl pl-9 pr-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none transition-colors ${
-                      errors.deliveryAddress
-                        ? "border-red-500/60"
-                        : "border-white/10 focus:border-amber-500/50"
-                    }`}
-                  />
-                </div>
-                {errors.deliveryAddress && (
-                  <p className="text-red-400 text-xs mt-1">{errors.deliveryAddress}</p>
-                )}
+                <AddressInput
+                  value={form.deliveryAddress}
+                  onChange={(v) => patch("deliveryAddress", v)}
+                  onError={(msg) => setAddressError(msg)}
+                  savedAddresses={savedAddresses}
+                  token={token}
+                  onAddressSaved={handleAddressSaved}
+                  isLoggedIn={!!user}
+                  errorMsg={errors.deliveryAddress || addressError}
+                />
               </section>
             )}
 
@@ -355,7 +565,6 @@ export default function CartPage() {
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-3">
                 {t("cart.contactInfo")}
               </h2>
-
               {user ? (
                 <div className="bg-gray-900 border border-white/5 rounded-xl px-4 py-3 space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-300">
@@ -386,11 +595,15 @@ export default function CartPage() {
                       onChange={(e) => patch("guestName", e.target.value)}
                       placeholder={t("cart.namePlaceholder")}
                       className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
-                        errors.guestName ? "border-red-500/60" : "border-white/10 focus:border-amber-500/50"
+                        errors.guestName
+                          ? "border-red-500/60"
+                          : "border-white/10 focus:border-amber-500/50"
                       }`}
                     />
                     {errors.guestName && (
-                      <p className="text-red-400 text-xs mt-1">{errors.guestName}</p>
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.guestName}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -400,11 +613,15 @@ export default function CartPage() {
                       onChange={(e) => patch("guestPhone", e.target.value)}
                       placeholder={t("cart.phonePlaceholder")}
                       className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
-                        errors.guestPhone ? "border-red-500/60" : "border-white/10 focus:border-amber-500/50"
+                        errors.guestPhone
+                          ? "border-red-500/60"
+                          : "border-white/10 focus:border-amber-500/50"
                       }`}
                     />
                     {errors.guestPhone && (
-                      <p className="text-red-400 text-xs mt-1">{errors.guestPhone}</p>
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.guestPhone}
+                      </p>
                     )}
                   </div>
                   <input
@@ -414,7 +631,9 @@ export default function CartPage() {
                     placeholder={t("cart.emailPlaceholder")}
                     className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                   />
-                  <p className="text-xs text-gray-500">{t("cart.guestEmailNote")}</p>
+                  <p className="text-xs text-gray-500">
+                    {t("cart.guestEmailNote")}
+                  </p>
                 </div>
               )}
             </section>
@@ -440,17 +659,17 @@ export default function CartPage() {
               <h2 className="font-bold text-base mb-4">{t("cart.summary")}</h2>
 
               <div className="space-y-2 text-sm">
-                {items.map((item) => {
-                  const name = item.menuItem.name || item.menuItem.name_fi;
-                  return (
-                    <div key={item.cartKey} className="flex justify-between text-gray-400">
-                      <span className="truncate max-w-[180px]">
-                        {item.quantity}× {name}
-                      </span>
-                      <span>€{item.totalPrice.toFixed(2)}</span>
-                    </div>
-                  );
-                })}
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex justify-between text-gray-400"
+                  >
+                    <span className="truncate max-w-[180px]">
+                      {item.quantity}× {item.menu_item_name}
+                    </span>
+                    <span>€{parseFloat(item.line_total).toFixed(2)}</span>
+                  </div>
+                ))}
               </div>
 
               <div className="border-t border-white/5 mt-4 pt-4 space-y-2">
@@ -468,13 +687,14 @@ export default function CartPage() {
                     )}
                   </span>
                 </div>
-                {form.orderType === "delivery" && subtotal < FREE_DELIVERY_THRESHOLD && (
-                  <p className="text-xs text-gray-500">
-                    {t("cart.freeDeliveryHint", {
-                      amount: (FREE_DELIVERY_THRESHOLD - subtotal).toFixed(2),
-                    })}
-                  </p>
-                )}
+                {form.orderType === "delivery" &&
+                  subtotal < FREE_DELIVERY_THRESHOLD && (
+                    <p className="text-xs text-gray-500">
+                      {t("cart.freeDeliveryHint", {
+                        amount: (FREE_DELIVERY_THRESHOLD - subtotal).toFixed(2),
+                      })}
+                    </p>
+                  )}
               </div>
 
               <div className="border-t border-white/5 mt-4 pt-4 flex justify-between font-bold text-lg">

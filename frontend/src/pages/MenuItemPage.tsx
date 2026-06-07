@@ -1,12 +1,18 @@
 import { useEffect, useState, useCallback } from "react";
-import { ArrowLeft, Star, ShoppingCart, Plus, Minus, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Star,
+  ShoppingCart,
+  Plus,
+  Minus,
+  Check,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import type { MenuItem, Extra, ExtraOption } from "../api/menu";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMenu } from "../hooks/useMenu";
 import { useCart } from "../hooks/useCart";
-import type { SelectedOption } from "../context/CartContext";
 
 function formatPrice(value: string | number | null | undefined) {
   if (value === null || value === undefined) return "";
@@ -20,33 +26,10 @@ function formatPrice(value: string | number | null | undefined) {
 /** Map of extra_id → set of selected option_ids */
 type ExtraSelections = Record<number, Set<number>>;
 
-function buildSelectedOptions(
+function validateSelections(
   extras: Extra[],
   selections: ExtraSelections,
-): SelectedOption[] {
-  const result: SelectedOption[] = [];
-  for (const extra of extras) {
-    const chosen = selections[extra.id];
-    if (!chosen || chosen.size === 0) continue;
-    for (const optionId of chosen) {
-      const option = extra.options.find((o) => o.id === optionId);
-      if (!option) continue;
-      result.push({
-        extra_id: extra.id,
-        extra_name: extra.name,
-        extra_name_fi: extra.name_fi,
-        extra_type: extra.extra_type,
-        option_id: option.id,
-        option_name: option.name,
-        option_name_fi: option.name_fi,
-        additional_price: Number(option.display_price) || 0,
-      });
-    }
-  }
-  return result;
-}
-
-function validateSelections(extras: Extra[], selections: ExtraSelections): string | null {
+): string | null {
   for (const extra of extras) {
     const chosen = selections[extra.id];
     const count = chosen ? chosen.size : 0;
@@ -97,44 +80,45 @@ const MenuItemPage = () => {
     ? getLocalizedText(item.name, item.name_fi, t("unnamedItem"))
     : "";
   const displayDescription = item
-    ? getLocalizedText(item.description, item.description_fi, t("unnamedItemDesc"))
+    ? getLocalizedText(
+        item.description,
+        item.description_fi,
+        t("unnamedItemDesc"),
+      )
     : "";
   const displayCategory =
     item?.category_name || item?.category_slug || t("menuItem.uncategorized");
 
   // ── Option toggle ────────────────────────────────────────────────────────
 
-  const toggleOption = useCallback(
-    (extra: Extra, option: ExtraOption) => {
-      setValidationError(null);
-      setSelections((prev) => {
-        const current = new Set(prev[extra.id] ?? []);
+  const toggleOption = useCallback((extra: Extra, option: ExtraOption) => {
+    setValidationError(null);
+    setSelections((prev) => {
+      const current = new Set(prev[extra.id] ?? []);
 
-        if (current.has(option.id)) {
-          // Deselect
-          current.delete(option.id);
+      if (current.has(option.id)) {
+        // Deselect
+        current.delete(option.id);
+      } else {
+        if (extra.extra_type === "choice") {
+          // Radio behaviour: replace selection
+          current.clear();
+          current.add(option.id);
         } else {
-          if (extra.extra_type === "choice") {
-            // Radio behaviour: replace selection
-            current.clear();
+          // Checkbox / addon behaviour: multi-select within max_selections
+          if (
+            extra.max_selections === null ||
+            current.size < extra.max_selections
+          ) {
             current.add(option.id);
-          } else {
-            // Checkbox / addon behaviour: multi-select within max_selections
-            if (
-              extra.max_selections === null ||
-              current.size < extra.max_selections
-            ) {
-              current.add(option.id);
-            }
-            // If at max, silently ignore (could show a toast if desired)
           }
+          // If at max, silently ignore (could show a toast if desired)
         }
+      }
 
-        return { ...prev, [extra.id]: current };
-      });
-    },
-    [],
-  );
+      return { ...prev, [extra.id]: current };
+    });
+  }, []);
 
   // ── Computed unit price ──────────────────────────────────────────────────
 
@@ -155,24 +139,41 @@ const MenuItemPage = () => {
 
   // ── Add to cart handler ──────────────────────────────────────────────────
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!item) return;
 
     const invalid = validateSelections(item.extras, selections);
     if (invalid) {
       setValidationError(invalid);
-      // Scroll to extras section
       document
         .getElementById("extras-section")
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
-    const selectedOptions = buildSelectedOptions(item.extras, selections);
-    addItem(item, selectedOptions, quantity, specialInstruction);
+    // Flatten selected option IDs — backend expects ExtraOption PKs
+    const selectedOptionIds: number[] = [];
+    for (const extra of item.extras) {
+      const chosen = selections[extra.id];
+      if (chosen) {
+        for (const optId of chosen) {
+          selectedOptionIds.push(optId);
+        }
+      }
+    }
 
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
+    try {
+      await addItem({
+        menu_item_id: item.id, // must be number, not string
+        quantity,
+        selected_option_ids: selectedOptionIds,
+        special_instruction: specialInstruction,
+      });
+      setAddedToCart(true);
+      setTimeout(() => setAddedToCart(false), 2000);
+    } catch {
+      setValidationError("Failed to add to cart. Please try again.");
+    }
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -201,8 +202,12 @@ const MenuItemPage = () => {
         ) : !item ? (
           <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-10 text-center">
             <div className="text-3xl mb-3">🍽️</div>
-            <h2 className="text-xl font-bold mb-2">{t("menuItem.notFoundTitle")}</h2>
-            <p className="text-gray-400 text-sm">{t("menuItem.notFoundBody")}</p>
+            <h2 className="text-xl font-bold mb-2">
+              {t("menuItem.notFoundTitle")}
+            </h2>
+            <p className="text-gray-400 text-sm">
+              {t("menuItem.notFoundBody")}
+            </p>
             <Link
               to="/menu"
               className="inline-flex items-center gap-2 mt-5 text-amber-400 hover:text-amber-300 font-semibold text-sm"
@@ -243,8 +248,12 @@ const MenuItemPage = () => {
                   <p className="text-amber-400 text-xs uppercase tracking-widest">
                     {t("menuItem.details")}
                   </p>
-                  <h1 className="text-3xl sm:text-4xl font-black">{displayName}</h1>
-                  <p className="text-gray-300 leading-relaxed">{displayDescription}</p>
+                  <h1 className="text-3xl sm:text-4xl font-black">
+                    {displayName}
+                  </h1>
+                  <p className="text-gray-300 leading-relaxed">
+                    {displayDescription}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -281,7 +290,8 @@ const MenuItemPage = () => {
                     htmlFor="special-instruction"
                     className="block text-xs text-gray-400 mb-1.5"
                   >
-                    {t("menuItem.specialInstruction") ?? "Special instructions (optional)"}
+                    {t("menuItem.specialInstruction") ??
+                      "Special instructions (optional)"}
                   </label>
                   <textarea
                     id="special-instruction"
@@ -330,8 +340,8 @@ const MenuItemPage = () => {
                       addedToCart
                         ? "bg-green-500 text-white"
                         : item.is_available
-                        ? "bg-amber-500 hover:bg-amber-400 text-gray-900"
-                        : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                          ? "bg-amber-500 hover:bg-amber-400 text-gray-900"
+                          : "bg-gray-700 text-gray-500 cursor-not-allowed"
                     }`}
                   >
                     {addedToCart ? (
@@ -403,9 +413,7 @@ const MenuItemPage = () => {
                       <div
                         key={extra.id}
                         className={`bg-gray-900/60 border rounded-2xl p-4 transition-colors ${
-                          isInvalid
-                            ? "border-red-500/50"
-                            : "border-white/10"
+                          isInvalid ? "border-red-500/50" : "border-white/10"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3 mb-4">
@@ -478,7 +486,9 @@ const MenuItemPage = () => {
                                 </span>
                                 <span
                                   className={`text-xs font-medium ${
-                                    isSelected ? "text-amber-400" : "text-gray-500"
+                                    isSelected
+                                      ? "text-amber-400"
+                                      : "text-gray-500"
                                   }`}
                                 >
                                   {priceLabel}

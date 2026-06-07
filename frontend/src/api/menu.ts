@@ -1,11 +1,10 @@
 import { BASE } from "./base";
-// ─── Types (mirror your Django serializers exactly) ───────────────────────────
 
 export interface ExtraOption {
   id: number;
   name: string;
   name_fi: string;
-  additional_price: string; // DecimalField comes back as string from DRF
+  additional_price: string;
   sale_price: string | null;
   display_price: string;
   is_on_sale: boolean;
@@ -15,7 +14,7 @@ export interface ExtraOption {
 export interface Extra {
   id: number;
   category: number;
-  category_slug: string;
+  // NOTE: category_slug not in ExtraSerializer — removed
   name: string;
   name_fi: string;
   extra_type: "choice" | "extra";
@@ -55,7 +54,12 @@ export interface Category {
   deal_label: string;
 }
 
-// ─── API calls ────────────────────────────────────────────────────────────────
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
 
 type Lang = "en" | "fi";
 
@@ -77,20 +81,47 @@ export const menuApi = {
   getCategories: (language: Lang = "en") =>
     get<Category[]>("/menu/categories/", { language }),
 
+  // FIX: items endpoint is paginated — unwrap results
   getItems: (
     params: {
       language?: Lang;
       category?: string;
       is_lunch_item?: boolean;
       is_available?: boolean;
+      page?: number;
+      page_size?: number;
     } = {},
   ) => {
-    const { language = "en", category, is_lunch_item, is_available } = params;
+    const { language = "en", category, is_lunch_item, is_available, page, page_size } = params;
     const p: Record<string, string> = { language };
     if (category) p.category = category;
     if (is_lunch_item !== undefined) p.is_lunch_item = String(is_lunch_item);
     if (is_available !== undefined) p.is_available = String(is_available);
-    return get<MenuItem[]>("/menu/items/", p);
+    if (page !== undefined) p.page = String(page);
+    if (page_size !== undefined) p.page_size = String(page_size);
+    return get<PaginatedResponse<MenuItem>>("/menu/items/", p)
+      .then((res) => res.results);
+  },
+
+  // For infinite scroll / pagination — returns full paginated response
+  getItemsPaginated: (
+    params: {
+      language?: Lang;
+      category?: string;
+      is_lunch_item?: boolean;
+      is_available?: boolean;
+      page?: number;
+      page_size?: number;
+    } = {},
+  ) => {
+    const { language = "en", category, is_lunch_item, is_available, page, page_size } = params;
+    const p: Record<string, string> = { language };
+    if (category) p.category = category;
+    if (is_lunch_item !== undefined) p.is_lunch_item = String(is_lunch_item);
+    if (is_available !== undefined) p.is_available = String(is_available);
+    if (page !== undefined) p.page = String(page);
+    if (page_size !== undefined) p.page_size = String(page_size);
+    return get<PaginatedResponse<MenuItem>>("/menu/items/", p);
   },
 
   getItem: (id: number, language: Lang = "en") =>

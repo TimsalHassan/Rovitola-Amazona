@@ -1,5 +1,4 @@
 import { BASE as BASE_URL } from "./base";
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PaginatedResponse<T> {
   count: number;
@@ -13,7 +12,7 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  is_staff: boolean; 
+  is_staff: boolean;
 }
 
 export interface Address {
@@ -33,10 +32,8 @@ export interface AuthTokens {
 
 export interface ApiError {
   message: string;
-  field?: string; // for field-level validation errors
+  field?: string;
 }
-
-// ─── Core fetch wrapper ───────────────────────────────────────────────────────
 
 async function request<T>(
   path: string,
@@ -58,7 +55,6 @@ async function request<T>(
 
     try {
       const data = await res.json();
-      // Django REST Framework error shapes
       if (typeof data === "object" && data !== null) {
         if (data.detail) {
           errorMessage = data.detail;
@@ -67,7 +63,6 @@ async function request<T>(
         } else if (data.non_field_errors) {
           errorMessage = data.non_field_errors[0];
         } else {
-          // Field-level errors — grab first one
           const firstField = Object.keys(data)[0];
           if (firstField) {
             const msgs = data[firstField];
@@ -77,27 +72,21 @@ async function request<T>(
         }
       }
     } catch {
-      // Response wasn't JSON — use HTTP status message
+      // not JSON
     }
 
-    const err = new Error(errorMessage) as Error & {
-      field?: string;
-      status: number;
-    };
+    const err = new Error(errorMessage) as Error & { field?: string; status: number };
     err.field = fieldError;
     err.status = res.status;
     throw err;
   }
 
-  // 204 No Content — return empty object
   if (res.status === 204) return {} as T;
-
   return res.json();
 }
 
-// ─── Auth endpoints ───────────────────────────────────────────────────────────
-
 export const authApi = {
+  // Returns { detail } — no token, user must verify email
   register: (data: {
     name: string;
     email: string;
@@ -105,7 +94,7 @@ export const authApi = {
     password: string;
     confirm_password: string;
   }) =>
-    request<AuthTokens>("/auth/register/", {
+    request<{ detail: string }>("/auth/register/", {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -133,14 +122,36 @@ export const authApi = {
     token: string,
     data: { current_password: string; new_password: string },
   ) =>
-    request<{ detail: string }>(
+    request<{ detail: string; token: string }>(
       "/auth/change-password/",
       { method: "POST", body: JSON.stringify(data) },
       token,
     ),
-};
 
-// ─── Address endpoints ────────────────────────────────────────────────────────
+  forgotPassword: (email: string) =>
+    request<{ message: string }>("/auth/forgot-password/", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (data: { uid: string; token: string; new_password: string }) =>
+    request<{ message: string }>("/auth/reset-password/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // Backend VerifyEmailView is a GET
+  verifyEmail: (uid: string, token: string) =>
+    request<{ detail: string }>(`/auth/verify-email/${uid}/${token}/`, {
+      method: "GET",
+    }),
+
+  resendVerification: (email: string) =>
+    request<{ detail: string }>("/auth/resend-verification/", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+};
 
 export const addressApi = {
   list: (token: string) =>

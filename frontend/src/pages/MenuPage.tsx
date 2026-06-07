@@ -436,7 +436,7 @@ export default function MenuPage() {
 
                       {categoryItems.length ? (
                         <>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {visibleItems.map((item) => (
                               <ItemCard
                                 key={item.id}
@@ -459,7 +459,7 @@ export default function MenuPage() {
                           )}
                         </>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           <EmptyCard />
                         </div>
                       )}

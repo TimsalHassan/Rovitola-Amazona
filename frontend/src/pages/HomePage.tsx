@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Clock,
@@ -17,9 +17,9 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { useMenu } from "../hooks/useMenu";
-import { isRestaurantOpen } from "../utils/openingHours";
+import { useRestaurant } from "../context/RestaurantContext";
 import { reviewsApi, type Review } from "../api/reviews";
-
+import { motion, useMotionValue, animate as motionAnimate } from "motion/react";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CarouselItem {
@@ -46,17 +46,15 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-// ─── MenuCarousel ─────────────────────────────────────────────────────────────
-
 function MenuCarousel({ items }: { items: CarouselItem[] }) {
   const { t } = useLanguage();
+  const [visible, setVisible] = useState(3);
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [visible, setVisible] = useState(3);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isSnapping = useRef(false);
 
   const total = items.length;
-  const maxIndex = Math.max(0, total - visible);
+  const gapPx = 16;
 
   useEffect(() => {
     function update() {
@@ -69,28 +67,86 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  useEffect(() => {
-    setIndex((i) => Math.min(i, Math.max(0, total - visible)));
-  }, [visible, total]);
-
-  const next = useCallback(
-    () => setIndex((i) => Math.min(i + 1, maxIndex)),
-    [maxIndex],
+  const cloned = useMemo(
+    () => [
+      ...items.slice(total - visible),
+      ...items,
+      ...items.slice(0, visible),
+    ],
+    [items, visible, total],
   );
-  const prev = useCallback(() => setIndex((i) => Math.max(i - 1, 0)), []);
+
+  const cardWidthPercent = 100 / visible;
+  const cardWidthPx = `calc(${cardWidthPercent}% - ${(gapPx * (visible - 1)) / visible}px)`;
+
+  const x = useMotionValue(0);
+
+  const getTargetX = useCallback(
+    (idx: number) => {
+      return -(visible + idx) * cardWidthPercent;
+    },
+    [visible, cardWidthPercent],
+  );
+
+  const snapTo = useCallback(
+    (idx: number, animate = true) => {
+      const target = getTargetX(idx);
+      if (animate) {
+        motionAnimate(x, target, {
+          type: "tween",
+          duration: 0.25,
+          ease: [0.25, 0.1, 0.25, 1],
+        });
+      } else {
+        x.set(target);
+      }
+    },
+    [x, getTargetX],
+  );
+
+  useEffect(() => {
+    snapTo(index, false);
+  }, [visible]);
+
+  const goTo = useCallback(
+    (next: number) => {
+      setIndex(next);
+      snapTo(next);
+    },
+    [snapTo],
+  );
+
+  useEffect(() => {
+    const unsub = x.on("animationComplete", () => {
+      if (isSnapping.current) return;
+      if (index >= total) {
+        isSnapping.current = true;
+        const wrapped = index - total;
+        setIndex(wrapped);
+        x.set(getTargetX(wrapped));
+        isSnapping.current = false;
+      } else if (index < 0) {
+        isSnapping.current = true;
+        const wrapped = index + total;
+        setIndex(wrapped);
+        x.set(getTargetX(wrapped));
+        isSnapping.current = false;
+      }
+    });
+    return unsub;
+  }, [index, total, x, getTargetX]);
+
+  const next = useCallback(() => goTo(index + 1), [index, goTo]);
+  const prev = useCallback(() => goTo(index - 1), [index, goTo]);
 
   useEffect(() => {
     if (isPaused) return;
-    timerRef.current = setInterval(() => {
-      setIndex((i) => (i >= maxIndex ? 0 : i + 1));
-    }, 3200);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isPaused, maxIndex]);
+    const id = setInterval(next, 3200);
+    return () => clearInterval(id);
+  }, [isPaused, next]);
 
-  const gapPx = 16;
-  const cardWidth = `calc(${100 / visible}% - ${(gapPx * (visible - 1)) / visible}px)`;
+  const realIndex = ((index % total) + total) % total;
+  const dotCount = Math.ceil(total / visible);
 
   return (
     <div
@@ -99,19 +155,13 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="overflow-hidden">
-        <div
-          className="flex transition-transform duration-500 ease-in-out"
-          style={{
-            gap: `${gapPx}px`,
-            transform: `translateX(calc(-${index * (100 / visible)}% - ${(index * gapPx) / visible}px))`,
-          }}
-        >
-          {items.map((item) => (
+        <motion.div className="flex" style={{ x, gap: `${gapPx}px` }}>
+          {cloned.map((item, i) => (
             <Link
-              key={item.id}
+              key={`${item.id}-${i}`}
               to={`/menu/${item.id}`}
-              style={{ width: cardWidth, flexShrink: 0 }}
-              className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden group hover:border-amber-500/30 transition-all duration-300"
+              style={{ width: cardWidthPx, flexShrink: 0 }}
+              className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden group hover:border-amber-500/30 transition-colors duration-300"
             >
               <div className="relative h-44 overflow-hidden bg-gray-800">
                 {item.image ? (
@@ -146,57 +196,48 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
                 <p className="text-gray-400 text-xs line-clamp-2 mb-3">
                   {item.description}
                 </p>
-                <Link
-                  to="/menu"
-                  className="inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 text-xs font-semibold transition-colors"
-                >
+                <span className="inline-flex items-center gap-1.5 text-amber-400 text-xs font-semibold">
                   {t("order")} <ArrowRight size={12} />
-                </Link>
+                </span>
               </div>
             </Link>
           ))}
-        </div>
+        </motion.div>
       </div>
 
-      {visible > 1 && (
-        <>
-          <button
-            onClick={prev}
-            disabled={index === 0}
-            className="absolute -left-4 top-[45%] -translate-y-1/2 w-9 h-9 bg-gray-800 hover:bg-gray-700 border border-white/10 rounded-full flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg z-10"
-            aria-label="Previous"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={next}
-            disabled={index >= maxIndex}
-            className="absolute -right-4 top-[45%] -translate-y-1/2 w-9 h-9 bg-gray-800 hover:bg-gray-700 border border-white/10 rounded-full flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg z-10"
-            aria-label="Next"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </>
-      )}
+      <button
+        onClick={prev}
+        className="absolute -left-4 top-[45%] -translate-y-1/2 w-9 h-9 bg-gray-800 hover:bg-gray-700 border border-white/10 rounded-full flex items-center justify-center text-white transition-all shadow-lg z-10"
+      >
+        <ChevronLeft size={18} />
+      </button>
+      <button
+        onClick={next}
+        className="absolute -right-4 top-[45%] -translate-y-1/2 w-9 h-9 bg-gray-800 hover:bg-gray-700 border border-white/10 rounded-full flex items-center justify-center text-white transition-all shadow-lg z-10"
+      >
+        <ChevronRight size={18} />
+      </button>
 
       <div className="flex justify-center gap-1.5 mt-6">
-        {Array.from({ length: maxIndex + 1 }).map((_, i) => (
-          <button
+        {Array.from({ length: dotCount }).map((_, i) => (
+          <motion.button
             key={i}
-            onClick={() => setIndex(i)}
-            className={`rounded-full transition-all duration-300 ${
-              i === index
-                ? "w-6 h-1.5 bg-amber-500"
-                : "w-1.5 h-1.5 bg-white/20 hover:bg-white/40"
-            }`}
-            aria-label={`Go to slide ${i + 1}`}
+            onClick={() => goTo(i * visible)}
+            animate={{
+              width: Math.floor(realIndex / visible) === i ? 24 : 6,
+              backgroundColor:
+                Math.floor(realIndex / visible) === i
+                  ? "#f59e0b"
+                  : "rgba(255,255,255,0.2)",
+            }}
+            transition={{ type: "tween", duration: 0.2, ease: "easeOut" }}
+            className="h-1.5 rounded-full"
           />
         ))}
       </div>
     </div>
   );
 }
-
 // ─── ReviewModal ──────────────────────────────────────────────────────────────
 
 interface ReviewModalProps {
@@ -309,13 +350,43 @@ function ReviewModal({ onClose, onSubmitted }: ReviewModalProps) {
   );
 }
 
+// ─── Opening Hours Row ────────────────────────────────────────────────────────
+
+const DAY_ORDER = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+function formatTime(t: string | null): string {
+  if (!t) return "—";
+  // "HH:MM:SS" → "HH:MM"
+  return t.slice(0, 5);
+}
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 // ─── HomePage ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const { items, isItemsLoading, error } = useMenu();
-  const open = isRestaurantOpen();
+  const {
+    info,
+    isLoading: restaurantLoading,
+    isOpen,
+    openStatusMessage,
+    deliveryFee,
+    minOrder,
+    isDeliveryEnabled,
+  } = useRestaurant();
 
   const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
   const [carouselLoading, setCarouselLoading] = useState(true);
@@ -328,7 +399,6 @@ export default function HomePage() {
       setCarouselLoading(true);
       return;
     }
-
     if (!items.length || error) {
       setCarouselItems([]);
       setCarouselLoading(false);
@@ -347,28 +417,22 @@ export default function HomePage() {
         item.description ||
         item.description_fi ||
         t("unnamedItemDesc"),
-      price:
-        typeof item.current_price === "number"
-          ? item.current_price
-          : item.current_price,
+      price: item.current_price,
       category_name: item.category_name || item.category_slug,
       image: item.image ?? undefined,
       is_on_sale: item.is_on_sale,
     }));
 
-    const shuffled = shuffle(mapped).slice(0, 12);
-    setCarouselItems(shuffled);
+    setCarouselItems(shuffle(mapped).slice(0, 12));
     setCarouselLoading(false);
   }, [items, isItemsLoading, error, language, t]);
 
-  // Fetch reviews on mount
   useEffect(() => {
     async function fetchReviews() {
       try {
         const data = await reviewsApi.getAll();
         setReviews(data);
-      } catch (err) {
-        console.error("Failed to fetch reviews:", err);
+      } catch {
         setReviews([]);
       } finally {
         setReviewsLoading(false);
@@ -378,7 +442,6 @@ export default function HomePage() {
   }, []);
 
   function handleReviewSubmitted() {
-    // Refresh reviews after submitting
     setReviewsLoading(true);
     reviewsApi
       .getAll()
@@ -405,6 +468,13 @@ export default function HomePage() {
     },
   ];
 
+  // Sort opening hours by day order
+  const sortedHours = info
+    ? [...info.opening_hours].sort(
+        (a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day),
+      )
+    : [];
+
   return (
     <main className="bg-gray-950 text-white">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
@@ -421,17 +491,19 @@ export default function HomePage() {
         <div className="relative z-10 max-w-3xl mx-auto px-4 text-center pt-20">
           <div className="inline-flex items-center gap-2 bg-black/40 backdrop-blur-md border border-white/15 rounded-full px-4 py-2 mb-8">
             <span
-              className={`w-2 h-2 rounded-full ${open ? "bg-green-400 animate-pulse" : "bg-red-400"}`}
+              className={`w-2 h-2 rounded-full ${isOpen ? "bg-green-400 animate-pulse" : "bg-red-400"}`}
             />
             <span className="text-white/90 text-sm font-medium">
-              {open ? t("openNow") : t("closedNow")}
+              {restaurantLoading
+                ? "..."
+                : openStatusMessage || (isOpen ? t("openNow") : t("closedNow"))}
             </span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black mb-5 leading-[1.05] tracking-tight">
-            Ravintola{" "}
+            {info?.name?.split(" ")[0] ?? "Ravintola"}{" "}
             <span className="text-amber-400 relative">
-              Amazona
+              {info?.name?.split(" ").slice(1).join(" ") ?? "Amazona"}
               <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-amber-400/40 rounded-full" />
             </span>
           </h1>
@@ -440,7 +512,7 @@ export default function HomePage() {
           </p>
           <div className="flex items-center justify-center gap-2 text-white/50 text-sm mb-10">
             <MapPin size={14} />
-            <span>Aleksanterinkatu 3, 15110 Lahti</span>
+            <span>{info?.address ?? "Aleksanterinkatu 3, 15110 Lahti"}</span>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -569,7 +641,7 @@ export default function HomePage() {
               <div className="h-72 md:h-96 rounded-2xl overflow-hidden">
                 <img
                   src="https://images.pexels.com/photos/1651167/pexels-photo-1651167.jpeg?auto=compress&cs=tinysrgb&w=800"
-                  alt="Ravintola Amazona"
+                  alt={info?.name ?? "Ravintola Amazona"}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -594,8 +666,14 @@ export default function HomePage() {
                 {[
                   { label: t("menuItems"), value: "100+" },
                   { label: t("categories"), value: "14" },
-                  { label: t("delivery"), value: "14km" },
-                  { label: t("minOrder"), value: "€13" },
+                  {
+                    label: t("delivery"),
+                    value: info ? `${info.paid_delivery_radius_km}km` : "14km",
+                  },
+                  {
+                    label: t("minOrder"),
+                    value: info ? `€${minOrder}` : "€13",
+                  },
                 ].map((s, i) => (
                   <div
                     key={i}
@@ -609,21 +687,35 @@ export default function HomePage() {
                 ))}
               </div>
               <div className="flex flex-col gap-2 text-sm text-gray-400">
-                <a
-                  href="tel:+358037333366"
-                  className="flex items-center gap-2 hover:text-amber-400 transition-colors"
-                >
-                  <Phone size={14} /> +358 037 333 366
-                </a>
-                <a
-                  href="mailto:info@ravintolaamazona.fi"
-                  className="flex items-center gap-2 hover:text-amber-400 transition-colors"
-                >
-                  <Mail size={14} /> info@ravintolaamazona.fi
-                </a>
-                <div className="flex items-center gap-2">
-                  <MapPin size={14} /> Aleksanterinkatu 3, 15110 Lahti
-                </div>
+                {info?.phone && (
+                  <a
+                    href={`tel:${info.phone}`}
+                    className="flex items-center gap-2 hover:text-amber-400 transition-colors"
+                  >
+                    <Phone size={14} /> {info.phone}
+                  </a>
+                )}
+                {info?.phone_2 && (
+                  <a
+                    href={`tel:${info.phone_2}`}
+                    className="flex items-center gap-2 hover:text-amber-400 transition-colors"
+                  >
+                    <Phone size={14} /> {info.phone_2}
+                  </a>
+                )}
+                {info?.email && (
+                  <a
+                    href={`mailto:${info.email}`}
+                    className="flex items-center gap-2 hover:text-amber-400 transition-colors"
+                  >
+                    <Mail size={14} /> {info.email}
+                  </a>
+                )}
+                {info?.address && (
+                  <div className="flex items-center gap-2">
+                    <MapPin size={14} /> {info.address}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -652,7 +744,10 @@ export default function HomePage() {
                   <div className="h-4 bg-gray-800 rounded w-8 mb-3" />
                   <div className="flex gap-0.5 mb-3">
                     {[1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className="w-3 h-3 bg-gray-800 rounded-full" />
+                      <div
+                        key={j}
+                        className="w-3 h-3 bg-gray-800 rounded-full"
+                      />
                     ))}
                   </div>
                   <div className="space-y-2 mb-4">
@@ -664,39 +759,38 @@ export default function HomePage() {
             </div>
           ) : reviews.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-              {reviews.slice(0, 3).map((r) => {
-                const date = new Date(r.created_at).toLocaleDateString();
-                return (
-                  <div
-                    key={r.id}
-                    className="bg-gray-900 border border-white/5 rounded-2xl p-5 hover:border-amber-500/20 transition-colors"
-                  >
-                    <Quote size={20} className="text-amber-400/30 mb-3" />
-                    <div className="flex gap-0.5 mb-3">
-                      {Array.from({ length: 5 }).map((_, j) => (
-                        <Star
-                          key={j}
-                          size={13}
-                          className={
-                            j < r.rating
-                              ? "text-amber-400 fill-amber-400"
-                              : "text-gray-600"
-                          }
-                        />
-                      ))}
-                    </div>
-                    <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                      "{r.text}"
-                    </p>
-                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                      <span className="text-amber-400 font-semibold text-xs">
-                        {r.customer_name}
-                      </span>
-                      <span className="text-gray-600 text-xs">{date}</span>
-                    </div>
+              {reviews.slice(0, 3).map((r) => (
+                <div
+                  key={r.id}
+                  className="bg-gray-900 border border-white/5 rounded-2xl p-5 hover:border-amber-500/20 transition-colors"
+                >
+                  <Quote size={20} className="text-amber-400/30 mb-3" />
+                  <div className="flex gap-0.5 mb-3">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <Star
+                        key={j}
+                        size={13}
+                        className={
+                          j < r.rating
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-gray-600"
+                        }
+                      />
+                    ))}
                   </div>
-                );
-              })}
+                  <p className="text-gray-300 text-sm leading-relaxed mb-4">
+                    "{r.text}"
+                  </p>
+                  <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                    <span className="text-amber-400 font-semibold text-xs">
+                      {r.customer_name}
+                    </span>
+                    <span className="text-gray-600 text-xs">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center mb-10">
@@ -725,9 +819,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Contact ──────────────────────────────────────────────────────── */}
-
-      {/* ── App download ──────────────────────────────────────────────────── */}
+      {/* ── App download + Opening Hours ──────────────────────────────────── */}
       <section className="py-14 bg-gray-900 border-t border-white/5">
         <div className="max-w-[1200px] mx-auto px-4">
           <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/15 rounded-3xl p-8 md:p-12">
@@ -740,6 +832,22 @@ export default function HomePage() {
                 <p className="text-gray-400 text-sm mb-6">
                   {t("downloadDesc")}
                 </p>
+
+                {/* Delivery info from backend */}
+                {info && isDeliveryEnabled && (
+                  <div className="mb-5 flex flex-wrap gap-2 text-xs">
+                    <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-3 py-1.5 rounded-full font-medium">
+                      Free delivery within {info.free_delivery_radius_km}km
+                    </span>
+                    <span className="bg-gray-800 border border-white/10 text-gray-300 px-3 py-1.5 rounded-full font-medium">
+                      €{deliveryFee} up to {info.paid_delivery_radius_km}km
+                    </span>
+                    <span className="bg-gray-800 border border-white/10 text-gray-300 px-3 py-1.5 rounded-full font-medium">
+                      Min order €{minOrder}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
                     href="https://apps.apple.com/us/app/ravintola-amazona/id6448418434"
@@ -786,39 +894,51 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Opening hours */}
+              {/* Opening hours — from backend */}
               <div className="bg-gray-900/60 rounded-2xl p-5 border border-white/5">
                 <h3 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
                   <Clock size={16} className="text-amber-400" />
                   {t("openingHours")}
                 </h3>
-                <div className="space-y-1.5 text-xs">
-                  {[
-                    {
-                      day: t("monTue"),
-                      hours: "15:00–03:00",
-                      lunch: "10:30–14:30",
-                    },
-                    {
-                      day: t("wedSun"),
-                      hours: "11:00–03:45",
-                      lunch: t("wedFri") + " 10:30–14:30",
-                    },
-                  ].map((row, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0"
-                    >
-                      <span className="text-gray-400 w-16">{row.day}</span>
-                      <span className="text-white font-medium">
-                        {row.hours}
-                      </span>
-                      <span className="text-amber-400/70 text-right">
-                        {row.lunch}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {restaurantLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                      <div
+                        key={i}
+                        className="h-4 bg-gray-800 rounded animate-pulse"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-1 text-xs">
+                    {sortedHours.map((row) => (
+                      <div
+                        key={row.day}
+                        className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0"
+                      >
+                        <span className="text-gray-400 w-24 shrink-0">
+                          {capitalize(row.day)}
+                        </span>
+                        {row.is_closed ? (
+                          <span className="text-red-400 font-medium">
+                            {t("closed") ?? "Closed"}
+                          </span>
+                        ) : (
+                          <span className="text-white font-medium">
+                            {formatTime(row.open_time)} –{" "}
+                            {formatTime(row.close_time)}
+                          </span>
+                        )}
+                        {!row.is_closed && row.lunch_open && (
+                          <span className="text-amber-400/70 text-right">
+                            {formatTime(row.lunch_open)}–
+                            {formatTime(row.lunch_close)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
