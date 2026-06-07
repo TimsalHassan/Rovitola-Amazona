@@ -39,30 +39,23 @@ def is_restaurant_open(opening_hours_qs):
         return False, "Opening hours not configured."
 
     open_time_str = (
-        today.open_time.strftime("%I:%M %p")
+        today.open_time.strftime("%H:%M")
         if today.open_time else "N/A"
     )
     close_time_str = (
-        today.close_time.strftime("%I:%M %p")
+        today.close_time.strftime("%H:%M")
         if today.close_time else "N/A"
     )
 
     if today.is_closed:
-        return False, (
-            f"Closed today. Opens at {open_time_str} "
-            f"and closes at {close_time_str}."
-        )
+        return False, f"We are closed today."
 
     if today.open_time and today.close_time:
-        # Handles schedules that cross midnight
         if today.close_time < today.open_time:
             if current_time >= today.open_time or current_time <= today.close_time:
-                return True, "Opened"
+                return True, "We are open now."
         else:
             if today.open_time <= current_time <= today.close_time:
-                return True, "Opened"
+                return True, "We are open now."
 
-    return False, (
-        f"Restaurant is closed. Opens at {open_time_str} "
-        f"and closes at {close_time_str}."
-    )
+    return False, f"We are currently closed. Today's hours: {open_time_str} – {close_time_str}."

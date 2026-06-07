@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'reviews',
     'payments',
     'restaurant.apps.RestaurantConfig',
+    'contact',
     # 'notifications.apps.NotificationsConfig',
 ]
 

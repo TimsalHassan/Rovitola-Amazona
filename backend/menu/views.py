@@ -13,7 +13,7 @@ CACHE_TTL = 60 * 15  # 15 minutes
 class MenuPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'  # frontend ?page_size=20 se change kar sake
-    max_page_size = 100
+    max_page_size = 1000
 
 
 class CategoryListView(generics.ListAPIView):
