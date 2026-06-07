@@ -27,6 +27,10 @@ class InitiatePaymentView(APIView):
         except Order.DoesNotExist:
             return Response({"error": "Order not found."}, status=404)
 
+        # COD/Card on delivery ko Paytrail ki zaroorat nahi
+        if order.payment_method in ["cash_on_delivery", "card_on_delivery"]:
+            return Response({"error": "Online payment not required for this order."}, status=400)
+
         if order.payment_status == "paid":
             return Response({"error": "Order is already paid."}, status=400)
 

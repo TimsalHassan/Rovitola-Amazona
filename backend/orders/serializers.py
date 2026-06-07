@@ -122,7 +122,18 @@ class CreateOrderSerializer(serializers.Serializer):
             for opt in options_data:
                 OrderItemSelectedOption.objects.create(order_item=order_item, **opt)
 
-        # Wrap emails so a config error never kills a valid order
+        # Cash/Card on delivery → seedha confirm, payment pending
+        if order.payment_method in ["cash_on_delivery", "card_on_delivery"]:
+            order.status = "confirmed"
+            order.payment_status = "pending"
+            order.save(update_fields=["status", "payment_status"])
+
+        # Online payment → pending confirmation (Paytrail karega confirm)
+        elif order.payment_method == "online":
+            order.status = "pending"
+            order.payment_status = "unpaid"
+            order.save(update_fields=["status", "payment_status"])
+
         try:
             send_order_received_email.delay(
                 order_id=order.id,
@@ -136,10 +147,9 @@ class CreateOrderSerializer(serializers.Serializer):
                 order_details=f"Order #{order.id}\nTotal: €{order.total}\nType: {order.order_type}"
             )
         except Exception:
-            pass  # log this in production
+            pass
 
         return order
-
 
 # ── Status-only update ────────────────────────────────────────────────────────
 

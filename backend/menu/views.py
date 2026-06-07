@@ -19,6 +19,7 @@ class MenuPagination(PageNumberPagination):
 class CategoryListView(generics.ListAPIView):
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
+    queryset = Category.objects.all()
 
     def list(self, request, *args, **kwargs):
         lang = request.query_params.get('language', 'en').lower()
