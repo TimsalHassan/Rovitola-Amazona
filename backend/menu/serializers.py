@@ -72,6 +72,9 @@ class ExtraSerializer(serializers.ModelSerializer):
 class MenuItemSerializer(serializers.ModelSerializer):
     category_name = serializers.SerializerMethodField()
     category_slug = serializers.SerializerMethodField()
+    category_description = serializers.SerializerMethodField()
+    category_deal_label = serializers.SerializerMethodField()
+    category_has_deal = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
@@ -84,6 +87,9 @@ class MenuItemSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "category", "category_name", "category_slug",
+            "category_description", 
+            "category_deal_label",
+            "category_has_deal",      
             "name", "name_fi",
             "description", "description_fi",
             "base_price", "sale_price",
@@ -118,6 +124,17 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
     def get_category_slug(self, obj):
         return obj.category.slug
+
+    def get_category_description(self, obj):
+        lang = self._lang(self.context.get('request'))
+        return obj.category.description_fi if lang == 'fi' else obj.category.description
+
+    def get_category_deal_label(self, obj):
+        lang = self._lang(self.context.get('request'))
+        return obj.category.deal_label_fi if lang == 'fi' else obj.category.deal_label
+
+    def get_category_has_deal(self, obj):
+        return obj.category.has_deal
 
     def get_extras(self, obj):
         """Return category extras (same for all items in this category)"""
