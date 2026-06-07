@@ -139,7 +139,7 @@ export function ItemCard({ item }: { item: ApiMenuItem }) {
         </div>
 
         {/* Footer: price + CTA */}
-        <div className="flex items-center justify-between pt-3 border-t border-white/5">
+        <div className="flex md:items-center md:justify-between md:flex-row flex-col gap-2 pt-3 border-t border-white/5">
           <div className="flex items-baseline gap-1.5">
             {item.is_on_sale && (
               <span className="text-gray-600 text-xs line-through">
@@ -152,7 +152,7 @@ export function ItemCard({ item }: { item: ApiMenuItem }) {
           </div>
 
           {item.is_available ? (
-            <span className="flex items-center gap-1.5 bg-amber-500 group-hover:bg-amber-400 text-gray-900 font-semibold text-xs px-3 py-1.5 rounded-xl transition-colors">
+            <span className="flex items-center justify-center gap-1.5 bg-amber-500 group-hover:bg-amber-400 text-gray-900 font-semibold text-xs px-3 py-1.5 rounded-xl transition-colors">
               <ShoppingBag size={13} />
               {t("menu.add")}
             </span>
@@ -509,9 +509,9 @@ export default function MenuPage() {
       {/* Main menu tab */}
       {tab === "main" && (
         <div className="max-w-[1200px] mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Desktop sidebar */}
-            <aside className="hidden lg:block">
+            <aside className="hidden lg:block col-span-1">
               <div className="sticky top-24 bg-gray-900 border border-white/5 rounded-xl p-2 max-h-[calc(100vh-7rem)] overflow-y-auto">
                 <nav className="space-y-0.5">
                   {sortedCategories.map((cat) => {
@@ -567,7 +567,7 @@ export default function MenuPage() {
             </div>
 
             {/* Category sections */}
-            <div className="space-y-10 lg:col-start-2">
+            <div className="space-y-10 lg:col-start-2 col-span-3">
               {!isItemsLoading && <DealsBanner items={items} />}
 
               {isItemsLoading ? (

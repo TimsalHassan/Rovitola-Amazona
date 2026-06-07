@@ -25,7 +25,6 @@ export default function Footer() {
               <span className={`w-2 h-2 rounded-full ${isOpen ? "bg-green-400" : "bg-red-400"}`} />
               <span className="text-xs text-gray-400">{openStatusMessage}</span>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed">{t("footer.tagline")}</p>
           </div>
 
           {/* Contact */}

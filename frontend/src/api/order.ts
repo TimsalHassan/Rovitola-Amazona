@@ -162,6 +162,15 @@ export const ordersApi = {
     );
   },
 
+  getStatus: (orderNumber: string) =>
+    request<{ status: OrderStatus }>(`/orders/${orderNumber}/status/`),
+
+  cancel: (orderNumber: string, guestCredentials?: { guest_phone?: string; guest_email?: string }) =>
+  request<Order>(`/orders/${orderNumber}/cancel/`, {
+    method: "PATCH",
+    body: JSON.stringify(guestCredentials ?? {}),
+  }),
+
   initiatePayment: (orderNumber: string) =>
     request<{ payment_url: string }>(`/payments/${orderNumber}/initiate/`, {
       method: "POST",

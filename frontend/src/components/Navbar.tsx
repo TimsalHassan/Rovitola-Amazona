@@ -238,33 +238,6 @@ export default function Navbar() {
               </button>
             ))}
           </div>
-
-          {/* Authenticated mobile links */}
-          {user && (
-            <>
-              <Link
-                to="/account"
-                className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10"
-              >
-                <Settings size={16} />
-                {t("nav.myAccount")}
-              </Link>
-              <Link
-                to="/my-orders"
-                className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10"
-              >
-                <ShoppingBag size={16} />
-                {t("nav.myOrders")}
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300"
-              >
-                <LogOut size={16} />
-                {t("nav.signOut")}
-              </button>
-            </>
-          )}
         </div>
       </div>
     </header>

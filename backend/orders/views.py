@@ -13,6 +13,8 @@ from .tasks import (
 )
 
 from rest_framework.throttling import AnonRateThrottle
+from rest_framework.exceptions import PermissionDenied, ValidationError
+
 class GuestOrderLookupThrottle(AnonRateThrottle):
     rate = "10/hour"
 
@@ -181,3 +183,46 @@ class OrderStatusUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAdminUser]
     lookup_field = "order_number"
     queryset = Order.objects.all()
+
+
+class OrderCancelView(generics.UpdateAPIView):
+    serializer_class = OrderStatusSerializer
+    permission_classes = [AllowAny]
+    lookup_field = "order_number"
+
+    def get_queryset(self):
+        return Order.objects.prefetch_related("items__selected_options").all()
+
+    def get_object(self):
+        obj = super().get_object()
+        user = self.request.user
+
+        # Authenticated customer must own the order
+        if user.is_authenticated:
+            if obj.customer and obj.customer != user and not user.is_staff:
+                raise PermissionDenied
+        else:
+            # Guest must match by phone or email
+            guest_phone = self.request.data.get("guest_phone", "").strip()
+            guest_email = self.request.data.get("guest_email", "").strip()
+
+            if not guest_phone and not guest_email:
+                raise PermissionDenied
+
+            if obj.guest_phone != guest_phone and obj.guest_email != guest_email:
+                raise PermissionDenied
+
+        return obj
+
+    def update(self, request, *args, **kwargs):
+        order = self.get_object()
+
+        if order.status not in ["pending", "confirmed"]:
+            raise ValidationError(
+                {"detail": "Order cannot be cancelled once it is being prepared."}
+            )
+
+        order.status = "cancelled"
+        order.save(update_fields=["status", "updated_at"])
+
+        return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)

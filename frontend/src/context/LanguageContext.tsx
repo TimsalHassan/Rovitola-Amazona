@@ -162,6 +162,7 @@ const resources = {
         language: "Kieli",
         langFi: "Suomi",
         langEn: "English",
+        orders: "Tilaukset",
       },
 
       // ── Footer ────────────────────────────────────────────────────────────
@@ -177,6 +178,10 @@ const resources = {
         addressLine2: "15110 Lahti, Finland",
         rights: "Kaikki oikeudet pidätetään.",
         findOrders: "Etsi tilauksesi",
+        linksTitle: "Pikalinkit",
+        contactTitle: "Ravintolan tiedot",
+        deliveryFrom: "Toimitus alkaen",
+        deliveryFee: "Toimitusmaksu",
         days: {
           monday: "Maanantai",
           tuesday: "Tiistai",
@@ -497,6 +502,11 @@ const resources = {
         cancelNotAllowed:
           "Tilausta ei voi enää peruuttaa — ravintola on jo aloittanut valmistuksen.",
         backHome: "Takaisin Etusivulle",
+        paymentMethod:{
+          cash: "Käteinen",
+          card: "Kortti",
+          online: "Verkkomaksu",
+        }
       },
 
       // ── Order status labels ───────────────────────────────────────────────
@@ -744,6 +754,7 @@ const resources = {
         language: "Language",
         langFi: "Suomi",
         langEn: "English",
+        orders: "Orders",
       },
 
       // ── Footer ────────────────────────────────────────────────────────────
@@ -757,6 +768,10 @@ const resources = {
         contact: "Contact",
         addressLine1: "Aleksanterinkatu 3",
         addressLine2: "15110 Lahti, Finland",
+        deliveryFrom: "Delivery From",
+        deliveryFee: "Delivery Fee",
+        linksTitle: "Quick Links",
+        contactTitle: "Restaurant Info",
         rights: "All rights reserved.",
         findOrders: "Find your orders",
         days: {
@@ -1078,6 +1093,11 @@ const resources = {
         cancelNotAllowed:
           "Order can no longer be cancelled — the restaurant has already started preparation.",
         backHome: "Back to Home",
+        paymentMethod:{
+          cash: "Cash",
+          card: "Card",
+          online: "Online payment",
+        }
       },
 
       // ── Order status labels ───────────────────────────────────────────────

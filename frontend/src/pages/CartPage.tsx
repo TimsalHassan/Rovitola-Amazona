@@ -24,11 +24,7 @@ import { useCart } from "../hooks/useCart";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
 import { addressApi, type Address } from "../api/auth";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const DELIVERY_CHARGE = 3.9;
-const FREE_DELIVERY_THRESHOLD = 30;
+import { useRestaurant } from "../context/RestaurantContext";
 
 // ─── CartItemRow ──────────────────────────────────────────────────────────────
 
@@ -83,7 +79,9 @@ function CartItemRow({ item }: { item: CartItem }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-white font-semibold text-sm leading-snug">{name}</h3>
+            <h3 className="text-white font-semibold text-sm leading-snug">
+              {name}
+            </h3>
             <button
               onClick={() => removeItem(item.id)}
               className="text-gray-600 hover:text-red-400 transition-colors shrink-0 mt-0.5"
@@ -104,9 +102,13 @@ function CartItemRow({ item }: { item: CartItem }) {
                 const price = parseFloat(opt.additional_price);
                 return (
                   <p key={opt.id} className="text-xs text-gray-400">
-                    <span className="text-gray-500">{extraName}:</span> {optName}
+                    <span className="text-gray-500">{extraName}:</span>{" "}
+                    {optName}
                     {price > 0 && (
-                      <span className="text-gray-500"> (+€{price.toFixed(2)})</span>
+                      <span className="text-gray-500">
+                        {" "}
+                        (+€{price.toFixed(2)})
+                      </span>
                     )}
                   </p>
                 );
@@ -209,7 +211,9 @@ function AddressInput({
 
   // Format fields → single string for comparison & API
   const toFormatted = (a: AddressFields) =>
-    [a.street, a.city, a.postal, a.country].filter((s) => s && s !== "-").join(", ");
+    [a.street, a.city, a.postal, a.country]
+      .filter((s) => s && s !== "-")
+      .join(", ");
 
   const formatted = toFormatted(value);
 
@@ -246,7 +250,13 @@ function AddressInput({
 
   const handleManualSave = async () => {
     const trimmed = value.street.trim();
-    if (!token || !trimmed || formatted === lastSavedRef.current || isSavingRef.current) return;
+    if (
+      !token ||
+      !trimmed ||
+      formatted === lastSavedRef.current ||
+      isSavingRef.current
+    )
+      return;
 
     isSavingRef.current = true;
     lastSavedRef.current = formatted;
@@ -279,7 +289,12 @@ function AddressInput({
       {savedAddresses.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {savedAddresses.map((addr) => {
-            const chipFormatted = [addr.street_address, addr.city, addr.postal_code, addr.country]
+            const chipFormatted = [
+              addr.street_address,
+              addr.city,
+              addr.postal_code,
+              addr.country,
+            ]
               .filter((s) => s && s !== "-")
               .join(", ");
             const isSelected =
@@ -297,7 +312,9 @@ function AddressInput({
                 }`}
               >
                 {addr.street_address}
-                {addr.is_default && <span className="ml-1 text-amber-500/60">★</span>}
+                {addr.is_default && (
+                  <span className="ml-1 text-amber-500/60">★</span>
+                )}
               </button>
             );
           })}
@@ -363,7 +380,9 @@ function AddressInput({
             </>
           )}
           {saveStatus === "error" && (
-            <span className="text-xs text-red-400">Failed to save — try again</span>
+            <span className="text-xs text-red-400">
+              Failed to save — try again
+            </span>
           )}
           {errorMsg && saveStatus === "idle" && (
             <span className="text-red-400 text-xs">{errorMsg}</span>
@@ -408,6 +427,7 @@ export default function CartPage() {
   const { items, subtotal, totalItems, isLoading } = useCart();
   const { user, token } = useAuth();
   const { t } = useLanguage();
+  const restaurant = useRestaurant();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<CheckoutFormData>({
@@ -456,21 +476,14 @@ export default function CartPage() {
     });
   }, []);
 
-  const deliveryCharge =
-    form.orderType === "delivery" && subtotal < FREE_DELIVERY_THRESHOLD
-      ? DELIVERY_CHARGE
-      : 0;
   // Round at source so navigate() state never carries a floating-point artifact
   const round2 = (n: number) => Math.round(n * 100) / 100;
-  const total = round2(subtotal + deliveryCharge);
+  const total = round2(subtotal + Number(restaurant.deliveryFee));
 
-  const patch = useCallback(
-    (field: keyof CheckoutFormData, value: string) => {
-      setForm((f) => ({ ...f, [field]: value }));
-      setErrors((e) => ({ ...e, [field]: undefined }));
-    },
-    [],
-  );
+  const patch = useCallback((field: keyof CheckoutFormData, value: string) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    setErrors((e) => ({ ...e, [field]: undefined }));
+  }, []);
 
   const validate = (): boolean => {
     const e: typeof errors = {};
@@ -492,7 +505,9 @@ export default function CartPage() {
       form.deliveryAddress.city,
       form.deliveryAddress.postal,
       form.deliveryAddress.country,
-    ].filter((s) => s && s.trim() && s !== "-").join(", ");
+    ]
+      .filter((s) => s && s.trim() && s !== "-")
+      .join(", ");
 
     navigate("/checkout", {
       state: {
@@ -500,7 +515,7 @@ export default function CartPage() {
         deliveryAddress: deliveryAddressStr,
         orderNotes: form.orderNotes,
         subtotal,
-        deliveryCharge,
+        deliveryCharge: restaurant.deliveryFee ? round2(Number(restaurant.deliveryFee)) : 0,
         discountAmount: 0,
         total,
         guestName: form.guestName,
@@ -610,7 +625,9 @@ export default function CartPage() {
                 </h2>
                 <AddressInput
                   value={form.deliveryAddress}
-                  onChange={(v) => setForm((f) => ({ ...f, deliveryAddress: v }))}
+                  onChange={(v) =>
+                    setForm((f) => ({ ...f, deliveryAddress: v }))
+                  }
                   onError={(msg) => setAddressError(msg)}
                   savedAddresses={savedAddresses}
                   token={token}
@@ -741,21 +758,13 @@ export default function CartPage() {
                 <div className="flex justify-between text-sm text-gray-400">
                   <span>{t("cart.delivery")}</span>
                   <span>
-                    {deliveryCharge === 0 ? (
+                    {Number(restaurant.deliveryFee) === 0 ? (
                       <span className="text-green-400">{t("cart.free")}</span>
                     ) : (
-                      `€${deliveryCharge.toFixed(2)}`
+                      `€${Number(restaurant.deliveryFee).toFixed(2)}`
                     )}
                   </span>
                 </div>
-                {form.orderType === "delivery" &&
-                  subtotal < FREE_DELIVERY_THRESHOLD && (
-                    <p className="text-xs text-gray-500">
-                      {t("cart.freeDeliveryHint", {
-                        amount: (FREE_DELIVERY_THRESHOLD - subtotal).toFixed(2),
-                      })}
-                    </p>
-                  )}
               </div>
 
               <div className="border-t border-white/5 mt-4 pt-4 flex justify-between font-bold text-lg">

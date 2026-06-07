@@ -5,7 +5,7 @@ import {
   useReducer,
   type ReactNode,
 } from "react";
-import { ordersApi, type Order } from "../api/order";
+import { ordersApi, OrderStatus, type Order } from "../api/order";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +15,7 @@ interface OrderState {
   isLoading: boolean;
   isFetching: boolean; // background re-fetch (e.g. polling)
   error: string | null;
+  isCancelling: boolean;
 }
 
 const initialState: OrderState = {
@@ -23,6 +24,7 @@ const initialState: OrderState = {
   isLoading: false,
   isFetching: false,
   error: null,
+  isCancelling: false,
 };
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -37,7 +39,10 @@ type OrderAction =
   | { type: "FETCH_ONE_ERROR"; error: string }
   | { type: "UPSERT_ORDER"; order: Order }
   | { type: "CLEAR_CURRENT" }
-  | { type: "CLEAR_ERROR" };
+  | { type: "CLEAR_ERROR" }
+  | { type: "CANCEL_ORDER_START" }
+  | { type: "CANCEL_ORDER_SUCCESS"; order: Order }
+  | { type: "CANCEL_ORDER_ERROR"; error: string };
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 
@@ -52,8 +57,7 @@ function reducer(state: OrderState, action: OrderAction): OrderState {
         isLoading: false,
         orders: action.orders.sort(
           (a, b) =>
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime(),
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         ),
       };
 
@@ -80,6 +84,21 @@ function reducer(state: OrderState, action: OrderAction): OrderState {
           : state.orders,
       };
 
+    case "CANCEL_ORDER_START":
+      return { ...state, isCancelling: true, error: null };
+
+    case "CANCEL_ORDER_SUCCESS":
+      return {
+        ...state,
+        isCancelling: false,
+        currentOrder: action.order,
+        orders: state.orders.map((o) =>
+          o.id === action.order.id ? action.order : o,
+        ),
+      };
+
+    case "CANCEL_ORDER_ERROR":
+      return { ...state, isCancelling: false, error: action.error };
     case "FETCH_ONE_ERROR":
       return {
         ...state,
@@ -127,6 +146,12 @@ export interface OrderContextValue extends OrderState {
   fetchOrder: (orderNumber: string) => Promise<void>;
   /** Re-fetch a single order silently (no loading spinner, for polling) */
   refreshOrder: (orderNumber: string) => Promise<void>;
+  getOrderStatus: (orderNumber: string) => Promise<{ status: OrderStatus }>;
+  // Add to OrderContextValue
+  cancelOrder: (
+    orderNumber: string,
+    guestCredentials?: { guest_phone?: string; guest_email?: string },
+  ) => Promise<void>;
   /** Manually insert / update an order in state (e.g. right after creation) */
   upsertOrder: (order: Order) => void;
   /** Clear the current order (e.g. when leaving the tracking page) */
@@ -181,6 +206,35 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const getOrderStatus = useCallback(async (orderNumber: string) => {
+    try {
+      return await ordersApi.getStatus(orderNumber);
+    } catch (err) {
+      throw new Error(
+        err instanceof Error ? err.message : "Failed to get order status",
+      );
+    }
+  }, []);
+
+  // Add to OrderProvider
+  const cancelOrder = useCallback(
+    async (
+      orderNumber: string,
+      guestCredentials?: { guest_phone?: string; guest_email?: string },
+    ) => {
+      dispatch({ type: "CANCEL_ORDER_START" });
+      try {
+        const order = await ordersApi.cancel(orderNumber, guestCredentials);
+        dispatch({ type: "CANCEL_ORDER_SUCCESS", order });
+      } catch (err) {
+        dispatch({
+          type: "CANCEL_ORDER_ERROR",
+          error: err instanceof Error ? err.message : "Failed to cancel order",
+        });
+      }
+    },
+    [],
+  );
   const upsertOrder = useCallback((order: Order) => {
     dispatch({ type: "UPSERT_ORDER", order });
   }, []);
@@ -200,6 +254,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         fetchOrders,
         fetchOrder,
         refreshOrder,
+        getOrderStatus,
+        cancelOrder,
         upsertOrder,
         clearCurrentOrder,
         clearError,

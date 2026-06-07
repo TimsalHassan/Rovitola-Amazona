@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ShoppingBag,
   ChevronDown,
@@ -117,6 +117,7 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
   const [open, setOpen] = useState(false);
   const total = parseFloat(order.total);
   const date = new Date(order.created_at);
+  const navigate = useNavigate();
 
   // Auto-open pending online-payment orders so the CTA is visible
   const isPendingPayment =
@@ -299,15 +300,18 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
 
               {/* Track order link — for confirmed/active orders */}
               {["confirmed", "preparing", "on_the_way"].includes(order.status) && (
-                <Link
-                  to={`/order/${order.order_number}/track`}
+                <button
+                  onClick={() => navigate(`/order/${order.order_number}/track`, {
+                    state: {
+                      address: order.delivery_address,
+                    }
+                  })}
                   className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-800 hover:bg-gray-700 border border-white/10 text-white text-sm font-medium rounded-xl transition-colors"
-                  onClick={(e) => e.stopPropagation()}
                 >
                   <Truck size={14} className="text-amber-400" />
                   Track Order
                   <ArrowRight size={13} className="text-gray-400" />
-                </Link>
+                </button>
               )}
 
               {/* Payment CTA — for unpaid online orders */}
