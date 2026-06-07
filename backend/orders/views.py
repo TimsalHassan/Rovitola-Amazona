@@ -1,7 +1,8 @@
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
 
 from .models import Order
 from .serializers import OrderSerializer, CreateOrderSerializer, OrderStatusSerializer
@@ -11,36 +12,81 @@ from .tasks import (
     send_restaurant_notification_email,
 )
 
+from rest_framework.throttling import AnonRateThrottle
+class GuestOrderLookupThrottle(AnonRateThrottle):
+    rate = "10/hour"
+
 
 class OrderListView(generics.ListAPIView):
     serializer_class = OrderSerializer
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
 
+    def get_throttles(self):
+        if not self.request.user.is_authenticated:
+            return [GuestOrderLookupThrottle()]
+        return []
+
     def get_queryset(self):
         user = self.request.user
 
-        # Logged-in user → return their orders
+        # Admin → all orders, with optional filters
+        if user.is_authenticated and user.is_staff:
+            qs = Order.objects.prefetch_related("items__selected_options").order_by("-created_at")
+
+            # Optional filtering for the admin dashboard
+            status = self.request.query_params.get("status")
+            order_type = self.request.query_params.get("order_type")
+            payment_method = self.request.query_params.get("payment_method")
+            payment_status = self.request.query_params.get("payment_status")
+            search = self.request.query_params.get("search", "").strip()
+
+            if status:
+                qs = qs.filter(status=status)
+            if order_type:
+                qs = qs.filter(order_type=order_type)
+            if payment_method:
+                qs = qs.filter(payment_method=payment_method)
+            if payment_status:
+                qs = qs.filter(payment_status=payment_status)
+            if search:
+                qs = qs.filter(
+                    Q(order_number__icontains=search)
+                    | Q(guest_phone__icontains=search)
+                    | Q(guest_email__icontains=search)
+                    | Q(guest_name__icontains=search)
+                    | Q(customer__email__icontains=search)
+                    | Q(customer__name__icontains=search)
+                )
+
+            return qs
+
+        # Authenticated customer → only their own orders
         if user.is_authenticated:
-            return Order.objects.filter(customer=user).prefetch_related(
-                "items__selected_options"
+            return (
+                Order.objects.filter(customer=user)
+                .prefetch_related("items__selected_options")
+                .order_by("-created_at")
             )
 
-        # Guest → return orders by phone number
-        guest_phone = self.request.query_params.get("guest_phone")
+        # Guest → require at least one identifier
+        guest_phone = self.request.query_params.get("guest_phone", "").strip()
+        guest_email = self.request.query_params.get("guest_email", "").strip()
+
+        if not guest_phone and not guest_email:
+            return Order.objects.none()
+
+        filters = {}
         if guest_phone:
-            return Order.objects.filter(guest_phone=guest_phone).prefetch_related(
-                "items__selected_options"
-            )
-        
-        guest_email = self.request.query_params.get("guest_email")
+            filters["guest_phone"] = guest_phone
         if guest_email:
-            return Order.objects.filter(guest_email=guest_email).prefetch_related(
-                "items__selected_options"
-            )
+            filters["guest_email"] = guest_email
 
-        return Order.objects.none()
-
+        return (
+            Order.objects.filter(**filters)
+            .prefetch_related("items__selected_options")
+            .order_by("-created_at")
+        )
 
 class OrderCreateView(generics.CreateAPIView):
     serializer_class = CreateOrderSerializer
