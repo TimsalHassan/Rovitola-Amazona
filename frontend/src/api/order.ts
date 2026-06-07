@@ -1,5 +1,7 @@
 import { BASE } from "./base";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export type OrderStatus =
   | "pending"
   | "confirmed"
@@ -9,9 +11,7 @@ export type OrderStatus =
   | "cancelled";
 
 export type OrderType = "delivery" | "pickup";
-
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
-
 export type PaymentMethod = "online" | "cash_on_delivery" | "card_on_delivery";
 
 export interface SelectedOptionRead {
@@ -55,6 +55,8 @@ export interface Order {
   items: OrderItemRead[];
 }
 
+// ─── Write types ──────────────────────────────────────────────────────────────
+
 export interface CreateSelectedOption {
   extra_name: string;
   extra_name_fi?: string;
@@ -74,10 +76,13 @@ export interface CreateOrderItem {
 }
 
 export interface CreateOrderPayload {
+  // Guest fields — omit when logged in
   guest_name?: string;
   guest_phone?: string;
   guest_email?: string;
+  // Order info
   order_type: OrderType;
+  payment_method: PaymentMethod;
   delivery_address?: string;
   order_notes?: string;
   subtotal: number;
@@ -93,6 +98,8 @@ interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
+
+// ─── Request helper ───────────────────────────────────────────────────────────
 
 async function request<T>(
   path: string,
@@ -115,14 +122,26 @@ async function request<T>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as { detail?: string }).detail ??
-        `Order API error: ${res.status}`,
-    );
+    const b = body as Record<string, unknown>;
+    // Extract the most useful error message from DRF response shapes
+    const message =
+      (b.detail as string) ||
+      (b.error as string) ||
+      (Array.isArray(b.non_field_errors) ? (b.non_field_errors[0] as string) : null) ||
+      (() => {
+        const first = Object.keys(b)[0];
+        if (!first) return null;
+        const msgs = b[first];
+        return Array.isArray(msgs) ? (msgs[0] as string) : String(msgs);
+      })() ||
+      `Order API error: ${res.status}`;
+    throw new Error(message);
   }
 
   return res.json() as Promise<T>;
 }
+
+// ─── API ──────────────────────────────────────────────────────────────────────
 
 export const ordersApi = {
   create: (payload: CreateOrderPayload) =>
@@ -134,18 +153,17 @@ export const ordersApi = {
   getByNumber: (orderNumber: string) =>
     request<Order>(`/orders/${orderNumber}/`),
 
-  // FIX: unwrap paginated response
   list: (params?: { guest_phone?: string; guest_email?: string }) => {
     const qs = params
       ? "?" + new URLSearchParams(params as Record<string, string>).toString()
       : "";
-    return request<PaginatedResponse<Order>>(`/orders/${qs}`)
-      .then((res) => res.results);
+    return request<PaginatedResponse<Order>>(`/orders/${qs}`).then(
+      (res) => res.results,
+    );
   },
 
   initiatePayment: (orderNumber: string) =>
-    request<{ payment_url: string }>(
-      `/payments/${orderNumber}/initiate/`,
-      { method: "POST" },
-    ),
+    request<{ payment_url: string }>(`/payments/${orderNumber}/initiate/`, {
+      method: "POST",
+    }),
 };

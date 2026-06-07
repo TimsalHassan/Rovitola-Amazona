@@ -8,8 +8,6 @@ import {
 } from "react";
 import { authApi, addressApi, type User, type Address } from "../api/auth";
 
-// ─── State ────────────────────────────────────────────────────────────────────
-
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -25,6 +23,7 @@ type AuthAction =
   | { type: "LOGIN_SUCCESS"; user: User; token: string }
   | { type: "LOGOUT" }
   | { type: "UPDATE_USER"; user: User }
+  | { type: "UPDATE_TOKEN"; token: string }
   | { type: "SET_ADDRESSES"; addresses: Address[] }
   | { type: "ADD_ADDRESS"; address: Address }
   | { type: "UPDATE_ADDRESS"; address: Address }
@@ -35,6 +34,14 @@ function sortAddresses(a: Address, b: Address) {
   if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 }
+
+const initialState: AuthState = {
+  user: null,
+  token: null,
+  addresses: [],
+  isLoading: true,
+  isAuthenticated: false,
+};
 
 function reducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
@@ -67,6 +74,10 @@ function reducer(state: AuthState, action: AuthAction): AuthState {
 
     case "UPDATE_USER":
       return { ...state, user: action.user };
+
+    // After changePassword backend returns a new token — update it
+    case "UPDATE_TOKEN":
+      return { ...state, token: action.token };
 
     case "SET_ADDRESSES":
       return { ...state, addresses: action.addresses };
@@ -104,31 +115,30 @@ function reducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
-const initialState: AuthState = {
-  user: null,
-  token: null,
-  addresses: [],
-  isLoading: true,
-  isAuthenticated: false,
-};
-
-// ─── Context value type ───────────────────────────────────────────────────────
-
 export interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
+  // register no longer returns a token — just resolves on success
   register: (data: {
     name: string;
     email: string;
     phone: string;
     password: string;
     confirm_password: string;
-  }) => Promise<void>;
+  }) => Promise<{ detail: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: { name?: string; phone?: string }) => Promise<void>;
   changePassword: (data: {
     current_password: string;
     new_password: string;
   }) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (data: {
+    uid: string;
+    token: string;
+    new_password: string;
+  }) => Promise<void>;
+  verifyEmail: (uid: string, token: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
   fetchAddresses: () => Promise<void>;
   addAddress: (data: Omit<Address, "id" | "created_at">) => Promise<void>;
   updateAddress: (
@@ -140,8 +150,6 @@ export interface AuthContextValue extends AuthState {
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
-
-// ─── Provider ─────────────────────────────────────────────────────────────────
 
 const TOKEN_KEY = "access_token";
 
@@ -174,12 +182,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token, user } = await authApi.login({ email, password });
     localStorage.setItem(TOKEN_KEY, token);
     dispatch({ type: "LOGIN_SUCCESS", user, token });
-    // Non-blocking — don't slow down the login redirect
+    // Non-blocking
     addressApi.list(token).then((addresses) => {
       dispatch({ type: "SET_ADDRESSES", addresses });
     });
   }, []);
 
+  // register just sends the request — no auto-login, user must verify email
   const register = useCallback(
     async (data: {
       name: string;
@@ -188,9 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string;
       confirm_password: string;
     }) => {
-      const { token, user } = await authApi.register(data);
-      localStorage.setItem(TOKEN_KEY, token);
-      dispatch({ type: "LOGIN_SUCCESS", user, token });
+      return authApi.register(data);
     },
     [],
   );
@@ -207,15 +214,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback(
     async (data: { name?: string; phone?: string }) => {
       const token = tokenRef.current!;
-      // Optimistic update
-      if (state.user) {
-        dispatch({ type: "UPDATE_USER", user: { ...state.user, ...data } });
-      }
+      const prev = state.user;
+      if (prev) dispatch({ type: "UPDATE_USER", user: { ...prev, ...data } });
       try {
         const updated = await authApi.updateProfile(token, data);
         dispatch({ type: "UPDATE_USER", user: updated });
       } catch (err) {
-        if (state.user) dispatch({ type: "UPDATE_USER", user: state.user });
+        if (prev) dispatch({ type: "UPDATE_USER", user: prev });
         throw err;
       }
     },
@@ -224,15 +229,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const changePassword = useCallback(
     async (data: { current_password: string; new_password: string }) => {
-      await authApi.changePassword(tokenRef.current!, data);
+      const res = await authApi.changePassword(tokenRef.current!, data);
+      // Backend invalidates old token and returns a new one
+      if (res.token) {
+        localStorage.setItem(TOKEN_KEY, res.token);
+        dispatch({ type: "UPDATE_TOKEN", token: res.token });
+      }
     },
     [],
   );
 
+  // ── Password reset ─────────────────────────────────────────────────────────
+
+  const forgotPassword = useCallback(async (email: string) => {
+    await authApi.forgotPassword(email);
+  }, []);
+
+  const resetPassword = useCallback(
+    async (data: { uid: string; token: string; new_password: string }) => {
+      await authApi.resetPassword(data);
+    },
+    [],
+  );
+
+  // ── Email verification ─────────────────────────────────────────────────────
+
+  const verifyEmail = useCallback(async (uid: string, token: string) => {
+    await authApi.verifyEmail(uid, token);
+  }, []);
+
+  const resendVerification = useCallback(async (email: string) => {
+    await authApi.resendVerification(email);
+  }, []);
+
   // ── Addresses ──────────────────────────────────────────────────────────────
 
   const fetchAddresses = useCallback(async () => {
-    // addressApi.list already unwraps .results — returns Address[]
     const addresses = await addressApi.list(tokenRef.current!);
     dispatch({ type: "SET_ADDRESSES", addresses });
   }, []);
@@ -247,12 +279,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         created_at: new Date().toISOString(),
       };
       dispatch({ type: "ADD_ADDRESS", address: optimistic });
-
       try {
-        // addressApi.create returns a single Address object (not paginated)
         const real = await addressApi.create(token, data);
         dispatch({ type: "DELETE_ADDRESS", id: tempId });
-        dispatch({ type: "ADD_ADDRESS", address: real }); // ← was real.results (bug)
+        dispatch({ type: "ADD_ADDRESS", address: real });
         if (real.is_default) {
           dispatch({ type: "SET_DEFAULT_ADDRESS", id: real.id });
         }
@@ -269,9 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = tokenRef.current!;
       const prev = state.addresses.find((a) => a.id === id);
       if (!prev) return;
-
       dispatch({ type: "UPDATE_ADDRESS", address: { ...prev, ...data } });
-
       try {
         const updated = await addressApi.update(token, id, data);
         dispatch({ type: "UPDATE_ADDRESS", address: updated });
@@ -327,6 +355,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         updateProfile,
         changePassword,
+        forgotPassword,
+        resetPassword,
+        verifyEmail,
+        resendVerification,
         fetchAddresses,
         addAddress,
         updateAddress,

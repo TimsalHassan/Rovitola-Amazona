@@ -30,6 +30,10 @@ import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import Footer from "./components/Footer";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import { RestaurantProvider } from "./context/RestaurantContext";
+import { OrderProvider } from "./context/OrderContext";
+import OrderTrackingPage from "./pages/OrderTrackingPage";
 
 function AppLayout() {
   return (
@@ -44,109 +48,149 @@ function AppLayout() {
 export default function App() {
   return (
     <LanguageProvider>
-      <MenuProvider>
-        <CartProvider>
-          <AuthProvider>
-            <AdminAuthProvider>
-              <BrowserRouter>
-                <Routes>
-                  {/* Auth pages - no navbar */}
-                  <Route element={<AuthLayout />}>
-                    <Route
-                      path="/login"
-                      element={
-                        <RequireGuest>
-                          <LoginPage />
-                        </RequireGuest>
-                      }
-                    />
-                    <Route
-                      path="/register"
-                      element={
-                        <RequireGuest>
-                          <RegisterPage />
-                        </RequireGuest>
-                      }
-                    />
-                  </Route>
+      <RestaurantProvider>
+        <MenuProvider>
+          <OrderProvider>
+            <CartProvider>
+              <AuthProvider>
+                <AdminAuthProvider>
+                  <BrowserRouter>
+                    <Routes>
+                      {/* Auth pages - no navbar */}
+                      <Route element={<AuthLayout />}>
+                        <Route
+                          path="/login"
+                          element={
+                            <RequireGuest>
+                              <LoginPage />
+                            </RequireGuest>
+                          }
+                        />
+                        <Route
+                          path="/register"
+                          element={
+                            <RequireGuest>
+                              <RegisterPage />
+                            </RequireGuest>
+                          }
+                        />
+                        <Route
+                          path="/verify-email/:uid/:token"
+                          element={
+                            <RequireGuest>
+                              <VerifyEmailPage />
+                            </RequireGuest>
+                          }
+                        />
+                      </Route>
 
-                  {/* App pages - with navbar */}
-                  <Route element={<AppLayout />}>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/menu" element={<MenuPage />} />
-                    <Route path="/menu/:id" element={<MenuItemPage />} />
-                    <Route path="/cart" element={<CartPage />} />
-                    <Route path="/contact" element={<ContactPage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route
-                      path="/checkout"
-                      element={
-                        <ProtectedRoute>
-                          <CheckoutPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/confirm/order/:orderId"
-                      element={
-                        <ProtectedRoute>
-                          <OrderConfirmationPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/order/:orderId"
-                      element={
-                        <ProtectedRoute>
-                          <OrderConfirmedPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/account"
-                      element={
-                        <ProtectedRoute>
-                          <AccountPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/my-orders"
-                      element={
-                        <ProtectedRoute>
-                          <MyOrdersPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                  </Route>
+                      {/* App pages - with navbar */}
+                      <Route element={<AppLayout />}>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/menu" element={<MenuPage />} />
+                        <Route path="/menu/:id" element={<MenuItemPage />} />
+                        <Route path="/cart" element={<CartPage />} />
+                        <Route path="/contact" element={<ContactPage />} />
+                        <Route path="/about" element={<AboutPage />} />
+                        <Route
+                          path="/checkout"
+                          element={
+                            <ProtectedRoute>
+                              <CheckoutPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/confirm/order/:orderId"
+                          element={
+                            <ProtectedRoute>
+                              <OrderConfirmationPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/order/:orderId"
+                          element={
+                            <ProtectedRoute>
+                              <OrderConfirmedPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/order/:orderId/track"
+                          element={
+                            <ProtectedRoute>
+                              <OrderTrackingPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/account"
+                          element={
+                            <ProtectedRoute>
+                              <AccountPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/my-orders"
+                          element={
+                            <ProtectedRoute>
+                              <MyOrdersPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                      </Route>
 
-                  {/* Admin routes */}
-                  <Route path="/admin/login" element={<AdminLoginPage />} />
-                  <Route
-                    path="/admin/*"
-                    element={
-                      <AdminRoute>
-                        <AdminLayout>
-                          <Routes>
-                            <Route path="dashboard" element={<AdminDashboardPage />} />
-                            <Route path="orders" element={<AdminOrdersPage />} />
-                            <Route path="menu" element={<AdminMenuPage />} />
-                            <Route path="menu/new" element={<AdminMenuFormPage />} />
-                            <Route path="menu/:id/edit" element={<AdminMenuFormPage />} />
-                            <Route path="categories" element={<AdminCategoriesPage />} />
-                            <Route path="users" element={<AdminUsersPage />} />
-                          </Routes>
-                        </AdminLayout>
-                      </AdminRoute>
-                    }
-                  />
-
-                </Routes>
-              </BrowserRouter>
-            </AdminAuthProvider>
-          </AuthProvider>
-        </CartProvider>
-      </MenuProvider>
+                      {/* Admin routes */}
+                      <Route path="/admin/login" element={<AdminLoginPage />} />
+                      <Route
+                        path="/admin/*"
+                        element={
+                          <AdminRoute>
+                            <AdminLayout>
+                              <Routes>
+                                <Route
+                                  path="dashboard"
+                                  element={<AdminDashboardPage />}
+                                />
+                                <Route
+                                  path="orders"
+                                  element={<AdminOrdersPage />}
+                                />
+                                <Route
+                                  path="menu"
+                                  element={<AdminMenuPage />}
+                                />
+                                <Route
+                                  path="menu/new"
+                                  element={<AdminMenuFormPage />}
+                                />
+                                <Route
+                                  path="menu/:id/edit"
+                                  element={<AdminMenuFormPage />}
+                                />
+                                <Route
+                                  path="categories"
+                                  element={<AdminCategoriesPage />}
+                                />
+                                <Route
+                                  path="users"
+                                  element={<AdminUsersPage />}
+                                />
+                              </Routes>
+                            </AdminLayout>
+                          </AdminRoute>
+                        }
+                      />
+                    </Routes>
+                  </BrowserRouter>
+                </AdminAuthProvider>
+              </AuthProvider>
+            </CartProvider>
+          </OrderProvider>
+        </MenuProvider>
+      </RestaurantProvider>
     </LanguageProvider>
   );
 }

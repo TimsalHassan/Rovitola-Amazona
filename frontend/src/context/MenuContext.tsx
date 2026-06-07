@@ -8,8 +8,6 @@ import {
 import { menuApi, type Category, type MenuItem, type Extra } from "../api/menu";
 import { useLanguage } from "../hooks/useLanguage";
 
-// ─── State ────────────────────────────────────────────────────────────────────
-
 interface MenuState {
   categories: Category[];
   items: MenuItem[];
@@ -28,8 +26,6 @@ const initialState: MenuState = {
   error: null,
 };
 
-// ─── Actions ──────────────────────────────────────────────────────────────────
-
 type MenuAction =
   | { type: "FETCH_START" }
   | { type: "FETCH_CATEGORIES_SUCCESS"; categories: Category[] }
@@ -43,50 +39,39 @@ function reducer(state: MenuState, action: MenuAction): MenuState {
   switch (action.type) {
     case "FETCH_START":
       return { ...state, isLoading: true, error: null };
-
     case "FETCH_CATEGORIES_SUCCESS":
       return { ...state, isLoading: false, categories: action.categories };
-
     case "FETCH_ITEMS_START":
       return { ...state, isItemsLoading: true, error: null };
-
     case "FETCH_ITEMS_SUCCESS":
       return { ...state, isItemsLoading: false, items: action.items };
-
     case "FETCH_EXTRAS_SUCCESS":
       return { ...state, extras: action.extras };
-
     case "FETCH_ERROR":
       return { ...state, isLoading: false, isItemsLoading: false, error: action.error };
-
     case "CLEAR_ERROR":
       return { ...state, error: null };
-
     default:
       return state;
   }
 }
 
-// ─── Context value ────────────────────────────────────────────────────────────
-
 export interface MenuContextValue extends MenuState {
   fetchCategories: () => Promise<void>;
   fetchItems: (params?: { category?: string; is_lunch_item?: boolean; is_available?: boolean }) => Promise<void>;
   fetchExtras: (params?: { category?: string }) => Promise<void>;
+  // category_slug not in ExtraSerializer — filter by category id instead
   getItemsByCategory: (categorySlug: string) => MenuItem[];
-  getExtrasByCategory: (categorySlug: string) => Extra[];
+  getExtrasByCategory: (categoryId: number) => Extra[];
   clearError: () => void;
 }
 
 export const MenuContext = createContext<MenuContextValue | null>(null);
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
-
 export function MenuProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { language } = useLanguage();
 
-  // Re-fetch whenever language changes so the API returns the right locale
   useEffect(() => {
     fetchCategories();
     fetchItems();
@@ -98,7 +83,10 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       const categories = await menuApi.getCategories(language);
       dispatch({ type: "FETCH_CATEGORIES_SUCCESS", categories });
     } catch (err) {
-      dispatch({ type: "FETCH_ERROR", error: err instanceof Error ? err.message : "Failed to load categories" });
+      dispatch({
+        type: "FETCH_ERROR",
+        error: err instanceof Error ? err.message : "Failed to load categories",
+      });
     }
   }, [language]);
 
@@ -107,10 +95,14 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   ) => {
     dispatch({ type: "FETCH_ITEMS_START" });
     try {
+      // getItems already unwraps pagination — returns MenuItem[]
       const items = await menuApi.getItems({ ...params, language });
       dispatch({ type: "FETCH_ITEMS_SUCCESS", items });
     } catch (err) {
-      dispatch({ type: "FETCH_ERROR", error: err instanceof Error ? err.message : "Failed to load menu items" });
+      dispatch({
+        type: "FETCH_ERROR",
+        error: err instanceof Error ? err.message : "Failed to load menu items",
+      });
     }
   }, [language]);
 
@@ -119,19 +111,23 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       const extras = await menuApi.getExtras({ ...params, language });
       dispatch({ type: "FETCH_EXTRAS_SUCCESS", extras });
     } catch (err) {
-      dispatch({ type: "FETCH_ERROR", error: err instanceof Error ? err.message : "Failed to load extras" });
+      dispatch({
+        type: "FETCH_ERROR",
+        error: err instanceof Error ? err.message : "Failed to load extras",
+      });
     }
   }, [language]);
 
-  // ── Derived selectors ──────────────────────────────────────────────────────
-
   const getItemsByCategory = useCallback(
-    (categorySlug: string) => state.items.filter((item) => item.category_slug === categorySlug),
+    (categorySlug: string) =>
+      state.items.filter((item) => item.category_slug === categorySlug),
     [state.items],
   );
 
+  // FIX: Extra has no category_slug — filter by category id
   const getExtrasByCategory = useCallback(
-    (categorySlug: string) => state.extras.filter((extra) => extra.category_slug === categorySlug),
+    (categoryId: number) =>
+      state.extras.filter((extra) => extra.category === categoryId),
     [state.extras],
   );
 

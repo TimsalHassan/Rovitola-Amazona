@@ -13,22 +13,18 @@ function validateSingle(field: FormKey, value: string, form: Record<FormKey, str
       return !value.trim() ? t("register.nameRequired") : null;
     case "email":
       if (!value.trim()) return t("register.emailRequired");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-        return t("register.emailInvalid");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t("register.emailInvalid");
       return null;
     case "phone":
-      if (value && !/^\+?[\d\s\-()]{7,20}$/.test(value))
-        return t("register.phoneInvalid");
+      if (value && !/^\+?[\d\s\-()]{7,20}$/.test(value)) return t("register.phoneInvalid");
       return null;
     case "password":
       if (!value) return t("register.passwordRequired");
-      if (value.length < 8)
-        return t("register.passwordMinLength");
+      if (value.length < 8) return t("register.passwordMinLength");
       return null;
     case "confirmPassword":
       if (!value) return t("register.confirmPasswordRequired");
-      if (value !== form.password)
-        return t("register.passwordMismatch");
+      if (value !== form.password) return t("register.passwordMismatch");
       return null;
   }
 }
@@ -39,11 +35,7 @@ export default function RegisterPage() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState<Record<FormKey, string>>({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
+    name: "", email: "", phone: "", password: "", confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +58,6 @@ export default function RegisterPage() {
       const newForm = { ...form, [field]: value };
       setForm(newForm);
       if (touched[field]) updateFieldError(field, value, newForm);
-      // Keep confirm password in sync when password changes
       if (field === "password" && touched.confirmPassword) {
         updateFieldError("confirmPassword", newForm.confirmPassword, newForm);
       }
@@ -103,13 +94,14 @@ export default function RegisterPage() {
         password: form.password,
         confirm_password: form.confirmPassword,
       });
-      navigate("/verify", { replace: true });
+      // Backend returns { detail } — redirect to check-email page with email in state
+      navigate("/verify-email", { replace: true, state: { email: form.email.trim() } });
     } catch (err: unknown) {
       const e = err as Error & { field?: string };
       if (e.field) {
         setFieldErrors({ [e.field]: e.message });
       } else {
-        setError(t("register.errorGeneric"));
+        setError(e.message || t("register.errorGeneric"));
       }
     } finally {
       setLoading(false);

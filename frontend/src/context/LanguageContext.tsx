@@ -64,6 +64,7 @@ const resources = {
       categories: "Kategoriat",
       delivery: "Toimitus",
       minOrder: "Minitilaus",
+      noReviewsYet: "Ei arvosteluja vielä",
       menu: {
         title: "Ruokalista",
         mainTab: "Pääruokalista",
@@ -95,10 +96,8 @@ const resources = {
       reviewsLabel: "Asiakaspalautteet",
       reviewsHeading: "Mitä asiakkaamme sanovat",
       signInToReview: "Kirjaudu arvostellaksesi",
-      review1:
-        "Paras kebab Lahdessa! Nopeaa toimitus ja ruoka aina tuoretta.",
-      review2:
-        "Amazona-pizza on rehellisesti parasta pizzaa mitä olen syönyt.",
+      review1: "Paras kebab Lahdessa! Nopeaa toimitus ja ruoka aina tuoretta.",
+      review2: "Amazona-pizza on rehellisesti parasta pizzaa mitä olen syönyt.",
       review3: "Erinomainen valikoima ja hinnat kohdillaan.",
       // App download
       mobileApp: "Sovellus",
@@ -237,6 +236,25 @@ const resources = {
         total: "Yhteensä",
         processing: "Käsitellään...",
         placeOrder: "Tee Tilaus",
+        reviewAndPay: "Tarkista tilauksesi ja valitse maksu",
+        secureCheckout: "Turvallinen kassa",
+        nothingToCheckout: "Ei tilattavaa",
+        addItemsFirst: "Lisää ensin tuotteita ostoskoriin.",
+        deliveringTo: "Toimitetaan osoitteeseen",
+        paymentMethod: "Maksutapa",
+        payOnline: "Maksa verkossa",
+        payOnlineDesc: "Visa, Mastercard, OP, Nordea Paytrailin kautta",
+        cashOnDelivery: "Käteinen toimituksessa",
+        cashOnDeliveryDesc: "Maksa käteisellä kun tilaus saapuu",
+        cardOnDelivery: "Kortti toimituksessa",
+        cardOnDeliveryDesc: "Maksa kortilla kun tilaus saapuu",
+        paytrailRedirectNote:
+          "Sinut ohjataan Paytrailin turvalliselle maksusivulle.",
+        redirectingToPayment: "Ohjataan maksuun…",
+        payViaPaytrail: "Maksa €{{amount}} Paytraililla",
+        paytrailFootnote:
+          "Ohjattu Paytrailiin — korttitietojasi ei tallenneta.",
+        offlinePaymentNote: "Tilauksesi vahvistetaan välittömästi.",
       },
       login: {
         emailRequired: "Sähköposti vaaditaan.",
@@ -503,6 +521,7 @@ const resources = {
       categories: "Categories",
       delivery: "Delivery",
       minOrder: "Min. order",
+      noReviewsYet: "No reviews yet",
       menu: {
         title: "Menu",
         mainTab: "Main Menu",
@@ -669,6 +688,25 @@ const resources = {
         total: "Total",
         processing: "Processing...",
         placeOrder: "Place Order",
+        reviewAndPay: "Review your order and choose payment",
+        secureCheckout: "Secure checkout",
+        nothingToCheckout: "Nothing to checkout",
+        addItemsFirst: "Please add items to your cart first.",
+        deliveringTo: "Delivering to",
+        paymentMethod: "Payment Method",
+        payOnline: "Pay Online",
+        payOnlineDesc: "Visa, Mastercard, OP, Nordea via Paytrail",
+        cashOnDelivery: "Cash on Delivery",
+        cashOnDeliveryDesc: "Pay in cash when your order arrives",
+        cardOnDelivery: "Card on Delivery",
+        cardOnDeliveryDesc: "Pay by card when your order arrives",
+        paytrailRedirectNote:
+          "You'll be redirected to Paytrail's secure payment page.",
+        redirectingToPayment: "Redirecting to payment…",
+        payViaPaytrail: "Pay €{{amount}} via Paytrail",
+        paytrailFootnote:
+          "Redirected to Paytrail — your card details are never stored here.",
+        offlinePaymentNote: "Your order will be confirmed immediately.",
       },
       login: {
         emailRequired: "Email is required.",
@@ -814,7 +852,8 @@ const resources = {
         quote: '"Food is the ingredient that binds us together."',
         headlineLine1: "Authentic flavours,",
         headlineLine2: "delivered fast.",
-        subhead: "Wood-fired pizzas and more — straight from our kitchen to your door.",
+        subhead:
+          "Wood-fired pizzas and more — straight from our kitchen to your door.",
         socialProof: "Loved by 2,000+ customers",
         mobileHeadline: "Authentic flavours, fast.",
         languageEnglish: "English",
@@ -918,7 +957,9 @@ export interface LanguageContextType {
   t: ReturnType<typeof useTranslation>["t"];
 }
 
-export const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+export const LanguageContext = createContext<LanguageContextType | undefined>(
+  undefined,
+);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { t, i18n: i18nInstance } = useTranslation("home");
@@ -933,10 +974,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const resolved = (i18nInstance.resolvedLanguage ?? i18nInstance.language).split("-")[0];
-  const language = (supportedLanguages.includes(resolved as Language)
-    ? resolved
-    : "fi") as Language;
+  const resolved = (
+    i18nInstance.resolvedLanguage ?? i18nInstance.language
+  ).split("-")[0];
+  const language = (
+    supportedLanguages.includes(resolved as Language) ? resolved : "fi"
+  ) as Language;
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
