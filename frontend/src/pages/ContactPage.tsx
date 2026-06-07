@@ -117,11 +117,9 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* Map placeholder */}
-            <div className="bg-gray-900 border border-white/5 rounded-2xl p-4 h-48 flex items-center justify-center">
+            <div className="bg-gray-900 border border-white/5 rounded-2xl p-4 h-48 flex items-center justify-center overflow-hidden">
               <div className="text-center">
-                <MapPin size={32} className="text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">{t("contact.mapLabel")} (Google Maps)</p>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1935.3203894971946!2d25.649473677392145!3d60.98328257754948!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x468e2854093965db%3A0xd11ee9ad95e079f8!2sAmazona%20Pizzeria!5e0!3m2!1sen!2s!4v1780817453165!5m2!1sen!2s" width="600" height="450" style={{border:0}} allowFullScreen={false} loading="lazy" referrerPolicy="no-referrer-when-downgrade"></iframe>
               </div>
             </div>
           </div>

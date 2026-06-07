@@ -431,7 +431,8 @@ export default function HomePage() {
     async function fetchReviews() {
       try {
         const data = await reviewsApi.getAll();
-        setReviews(data);
+        console.log("Fetched reviews:", data.results);
+        setReviews(data.results);
       } catch {
         setReviews([]);
       } finally {
@@ -445,7 +446,7 @@ export default function HomePage() {
     setReviewsLoading(true);
     reviewsApi
       .getAll()
-      .then(setReviews)
+      .then((data) => setReviews(data.results))
       .catch(() => setReviews([]))
       .finally(() => setReviewsLoading(false));
   }

@@ -1,8 +1,25 @@
-const BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+import { BASE } from "./base";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Review {
+  id: number;
+  customer: number;
+  customer_name: string;
+  rating: number;
+  text: string;
+  is_approved: boolean;
+  created_at: string;
+}
+
+export interface ReviewResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Review[];
+}
+
+export interface CreateReviewResponse {
   id: number;
   customer: number;
   customer_name: string;
@@ -21,11 +38,15 @@ export interface CreateReviewPayload {
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    headers:{
+    headers: {
       "ngrok-skip-browser-warning": "true",
-    }
+    },
   });
-  if (!res.ok) throw new Error(`Reviews API error: ${res.status}`);
+
+  if (!res.ok) {
+    throw new Error(`Reviews API error: ${res.status}`);
+  }
+
   return res.json() as Promise<T>;
 }
 
@@ -36,6 +57,7 @@ async function post<T>(
 ): Promise<T> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
   };
 
   if (token) {
@@ -50,8 +72,11 @@ async function post<T>(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
+
     throw new Error(
-      error.detail || error.non_field_errors?.[0] || `API error: ${res.status}`,
+      error.detail ||
+      error.non_field_errors?.[0] ||
+      `API error: ${res.status}`,
     );
   }
 
@@ -59,8 +84,8 @@ async function post<T>(
 }
 
 export const reviewsApi = {
-  getAll: () => get<Review[]>("/reviews/"),
+  getAll: () => get<ReviewResponse>("/reviews/"),
 
   create: (payload: CreateReviewPayload, token: string) =>
-    post<Review>("/reviews/create/", payload, token),
+    post<CreateReviewResponse>("/reviews/create/", payload, token),
 };
