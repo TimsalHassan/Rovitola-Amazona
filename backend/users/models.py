@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+import uuid
 
 
 class UserManager(BaseUserManager):
@@ -24,6 +25,7 @@ class User(AbstractUser):
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20, blank=True)
     is_email_verified = models.BooleanField(default=False)
+    email_verification_token = models.UUIDField(default=uuid.uuid4, null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["name"]

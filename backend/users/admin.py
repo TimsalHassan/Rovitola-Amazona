@@ -5,41 +5,29 @@ from .models import User, Address
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ["email", "name", "phone", "is_staff", "date_joined"]
-    search_fields = ["email", "name", "phone"]
-    ordering = ["-date_joined"]
-
-    # Override fieldsets to remove username, add name/phone
+    ordering = ['-date_joined']
+    list_display = ['email', 'name', 'is_email_verified', 'is_staff', 'date_joined']
+    list_filter = ['is_email_verified', 'is_staff', 'is_superuser']
+    search_fields = ['email', 'name']
+    
     fieldsets = (
-        (None, {"fields": ("email", "password")}),
-        ("Personal Info", {"fields": ("name", "phone")}),
-        (
-            "Permissions",
-            {
-                "fields": (
-                    "is_active",
-                    "is_staff",
-                    "is_superuser",
-                    "groups", "user_permissions",
-                )
-            },
-        ),
-        ("Important Dates", {"fields": ("last_login", "date_joined")}),
+        (None, {'fields': ('email', 'password')}),
+        ('Personal Info', {'fields': ('name', 'phone')}),
+        ('Verification', {'fields': ('is_email_verified',)}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
+    
     add_fieldsets = (
-        (
-            None,
-            {
-                "classes": ("wide",),
-                "fields": ("email", "name", "phone", "password1", "password2"),
-            },
-        ),
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'name', 'phone', 'password1', 'password2', 'is_email_verified'),
+        }),
     )
 
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
-    list_display = ["user", "street_address", "city", "postal_code", "country", "is_default", "created_at"]
-    search_fields = ["user__email", "street_address", "city"]
-    list_filter = ["is_default", "country", "created_at"]
-    ordering = ["-is_default", "-created_at"]
+    list_display = ['user', 'street_address', 'city', 'postal_code', 'is_default']
+    list_filter = ['is_default', 'country']
+    search_fields = ['user__email', 'street_address', 'city']
