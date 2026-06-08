@@ -28,11 +28,7 @@ const NAV = [
   { label: "Restaurant", path: "/admin/restaurant", icon: Settings },
 ];
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { admin, logout } = useAdminAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,7 +39,7 @@ export default function AdminLayout({
     navigate("/admin/login", { replace: true });
   }
 
-  if(location.pathname === "/admin" || location.pathname === "/admin/") {
+  if (location.pathname === "/admin" || location.pathname === "/admin/") {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
@@ -51,7 +47,7 @@ export default function AdminLayout({
     NAV.find((n) => location.pathname.startsWith(n.path))?.label ?? "Admin";
 
   return (
-    <div className="min-h-screen bg-gray-950 flex">
+    <div className="h-screen overflow-hidden bg-gray-950 flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -62,7 +58,7 @@ export default function AdminLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-30 w-52 flex flex-col transition-transform duration-300 ${
+        className={`fixed inset-y-0 left-0 z-30 w-52 flex flex-col h-full transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
         style={{
@@ -72,22 +68,20 @@ export default function AdminLayout({
       >
         {/* Brand */}
         <div
-          className="px-4 py-5"
+          className="px-4 py-5 shrink-0"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
         >
           <div className="space-y-2.5">
             <Link to="/">
               <Logo />
             </Link>
-            <div>
-              <p className="text-gray-600 text-[9px] mt-0.5 font-medium uppercase tracking-widest">
-                Admin Panel
-              </p>
-            </div>
+            <p className="text-gray-600 text-[9px] mt-0.5 font-medium uppercase tracking-widest">
+              Admin Panel
+            </p>
           </div>
         </div>
 
-        {/* Nav */}
+        {/* Nav — only this scrolls */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV.map((item) => {
             const active = location.pathname.startsWith(item.path);
@@ -114,15 +108,12 @@ export default function AdminLayout({
 
         {/* Divider */}
         <div
-          style={{
-            height: "1px",
-            background: "rgba(255,255,255,0.05)",
-            margin: "0 12px",
-          }}
+          className="shrink-0"
+          style={{ height: "1px", background: "rgba(255,255,255,0.05)", margin: "0 12px" }}
         />
 
         {/* Footer */}
-        <div className="p-3">
+        <div className="p-3 shrink-0">
           <div
             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-1"
             style={{
@@ -136,9 +127,7 @@ export default function AdminLayout({
               </span>
             </div>
             <div className="min-w-0">
-              <p className="text-white font-bold truncate">
-                {admin?.name ?? "Admin"}
-              </p>
+              <p className="text-white font-bold truncate">{admin?.name ?? "Admin"}</p>
               <p className="text-gray-600 text-sm truncate">{admin?.email}</p>
             </div>
           </div>
@@ -147,28 +136,24 @@ export default function AdminLayout({
             target="_blank"
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] transition-all"
           >
-            <span className="text-base">
-              <Globe className="size-4" />
-            </span>{" "}
+            <Globe className="size-4" />
             View Site
           </Link>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06] transition-all"
           >
-            <span className="text-sm">
-              <LogOut className="size-4" />
-            </span>{" "}
+            <LogOut className="size-4" />
             Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main — offset by sidebar width, fills remaining space */}
+      <div className="flex flex-col flex-1 min-w-0 lg:ml-52">
         {/* Topbar */}
         <header
-          className="flex items-center px-5 gap-3 sticky top-0 z-10"
+          className="flex items-center px-5 gap-3 shrink-0"
           style={{
             height: "52px",
             background: "#0a0f1e",
@@ -181,12 +166,10 @@ export default function AdminLayout({
           >
             <Menu className="size-6" />
           </button>
-          <div className="flex items-center gap-2">
-            <span className="text-white font-bold text-xl">{currentLabel}</span>
-          </div>
+          <span className="text-white font-bold text-xl">{currentLabel}</span>
         </header>
 
-        <main className="flex-1 p-5 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto p-5">{children}</main>
       </div>
     </div>
   );

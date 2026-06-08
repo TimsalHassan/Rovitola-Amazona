@@ -97,7 +97,7 @@ export default function AdminDashboardPage() {
 
     Promise.all([
       adminGet<Stats>(`${ADMIN}/stats/`, token),
-      adminGet<PaginatedOrders>(`${ADMIN}/orders/?page_size=5`, token),
+      adminGet<PaginatedOrders>(`${ADMIN}/orders/?page_size=10`, token),
     ])
       .then(([statsData, ordersData]) => {
         setStats(statsData);

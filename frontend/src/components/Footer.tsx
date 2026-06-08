@@ -41,19 +41,19 @@ export default function Footer() {
               {info?.phone && (
                 <div className="flex items-center gap-2 text-gray-400">
                   <Phone size={15} className="text-amber-400 shrink-0" />
-                  <a href={`tel:${info.phone}`} className="hover:text-amber-400 transition-colors">{info.phone}</a>
+                  <Link to={`tel:${info.phone}`} className="hover:text-amber-400 transition-colors">{info.phone}</Link>
                 </div>
               )}
               {info?.phone_2 && (
                 <div className="flex items-center gap-2 text-gray-400">
                   <Phone size={15} className="text-amber-400 shrink-0" />
-                  <a href={`tel:${info.phone_2}`} className="hover:text-amber-400 transition-colors">{info.phone_2}</a>
+                  <Link to={`tel:${info.phone_2}`} className="hover:text-amber-400 transition-colors">{info.phone_2}</Link>
                 </div>
               )}
               {info?.email && (
                 <div className="flex items-center gap-2 text-gray-400">
                   <Mail size={15} className="text-amber-400 shrink-0" />
-                  <a href={`mailto:${info.email}`} className="hover:text-amber-400 transition-colors">{info.email}</a>
+                  <Link to={`mailto:${info.email}`} className="hover:text-amber-400 transition-colors">{info.email}</Link>
                 </div>
               )}
             </div>
