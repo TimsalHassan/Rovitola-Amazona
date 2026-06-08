@@ -42,6 +42,8 @@ import { OrderProvider } from "./context/OrderContext";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPasswordPage from "./pages/ResetPassword";
+import PrivacyPage from "./pages/PrivacyPage";
+import TermsPage from "./pages/TermsPage";
 
 function AppLayout() {
   return (
@@ -116,6 +118,12 @@ export default function App() {
                         />
                       </Route>
 
+                      {/* Privacy Routes */}
+                      <Route path="/privacy" element={<PrivacyPage />} />
+                      <Route
+                        path="/terms-and-conditions"
+                        element={<TermsPage />}
+                      />
                       {/* App pages - with navbar */}
                       <Route element={<AppLayout />}>
                         <Route path="/" element={<HomePage />} />
@@ -124,13 +132,11 @@ export default function App() {
                         <Route path="/cart" element={<CartPage />} />
                         <Route path="/contact" element={<ContactPage />} />
                         <Route path="/about" element={<AboutPage />} />
+                        <Route path="/checkout" element={<CheckoutPage />} />
+                        <Route path="/my-orders" element={<MyOrdersPage />} />
                         <Route
-                          path="/checkout"
-                          element={
-                            <ProtectedRoute>
-                              <CheckoutPage />
-                            </ProtectedRoute>
-                          }
+                          path="/order/:orderId"
+                          element={<OrderConfirmedPage />}
                         />
                         <Route
                           path="/confirm/order/:orderId"
@@ -140,14 +146,7 @@ export default function App() {
                             </ProtectedRoute>
                           }
                         />
-                        <Route
-                          path="/order/:orderId"
-                          element={
-                            <ProtectedRoute>
-                              <OrderConfirmedPage />
-                            </ProtectedRoute>
-                          }
-                        />
+
                         <Route
                           path="/order/:orderId/track"
                           element={
@@ -161,14 +160,6 @@ export default function App() {
                           element={
                             <ProtectedRoute>
                               <AccountPage />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/my-orders"
-                          element={
-                            <ProtectedRoute>
-                              <MyOrdersPage />
                             </ProtectedRoute>
                           }
                         />

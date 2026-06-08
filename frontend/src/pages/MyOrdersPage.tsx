@@ -15,9 +15,13 @@ import {
   CreditCard,
   ArrowRight,
   Loader2,
+  Phone,
+  Search,
 } from "lucide-react";
 import { ordersApi, type Order, type OrderStatus } from "../api/order";
 import { useLanguage } from "../hooks/useLanguage";
+import { useAuth } from "../hooks/useAuth";
+import { useOrders } from "../context/OrderContext";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
@@ -57,7 +61,6 @@ function PaymentCta({ order }: { order: Order }) {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only show for online-payment orders that are still unpaid/pending
   if (
     order.payment_method !== "online" ||
     order.payment_status !== "unpaid" ||
@@ -67,7 +70,7 @@ function PaymentCta({ order }: { order: Order }) {
   }
 
   const handlePay = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // don't toggle the accordion
+    e.stopPropagation();
     setPaying(true);
     setError(null);
     try {
@@ -119,7 +122,6 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
   const date = new Date(order.created_at);
   const navigate = useNavigate();
 
-  // Auto-open pending online-payment orders so the CTA is visible
   const isPendingPayment =
     order.status === "pending" &&
     order.payment_method === "online" &&
@@ -133,12 +135,9 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
     <motion.div
       layout
       className={`bg-gray-900 border rounded-xl overflow-hidden transition-colors ${
-        isPendingPayment
-          ? "border-amber-500/30"
-          : "border-white/5"
+        isPendingPayment ? "border-amber-500/30" : "border-white/5"
       }`}
     >
-      {/* Pending payment banner */}
       {isPendingPayment && (
         <div className="flex items-center gap-2 px-5 py-2 bg-amber-500/10 border-b border-amber-500/20">
           <Clock size={12} className="text-amber-400 shrink-0" />
@@ -148,7 +147,6 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
         </div>
       )}
 
-      {/* Header row */}
       <button
         onClick={() => setOpen((p) => !p)}
         className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors"
@@ -194,7 +192,6 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
         </div>
       </button>
 
-      {/* Expandable details */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -206,8 +203,6 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 border-t border-white/5 pt-4 space-y-4">
-
-              {/* Delivery address */}
               {order.order_type === "delivery" && order.delivery_address && (
                 <div className="flex items-start gap-2 text-sm text-gray-400">
                   <MapPin size={13} className="text-gray-600 mt-0.5 shrink-0" />
@@ -215,7 +210,6 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                 </div>
               )}
 
-              {/* Items */}
               <div className="space-y-2.5">
                 {order.items.map((item) => {
                   const name =
@@ -223,10 +217,7 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                       ? item.menu_item_name_fi
                       : item.menu_item_name;
                   return (
-                    <div
-                      key={item.id}
-                      className="flex items-start justify-between gap-3"
-                    >
+                    <div key={item.id} className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold flex items-center justify-center shrink-0">
@@ -259,7 +250,6 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                 })}
               </div>
 
-              {/* Totals */}
               <div className="border-t border-white/5 pt-3 space-y-1 text-sm">
                 <div className="flex justify-between text-gray-500">
                   <span>Subtotal</span>
@@ -280,9 +270,7 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                 {parseFloat(order.discount_amount) > 0 && (
                   <div className="flex justify-between text-green-400">
                     <span>Discount</span>
-                    <span>
-                      -€{parseFloat(order.discount_amount).toFixed(2)}
-                    </span>
+                    <span>-€{parseFloat(order.discount_amount).toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-white pt-1.5 border-t border-white/5">
@@ -291,21 +279,19 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                 </div>
               </div>
 
-              {/* Notes */}
               {order.order_notes && (
                 <p className="text-gray-600 text-xs italic border-t border-white/5 pt-3">
                   Note: {order.order_notes}
                 </p>
               )}
 
-              {/* Track order link — for confirmed/active orders */}
               {["confirmed", "preparing", "on_the_way"].includes(order.status) && (
                 <button
-                  onClick={() => navigate(`/order/${order.order_number}/track`, {
-                    state: {
-                      address: order.delivery_address,
-                    }
-                  })}
+                  onClick={() =>
+                    navigate(`/order/${order.order_number}/track`, {
+                      state: { address: order.delivery_address },
+                    })
+                  }
                   className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-800 hover:bg-gray-700 border border-white/10 text-white text-sm font-medium rounded-xl transition-colors"
                 >
                   <Truck size={14} className="text-amber-400" />
@@ -314,7 +300,6 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                 </button>
               )}
 
-              {/* Payment CTA — for unpaid online orders */}
               <PaymentCta order={order} />
             </div>
           </motion.div>
@@ -324,43 +309,149 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
   );
 }
 
+// ─── Guest lookup form ────────────────────────────────────────────────────────
+
+function GuestLookupForm({
+  onSearch,
+  loading,
+}: {
+  onSearch: (phone: string) => void;
+  loading: boolean;
+}) {
+  const [phone, setPhone] = useState("");
+  const [touched, setTouched] = useState(false);
+
+  const isValid = phone.trim().length >= 6;
+
+  const handleSubmit = () => {
+    setTouched(true);
+    if (!isValid) return;
+    onSearch(phone.trim());
+  };
+
+  return (
+    <div className="max-w-sm mx-auto text-center py-10 space-y-6">
+      <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto">
+        <Phone size={24} className="text-amber-400" />
+      </div>
+
+      <div>
+        <h2 className="text-white font-bold text-lg">Find your orders</h2>
+        <p className="text-gray-500 text-sm mt-1">
+          Enter the phone number you used when ordering
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="relative">
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setTouched(false);
+            }}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            placeholder="+358 40 123 4567"
+            className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
+              touched && !isValid
+                ? "border-red-500/60"
+                : "border-white/10 focus:border-amber-500/50"
+            }`}
+          />
+        </div>
+        {touched && !isValid && (
+          <p className="text-red-400 text-xs text-left">
+            Please enter a valid phone number.
+          </p>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 disabled:cursor-not-allowed text-gray-900 font-bold text-sm rounded-xl transition-all"
+        >
+          {loading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Searching…
+            </>
+          ) : (
+            <>
+              <Search size={14} />
+              Find Orders
+            </>
+          )}
+        </button>
+      </div>
+
+      <p className="text-xs text-gray-600">
+        Have an account?{" "}
+        <Link to="/login" className="text-amber-400 hover:text-amber-300 transition-colors">
+          Sign in
+        </Link>{" "}
+        to see all your orders.
+      </p>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyOrdersPage() {
   const { language } = useLanguage();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { orders, isLoading, error, fetchOrders } = useOrders();
 
-  const fetchOrders = () => {
-    setLoading(true);
-    setError(null);
-    ordersApi
-      .list()
-      .then((data) =>
-        setOrders(
-          data.sort(
-            (a, b) =>
-              new Date(b.created_at).getTime() -
-              new Date(a.created_at).getTime(),
-          ),
-        ),
-      )
-      .catch((err) => setError(err.message ?? "Failed to load orders."))
-      .finally(() => setLoading(false));
+  // Guest state
+  const [searched, setSearched] = useState(false);
+  const [guestPhone, setGuestPhone] = useState("");
+
+  const isGuest = !user;
+
+  // Fetch on mount for authenticated users only
+  useEffect(() => {
+    if (!isGuest) {
+      fetchOrders();
+    }
+  }, [isGuest]);
+
+  const handleGuestSearch = (phone: string) => {
+    setGuestPhone(phone);
+    setSearched(true);
+    fetchOrders({ guest_phone: phone });
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const handleRefresh = () => {
+    if (isGuest && guestPhone) {
+      fetchOrders({ guest_phone: guestPhone });
+    } else if (!isGuest) {
+      fetchOrders();
+    }
+  };
 
-  // Count of orders needing payment action
   const pendingPaymentCount = orders.filter(
     (o) =>
       o.status === "pending" &&
       o.payment_method === "online" &&
       o.payment_status === "unpaid",
   ).length;
+
+  // Guests who haven't searched yet — show lookup form
+  if (isGuest && !searched) {
+    return (
+      <main className="bg-gray-950 min-h-screen pt-16 text-white">
+        <div className="bg-gray-900 border-b border-white/5 pt-8 pb-5">
+          <div className="max-w-2xl mx-auto px-4">
+            <h1 className="text-2xl font-bold">My Orders</h1>
+          </div>
+        </div>
+        <div className="max-w-2xl mx-auto px-4 py-6">
+          <GuestLookupForm onSearch={handleGuestSearch} loading={isLoading} />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="bg-gray-950 min-h-screen pt-16 text-white">
@@ -370,9 +461,12 @@ export default function MyOrdersPage() {
           <div>
             <h1 className="text-2xl font-bold">My Orders</h1>
             <p className="text-gray-500 text-sm mt-0.5">
-              {!loading && !error && (
+              {!isLoading && !error && (
                 <>
                   {orders.length} order{orders.length !== 1 ? "s" : ""}
+                  {isGuest && guestPhone && (
+                    <span className="ml-2 text-gray-600">· {guestPhone}</span>
+                  )}
                   {pendingPaymentCount > 0 && (
                     <span className="ml-2 text-amber-400 font-medium">
                       · {pendingPaymentCount} awaiting payment
@@ -382,20 +476,34 @@ export default function MyOrdersPage() {
               )}
             </p>
           </div>
-          <button
-            onClick={fetchOrders}
-            disabled={loading}
-            className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors disabled:opacity-40"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Guests can search a different number */}
+            {isGuest && (
+              <button
+                onClick={() => {
+                  setSearched(false);
+                  setGuestPhone("");
+                }}
+                className="text-xs text-gray-500 hover:text-amber-400 transition-colors border border-white/10 hover:border-amber-500/30 px-3 py-1.5 rounded-lg"
+              >
+                Change number
+              </button>
+            )}
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors disabled:opacity-40"
+            >
+              <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Loading skeletons */}
-        {loading && (
+        {isLoading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div
@@ -416,13 +524,13 @@ export default function MyOrdersPage() {
         )}
 
         {/* Error */}
-        {error && !loading && (
+        {error && !isLoading && (
           <div className="text-center py-16 space-y-3">
             <XCircle size={36} className="text-red-400 mx-auto" />
             <p className="text-white font-semibold">Failed to load orders</p>
             <p className="text-gray-500 text-sm">{error}</p>
             <button
-              onClick={fetchOrders}
+              onClick={handleRefresh}
               className="mt-2 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold text-sm rounded-xl transition-colors"
             >
               Try again
@@ -430,8 +538,35 @@ export default function MyOrdersPage() {
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && !error && orders.length === 0 && (
+        {/* Empty — guest with no results */}
+        {!isLoading && !error && orders.length === 0 && isGuest && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16 space-y-3"
+          >
+            <div className="w-16 h-16 rounded-full bg-gray-900 border border-white/5 flex items-center justify-center mx-auto">
+              <ShoppingBag size={28} className="text-gray-600" />
+            </div>
+            <p className="text-white font-semibold">No orders found</p>
+            <p className="text-gray-500 text-sm">
+              No orders found for{" "}
+              <span className="text-gray-300">{guestPhone}</span>.
+            </p>
+            <button
+              onClick={() => {
+                setSearched(false);
+                setGuestPhone("");
+              }}
+              className="mt-2 px-5 py-2 border border-white/10 hover:border-white/20 text-gray-300 text-sm rounded-xl transition-colors"
+            >
+              Try a different number
+            </button>
+          </motion.div>
+        )}
+
+        {/* Empty — logged in user */}
+        {!isLoading && !error && orders.length === 0 && !isGuest && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -441,9 +576,7 @@ export default function MyOrdersPage() {
               <ShoppingBag size={28} className="text-gray-600" />
             </div>
             <p className="text-white font-semibold">No orders yet</p>
-            <p className="text-gray-500 text-sm">
-              Your order history will appear here.
-            </p>
+            <p className="text-gray-500 text-sm">Your order history will appear here.</p>
             <Link
               to="/menu"
               className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold text-sm rounded-xl transition-colors"
@@ -454,7 +587,7 @@ export default function MyOrdersPage() {
         )}
 
         {/* Orders list */}
-        {!loading && !error && orders.length > 0 && (
+        {!isLoading && !error && orders.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

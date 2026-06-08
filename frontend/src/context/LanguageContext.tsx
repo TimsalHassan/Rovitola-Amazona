@@ -193,6 +193,8 @@ const resources = {
           saturday: "Lauantai",
           sunday: "Sunnuntai",
         },
+        privacy: "Tietosuojakäytäntö",
+        terms: "Käyttöehdot",
       },
 
       // ── Cart page ─────────────────────────────────────────────────────────
@@ -788,6 +790,8 @@ const resources = {
           saturday: "Saturday",
           sunday: "Sunday",
         },
+        privacy: "Privacy Policy",
+        terms: "Terms of Service",
       },
 
       // ── Cart page ─────────────────────────────────────────────────────────
