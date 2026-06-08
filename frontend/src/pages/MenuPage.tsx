@@ -15,6 +15,7 @@ import { useLanguage } from "../hooks/useLanguage";
 import { useMenu } from "../hooks/useMenu";
 import { isLunchHours } from "../utils/openingHours";
 import { Link } from "react-router-dom";
+import { useRestaurant } from "../context/RestaurantContext";
 
 const PAGE_SIZE = 8;
 
@@ -190,48 +191,32 @@ function EmptyCard() {
 
 function LunchUnavailableCard({ item }: { item: ApiMenuItem }) {
   const { language, t } = useLanguage();
-  const name = getLocalizedText(
-    language,
-    item.name,
-    item.name_fi,
-    t("unnamedItem"),
-  );
-  const description = getLocalizedText(
-    language,
-    item.description,
-    item.description_fi,
-    t("unnamedItemDesc"),
-  );
+  const name = getLocalizedText(language, item.name, item.name_fi, t("unnamedItem"));
+  const description = getLocalizedText(language, item.description, item.description_fi, t("unnamedItemDesc"));
   const price = toNumber(item.current_price);
 
   return (
-    <div className="relative bg-gray-900 border border-white/5 rounded-xl p-4 opacity-70">
-      <div className="absolute inset-0 bg-gray-950/60 rounded-xl flex items-center justify-center z-10">
-        <div className="text-center px-4">
-          <Clock size={20} className="text-gray-500 mx-auto mb-1" />
-          <p className="text-gray-400 text-xs">{t("menu.lunchUnavailable")}</p>
-        </div>
-      </div>
-      <div className="flex gap-4 opacity-40">
+    <div className="relative bg-gray-900 border border-white/5 rounded-xl overflow-hidden">
+      {/* Blurred content */}
+      <div className="flex gap-4 p-4 opacity-40 blur-[1px] select-none pointer-events-none">
         {item.image ? (
-          <img
-            src={item.image}
-            alt={name}
-            className="w-20 h-20 object-cover rounded-lg shrink-0"
-          />
+          <img src={item.image} alt={name} className="w-20 h-20 object-cover rounded-lg shrink-0" />
         ) : (
-          <div className="w-20 h-20 bg-gray-800 rounded-lg flex items-center justify-center shrink-0 text-gray-600">
-            🍕
-          </div>
+          <div className="w-20 h-20 bg-gray-800 rounded-lg flex items-center justify-center shrink-0 text-gray-600">🍕</div>
         )}
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold text-sm truncate">{name}</h3>
-          <p className="text-gray-400 text-xs mt-1">{description}</p>
+          <p className="text-gray-400 text-xs mt-1 line-clamp-2">{description}</p>
           <div className="mt-3">
-            <span className="text-amber-400 font-bold">
-              €{price.toFixed(2)}
-            </span>
+            <span className="text-amber-400 font-bold">€{price.toFixed(2)}</span>
           </div>
+        </div>
+      </div>
+      {/* Overlay badge */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="flex items-center gap-2 bg-gray-950/80 border border-white/10 px-4 py-2 rounded-full">
+          <Clock size={14} className="text-gray-400" />
+          <p className="text-gray-300 text-xs font-medium">{t("menu.lunchUnavailable")}</p>
         </div>
       </div>
     </div>
@@ -386,6 +371,7 @@ export default function MenuPage() {
   const isScrollingRef = useRef(false);
 
   const isLunch = isLunchHours();
+  const { info } = useRestaurant();
 
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.order - b.order),
@@ -396,6 +382,32 @@ export default function MenuPage() {
     () => items.filter((item) => item.is_lunch_item),
     [items],
   );
+
+  // Derive lunch hours string from opening_hours
+  const lunchHoursText = useMemo(() => {
+    if (!info?.opening_hours) return t("menu.lunchHours"); // fallback to translation
+
+    const days = info.opening_hours.filter(
+      (row) => !row.is_closed && row.lunch_open && row.lunch_close
+    );
+
+    if (!days.length) return t("menu.lunchHours");
+
+    // Group consecutive days with same hours
+    const formatTime = (t: string) => t.slice(0, 5); // "10:30:00" → "10:30"
+    const firstDay = days[0];
+    const lastDay = days[days.length - 1];
+    const time = `${formatTime(firstDay.lunch_open!)} – ${formatTime(firstDay.lunch_close!)}`;
+
+    // Capitalize day names
+    const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+    const dayRange =
+      days.length === 1
+        ? capitalize(firstDay.day)
+        : `${capitalize(firstDay.day)} – ${capitalize(lastDay.day)}`;
+
+    return `${dayRange}  ${time}`;
+  }, [info, t]);
 
   useEffect(() => {
     if (!sortedCategories.length) return;
@@ -662,7 +674,8 @@ export default function MenuPage() {
             <p className="text-amber-400 font-semibold">
               {t("menu.lunchAvailable")}
             </p>
-            <p className="text-gray-400 text-sm">{t("menu.lunchHours")}</p>
+            {/* ✅ Dynamic from API instead of hardcoded translation string */}
+            <p className="text-gray-400 text-sm">{lunchHoursText}</p>
           </div>
 
           {isItemsLoading ? (
