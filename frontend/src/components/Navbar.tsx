@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  ShoppingCart, Menu, X, Utensils, User,
+  ShoppingCart, Menu, X, User,
   ChevronDown, LogOut, Settings, ShoppingBag,
   LogIn
 } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from '../hooks/useAuth';
+import Logo from './Logo';
 
 export default function Navbar() {
   const { totalItems } = useCart();
@@ -71,13 +72,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center shadow-md group-hover:bg-amber-400 transition-colors">
-              <Utensils size={20} className="text-gray-900" />
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-white font-bold text-sm tracking-tight">Ravintola</span>
-              <span className="text-amber-400 font-bold text-sm tracking-wide">Amazona</span>
-            </div>
+            <Logo/>
           </Link>
 
           {/* Desktop nav links */}

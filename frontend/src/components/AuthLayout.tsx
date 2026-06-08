@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { useLanguage } from "../hooks/useLanguage";
 import { useState, useRef, useEffect } from "react";
 import { Globe, ChefHat, Star } from "lucide-react";
+import Logo from "./Logo";
 
 const CUSTOMER_AVATARS = [
   "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8cG9ydHJhaXRzfGVufDB8fDB8fHwy",
@@ -44,12 +45,7 @@ export default function AuthLayout() {
 
         {/* Top-left brand badge */}
         <div className="absolute top-8 left-8 flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center shadow-lg">
-            <ChefHat className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-white font-bold text-lg tracking-tight">
-            Ravintola <span className="text-amber-400">Amazona</span>
-          </span>
+          <Logo/>
         </div>
 
         {/* Center quote */}
