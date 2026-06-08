@@ -478,7 +478,10 @@ export default function CartPage() {
 
   // Round at source so navigate() state never carries a floating-point artifact
   const round2 = (n: number) => Math.round(n * 100) / 100;
-  const total = round2(subtotal + Number(restaurant.deliveryFee));
+  const deliveryCharge =
+    form.orderType === "delivery" ? Number(restaurant.deliveryFee || 0) : 0;
+
+  const total = round2(subtotal + deliveryCharge);
 
   const patch = useCallback((field: keyof CheckoutFormData, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -502,7 +505,7 @@ export default function CartPage() {
     // Format structured address fields into a clean string for the order payload
 
     // Store the email and password of the guest account to session storage
-    
+
     const deliveryAddressStr = [
       form.deliveryAddress.street,
       form.deliveryAddress.city,
@@ -518,7 +521,9 @@ export default function CartPage() {
         deliveryAddress: deliveryAddressStr,
         orderNotes: form.orderNotes,
         subtotal,
-        deliveryCharge: restaurant.deliveryFee ? round2(Number(restaurant.deliveryFee)) : 0,
+        deliveryCharge: form.orderType === "delivery" && form.deliveryAddress.street.trim()
+          ? round2(Number(restaurant.deliveryFee))
+          : 0,
         discountAmount: 0,
         total,
         guestName: form.guestName,
@@ -758,16 +763,18 @@ export default function CartPage() {
                   <span>{t("cart.subtotal")}</span>
                   <span>€{subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-400">
-                  <span>{t("cart.delivery")}</span>
-                  <span>
-                    {Number(restaurant.deliveryFee) === 0 ? (
-                      <span className="text-green-400">{t("cart.free")}</span>
-                    ) : (
-                      `€${Number(restaurant.deliveryFee).toFixed(2)}`
-                    )}
-                  </span>
-                </div>
+                {form.orderType === "delivery" && restaurant.deliveryFee && (
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>{t("cart.delivery")}</span>
+                    <span>
+                      {Number(restaurant.deliveryFee) === 0 ? (
+                        <span className="text-green-400">{t("cart.free")}</span>
+                      ) : (
+                        `€${Number(restaurant.deliveryFee).toFixed(2)}`
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-white/5 mt-4 pt-4 flex justify-between font-bold text-lg">

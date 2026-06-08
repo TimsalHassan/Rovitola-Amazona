@@ -3,6 +3,16 @@ import { useEffect, useState } from "react";
 import { useAdminAuth } from "../../hooks/useAuth";
 import { ADMIN, adminGet, adminPatch } from "../../api/admin";
 
+type OrderStatus = "all"
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "ready_for_pickup"
+  | "on_the_way"
+  | "delivered"
+  | "completed"
+  | "cancelled";
+
 interface OrderItem {
   id: number;
   menu_item_name: string;
@@ -40,29 +50,64 @@ interface PaginatedResponse {
   results: Order[];
 }
 
-const STATUSES = ["all", "pending", "confirmed", "preparing", "on_the_way", "delivered", "cancelled"];
+const STATUSES: OrderStatus[] = [
+  "all",
+  "pending",
+  "confirmed",
+  "preparing",
+  "ready_for_pickup",
+  "on_the_way",
+  "delivered",
+  "completed",
+  "cancelled",
+];
 
 const STATUS_STYLES: Record<string, string> = {
-  pending:    "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  confirmed:  "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  preparing:  "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  pending: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  confirmed: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  preparing: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  ready_for_pickup:
+    "bg-orange-500/10 text-orange-400 border-orange-500/20",
   on_the_way: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  delivered:  "bg-green-500/10 text-green-400 border-green-500/20",
-  cancelled:  "bg-red-500/10 text-red-400 border-red-500/20",
-};
-
-const NEXT_STATUS: Record<string, string> = {
-  pending:    "confirmed",
-  confirmed:  "preparing",
-  preparing:  "on_the_way",
-  on_the_way: "delivered",
+  delivered: "bg-green-500/10 text-green-400 border-green-500/20",
+  cancelled: "bg-red-500/10 text-red-400 border-red-500/20",
 };
 
 const PAYMENT_STYLES: Record<string, string> = {
-  unpaid:   "text-red-400",
-  paid:     "text-green-400",
+  unpaid: "text-red-400",
+  paid: "text-green-400",
   refunded: "text-blue-400",
 };
+function getNextStatus(order: Order): string | null {
+  if (order.order_type === "pickup") {
+    switch (order.status) {
+      case "pending":
+        return "confirmed";
+      case "confirmed":
+        return "preparing";
+      case "preparing":
+        return "ready_for_pickup";
+      case "ready_for_pickup":
+        return "completed";
+      default:
+        return null;
+    }
+  }
+
+  // Delivery flow
+  switch (order.status) {
+    case "pending":
+      return "confirmed";
+    case "confirmed":
+      return "preparing";
+    case "preparing":
+      return "on_the_way";
+    case "on_the_way":
+      return "delivered";
+    default:
+      return null;
+  }
+}
 
 const PAGE_SIZE = 20;
 
@@ -81,11 +126,17 @@ export default function AdminOrdersPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(pageNum), page_size: String(PAGE_SIZE) });
+      const params = new URLSearchParams({
+        page: String(pageNum),
+        page_size: String(PAGE_SIZE),
+      });
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (search.trim()) params.set("search", search.trim());
 
-      const data = await adminGet<PaginatedResponse>(`${ADMIN}/orders/?${params}`, token);
+      const data = await adminGet<PaginatedResponse>(
+        `${ADMIN}/orders/?${params}`,
+        token,
+      );
       setOrders(data.results ?? []);
       setCount(data.count ?? 0);
     } catch (err) {
@@ -110,9 +161,13 @@ export default function AdminOrdersPage() {
     if (!token) return;
     setUpdating(orderNumber);
     try {
-      await adminPatch(`${ADMIN}/orders/${orderNumber}/status/`, token, { status: newStatus });
+      await adminPatch(`${ADMIN}/orders/${orderNumber}/status/`, token, {
+        status: newStatus,
+      });
       setOrders((prev) =>
-        prev.map((o) => (o.order_number === orderNumber ? { ...o, status: newStatus } : o))
+        prev.map((o) =>
+          o.order_number === orderNumber ? { ...o, status: newStatus } : o,
+        ),
       );
     } catch (err) {
       console.error("Failed to update status", err);
@@ -152,7 +207,9 @@ export default function AdminOrdersPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="sm:ml-auto w-full sm:w-64 bg-gray-900 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-1.5 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
         />
-        <span className="text-gray-500 text-xs self-center shrink-0">{count} total</span>
+        <span className="text-gray-500 text-xs self-center shrink-0">
+          {count} total
+        </span>
       </div>
 
       {/* Table */}
@@ -170,58 +227,106 @@ export default function AdminOrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5">
-                  {["Order #", "Customer", "Type", "Total", "Payment", "Status", "Date", "Action"].map((h) => (
-                    <th key={h} className="text-left text-gray-500 text-xs font-medium px-4 py-3 uppercase tracking-wider whitespace-nowrap">
+                  {[
+                    "Order #",
+                    "Customer",
+                    "Type",
+                    "Total",
+                    "Payment",
+                    "Status",
+                    "Date",
+                    "Action",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left text-gray-500 text-xs font-medium px-4 py-3 uppercase tracking-wider whitespace-nowrap"
+                    >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              
-                {orders.map((order) => (
-                  <tbody
-                      key={order.order_number}
-                  >
+
+              {orders.map((order) => {
+                const nextStatus = getNextStatus(order);
+                return (
+                  <tbody key={order.order_number}>
                     <tr
                       className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                      onClick={() => setExpanded(expanded === order.order_number ? null : order.order_number)}
+                      onClick={() =>
+                        setExpanded(
+                          expanded === order.order_number
+                            ? null
+                            : order.order_number,
+                        )
+                      }
                     >
                       <td className="px-4 py-3">
-                        <span className="text-amber-400 font-mono text-xs">#{order.order_number}</span>
+                        <span className="text-amber-400 font-mono text-xs">
+                          #{order.order_number}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-white font-medium">{order.customer_name || order.guest_name || "Guest"}</p>
-                        <p className="text-gray-500 text-xs">{order.customer_email || order.guest_email}</p>
+                        <p className="text-white font-medium">
+                          {order.customer_name || order.guest_name || "Guest"}
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          {order.customer_email || order.guest_email}
+                        </p>
                         {(order.customer_phone || order.guest_phone) && (
-                          <p className="text-gray-600 text-xs">{order.customer_phone || order.guest_phone}</p>
+                          <p className="text-gray-600 text-xs">
+                            {order.customer_phone || order.guest_phone}
+                          </p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 capitalize">{order.order_type}</td>
-                      <td className="px-4 py-3 text-white font-semibold">€{Number(order.total).toFixed(2)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium capitalize ${PAYMENT_STYLES[order.payment_status] ?? "text-gray-400"}`}>
-                          {order.payment_status}
-                        </span>
-                        <p className="text-gray-600 text-[10px] capitalize">{order.payment_method?.replace(/_/g, " ")}</p>
+                      <td className="px-4 py-3 text-gray-400 capitalize">
+                        {order.order_type}
+                      </td>
+                      <td className="px-4 py-3 text-white font-semibold">
+                        €{Number(order.total).toFixed(2)}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_STYLES[order.status] ?? STATUS_STYLES.pending}`}>
+                        <span
+                          className={`text-xs font-medium capitalize ${PAYMENT_STYLES[order.payment_status] ?? "text-gray-400"}`}
+                        >
+                          {order.payment_status}
+                        </span>
+                        <p className="text-gray-600 text-[10px] capitalize">
+                          {order.payment_method?.replace(/_/g, " ")}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_STYLES[order.status] ?? STATUS_STYLES.pending}`}
+                        >
                           {order.status.replace("_", " ")}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                         {new Date(order.created_at).toLocaleDateString("fi-FI")}
                         <br />
-                        <span className="text-gray-600">{new Date(order.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className="text-gray-600">
+                          {new Date(order.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                       </td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        {NEXT_STATUS[order.status] ? (
+                      <td
+                        className="px-4 py-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {nextStatus ? (
                           <button
-                            onClick={() => updateStatus(order.order_number, NEXT_STATUS[order.status])}
+                            onClick={() =>
+                              updateStatus(order.order_number, nextStatus)
+                            }
                             disabled={updating === order.order_number}
                             className="px-3 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 text-xs rounded-lg capitalize transition-all disabled:opacity-50 whitespace-nowrap"
                           >
-                            {updating === order.order_number ? "…" : `→ ${NEXT_STATUS[order.status].replace("_", " ")}`}
+                            {updating === order.order_number
+                              ? "…"
+                              : `→ ${nextStatus.replace("_", " ")}`}
                           </button>
                         ) : order.status !== "cancelled" ? (
                           <span className="text-gray-600 text-xs">Final</span>
@@ -238,27 +343,47 @@ export default function AdminOrdersPage() {
                           <div className="grid grid-cols-2 gap-6 pt-3">
                             {/* Items */}
                             <div>
-                              <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">Items</p>
+                              <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">
+                                Items
+                              </p>
                               <div className="space-y-1">
                                 {order.items.map((item) => (
-                                  <div key={item.id} className="flex justify-between text-xs">
-                                    <span className="text-gray-300">{item.menu_item_name} ×{item.quantity}</span>
-                                    <span className="text-gray-400">€{Number(item.total_price).toFixed(2)}</span>
+                                  <div
+                                    key={item.id}
+                                    className="flex justify-between text-xs"
+                                  >
+                                    <span className="text-gray-300">
+                                      {item.menu_item_name} ×{item.quantity}
+                                    </span>
+                                    <span className="text-gray-400">
+                                      €{Number(item.total_price).toFixed(2)}
+                                    </span>
                                   </div>
                                 ))}
                                 <div className="border-t border-white/5 pt-1 mt-1 flex justify-between text-xs">
-                                  <span className="text-gray-500">Subtotal</span>
-                                  <span className="text-gray-300">€{Number(order.subtotal).toFixed(2)}</span>
+                                  <span className="text-gray-500">
+                                    Subtotal
+                                  </span>
+                                  <span className="text-gray-300">
+                                    €{Number(order.subtotal).toFixed(2)}
+                                  </span>
                                 </div>
                                 {Number(order.delivery_charge) > 0 && (
                                   <div className="flex justify-between text-xs">
-                                    <span className="text-gray-500">Delivery</span>
-                                    <span className="text-gray-300">€{Number(order.delivery_charge).toFixed(2)}</span>
+                                    <span className="text-gray-500">
+                                      Delivery
+                                    </span>
+                                    <span className="text-gray-300">
+                                      €
+                                      {Number(order.delivery_charge).toFixed(2)}
+                                    </span>
                                   </div>
                                 )}
                                 <div className="flex justify-between text-xs font-bold">
                                   <span className="text-gray-300">Total</span>
-                                  <span className="text-white">€{Number(order.total).toFixed(2)}</span>
+                                  <span className="text-white">
+                                    €{Number(order.total).toFixed(2)}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -267,24 +392,41 @@ export default function AdminOrdersPage() {
                             <div className="space-y-2 text-xs">
                               {order.delivery_address && (
                                 <div>
-                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">Delivery Address</p>
-                                  <p className="text-gray-300">{order.delivery_address}</p>
+                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">
+                                    Delivery Address
+                                  </p>
+                                  <p className="text-gray-300">
+                                    {order.delivery_address}
+                                  </p>
                                 </div>
                               )}
                               {order.order_notes && (
                                 <div>
-                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">Notes</p>
-                                  <p className="text-gray-300">{order.order_notes}</p>
+                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">
+                                    Notes
+                                  </p>
+                                  <p className="text-gray-300">
+                                    {order.order_notes}
+                                  </p>
                                 </div>
                               )}
-                              {order.items.some((i) => i.special_instruction) && (
+                              {order.items.some(
+                                (i) => i.special_instruction,
+                              ) && (
                                 <div>
-                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">Special Instructions</p>
-                                  {order.items.filter((i) => i.special_instruction).map((i) => (
-                                    <p key={i.id} className="text-gray-300">
-                                      <span className="text-gray-500">{i.menu_item_name}:</span> {i.special_instruction}
-                                    </p>
-                                  ))}
+                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">
+                                    Special Instructions
+                                  </p>
+                                  {order.items
+                                    .filter((i) => i.special_instruction)
+                                    .map((i) => (
+                                      <p key={i.id} className="text-gray-300">
+                                        <span className="text-gray-500">
+                                          {i.menu_item_name}:
+                                        </span>{" "}
+                                        {i.special_instruction}
+                                      </p>
+                                    ))}
                                 </div>
                               )}
                             </div>
@@ -293,7 +435,8 @@ export default function AdminOrdersPage() {
                       </tr>
                     )}
                   </tbody>
-                ))}
+                );
+              })}
             </table>
           </div>
         )}
@@ -302,7 +445,9 @@ export default function AdminOrdersPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <p className="text-gray-500 text-xs">Page {page} of {totalPages}</p>
+          <p className="text-gray-500 text-xs">
+            Page {page} of {totalPages}
+          </p>
           <div className="flex gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
