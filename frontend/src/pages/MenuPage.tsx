@@ -700,8 +700,8 @@ function CartFAB() {
   if (totalItems === 0) return null;
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
-      <a
-        href="/cart"
+      <Link
+        to="/cart"
         className="flex items-center gap-3 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold px-5 py-3 rounded-2xl shadow-xl transition-colors"
       >
         <ShoppingCart size={18} />
@@ -709,7 +709,7 @@ function CartFAB() {
         <span className="bg-gray-900/20 px-2 py-0.5 rounded-lg text-sm">
           €{subtotal.toFixed(2)}
         </span>
-      </a>
+      </Link>
     </div>
   );
 }

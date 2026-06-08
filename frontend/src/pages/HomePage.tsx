@@ -106,7 +106,7 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
 
   useEffect(() => {
     snapTo(index, false);
-  }, [visible]);
+  }, [visible, snapTo, index]);
 
   const goTo = useCallback(
     (next: number) => {
@@ -688,28 +688,28 @@ export default function HomePage() {
               </div>
               <div className="flex flex-col gap-2 text-sm text-gray-400">
                 {info?.phone && (
-                  <a
-                    href={`tel:${info.phone}`}
+                  <Link
+                    to={`tel:${info.phone}`}
                     className="flex items-center gap-2 hover:text-amber-400 transition-colors"
                   >
                     <Phone size={14} /> {info.phone}
-                  </a>
+                  </Link>
                 )}
                 {info?.phone_2 && (
-                  <a
-                    href={`tel:${info.phone_2}`}
+                  <Link
+                    to={`tel:${info.phone_2}`}
                     className="flex items-center gap-2 hover:text-amber-400 transition-colors"
                   >
                     <Phone size={14} /> {info.phone_2}
-                  </a>
+                  </Link>
                 )}
                 {info?.email && (
-                  <a
-                    href={`mailto:${info.email}`}
+                  <Link
+                    to={`mailto:${info.email}`}
                     className="flex items-center gap-2 hover:text-amber-400 transition-colors"
                   >
                     <Mail size={14} /> {info.email}
-                  </a>
+                  </Link>
                 )}
                 {info?.address && (
                   <div className="flex items-center gap-2">
@@ -849,8 +849,8 @@ export default function HomePage() {
                 )}
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <a
-                    href="https://apps.apple.com/us/app/ravintola-amazona/id6448418434"
+                  <Link
+                    to="https://apps.apple.com/us/app/ravintola-amazona/id6448418434"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 transition-colors"
@@ -869,9 +869,9 @@ export default function HomePage() {
                         App Store
                       </div>
                     </div>
-                  </a>
-                  <a
-                    href="https://play.google.com/store/apps/details?id=com.ravintolaamazona_new"
+                  </Link>
+                  <Link
+                    to="https://play.google.com/store/apps/details?id=com.ravintolaamazona_new"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 transition-colors"
@@ -890,7 +890,7 @@ export default function HomePage() {
                         Google Play
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 </div>
               </div>
 

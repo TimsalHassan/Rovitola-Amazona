@@ -404,12 +404,16 @@ class AdminRestaurantSettingsView(APIView):
         cache.delete("restaurant_info")
         return Response(serializer.data)
 
-
 class AdminOpeningHoursBulkUpdateView(APIView):
     """
     PUT /api/admin/restaurant/hours/
-    Body: list of { id, day, is_closed, open_time, close_time, lunch_open, lunch_close }
-    Updates all 7 days at once.
+    Body: list of { id?, day, is_closed, open_time, close_time, lunch_open, lunch_close }
+
+    - Rows with an `id`   → update that OpeningHours record.
+    - Rows without an `id` → create a new OpeningHours for this restaurant.
+    - Existing DB rows whose id is absent from the payload → deleted.
+
+    Response: { "updated": [...], "errors": [...] }
     """
     permission_classes = [IsAdminUser]
 
@@ -422,21 +426,48 @@ class AdminOpeningHoursBulkUpdateView(APIView):
         if not isinstance(hours_data, list):
             return Response({"detail": "Expected a list of opening hours."}, status=400)
 
+        # ── Collect which real ids the client is keeping ──────────────────────
+        submitted_ids = {
+            int(item["id"])
+            for item in hours_data
+            if item.get("id") is not None
+        }
+
+        # ── Delete rows the client removed ────────────────────────────────────
+        OpeningHours.objects.filter(
+            restaurant=settings_obj
+        ).exclude(id__in=submitted_ids).delete()
+
+        # ── Create / update the submitted rows ───────────────────────────────
         updated = []
         errors = []
+
         for item in hours_data:
+            row_id = item.get("id")
+
             try:
-                oh = OpeningHours.objects.get(id=item["id"], restaurant=settings_obj)
-                serializer = AdminOpeningHoursWriteSerializer(
-                    oh, data=item, partial=True
-                )
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-                updated.append(serializer.data)
+                if row_id is not None:
+                    # --- UPDATE existing row ---
+                    oh = OpeningHours.objects.get(id=int(row_id), restaurant=settings_obj)
+                    serializer = AdminOpeningHoursWriteSerializer(
+                        oh, data=item, partial=True
+                    )
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+                    updated.append(serializer.data)
+
+                else:
+                    # --- CREATE new row ---
+                    data_with_restaurant = {**item, "restaurant": settings_obj.pk}
+                    serializer = AdminOpeningHoursWriteSerializer(data=data_with_restaurant)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save(restaurant=settings_obj)
+                    updated.append(serializer.data)
+
             except OpeningHours.DoesNotExist:
-                errors.append({"id": item.get("id"), "error": "Not found."})
+                errors.append({"id": row_id, "error": "Not found."})
             except Exception as e:
-                errors.append({"id": item.get("id"), "error": str(e)})
+                errors.append({"id": row_id, "error": str(e)})
 
         cache.delete("restaurant_info")
         return Response({"updated": updated, "errors": errors})

@@ -1,5 +1,5 @@
 // src/pages/admin/AdminReviewsPage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdminAuth } from "../../hooks/useAuth";
 import { ADMIN, adminGet, adminPatch, adminDelete } from "../../api/admin";
 
@@ -35,16 +35,16 @@ function StarRating({ rating }: { rating: number }) {
 export default function AdminReviewsPage() {
   const { token } = useAdminAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialised, setInitialised] = useState(false);
   const [filter, setFilter] = useState<"all" | "pending" | "approved">("pending");
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function fetchReviews(pageNum = 1) {
     if (!token) return;
-    setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(pageNum), page_size: String(PAGE_SIZE) });
       if (filter === "pending")  params.set("approved", "false");
@@ -56,12 +56,13 @@ export default function AdminReviewsPage() {
     } catch {
       console.error("Failed to load reviews");
     } finally {
-      setLoading(false);
+      setInitialised(true);
     }
   }
 
   useEffect(() => {
     setPage(1);
+    setInitialised(false);
     fetchReviews(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
@@ -70,6 +71,35 @@ export default function AdminReviewsPage() {
     fetchReviews(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
+
+  useEffect(() => {
+    function startPolling() {
+      pollingRef.current = setInterval(() => {
+        fetchReviews(page);
+      }, 5_000);
+    }
+
+    function stopPolling() {
+      if (pollingRef.current !== null) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    }
+
+    function handleVisibility() {
+      if (document.hidden) stopPolling();
+      else startPolling();
+    }
+
+    if (!document.hidden) startPolling();
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filter]);
 
   async function toggleApproval(review: Review) {
     if (!token) return;
@@ -127,11 +157,7 @@ export default function AdminReviewsPage() {
 
       {/* List */}
       <div className="bg-gray-900 border border-white/5 rounded-xl overflow-hidden">
-        {loading ? (
-          <div className="p-10 text-center">
-            <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          </div>
-        ) : reviews.length === 0 ? (
+        {!initialised ? null : reviews.length === 0 ? (
           <div className="p-10 text-center">
             <p className="text-gray-500 text-sm">No reviews found.</p>
           </div>
@@ -139,14 +165,12 @@ export default function AdminReviewsPage() {
           <div className="divide-y divide-white/5">
             {reviews.map((review) => (
               <div key={review.id} className="px-5 py-4 flex gap-4">
-                {/* Avatar */}
                 <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
                   <span className="text-amber-400 text-xs font-bold">
                     {review.customer_name?.charAt(0)?.toUpperCase() || "?"}
                   </span>
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -173,7 +197,6 @@ export default function AdminReviewsPage() {
                     <p className="text-gray-300 text-sm mt-1.5 leading-relaxed">{review.text}</p>
                   )}
 
-                  {/* Actions */}
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => toggleApproval(review)}
@@ -201,7 +224,6 @@ export default function AdminReviewsPage() {
         )}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-gray-500 text-xs">Page {page} of {totalPages}</p>
