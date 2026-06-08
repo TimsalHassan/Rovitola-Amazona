@@ -3,10 +3,11 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
 import { ADMIN, adminGet } from "../../api/admin";
-import { Package, DollarSign, Utensils, Users, MessageCircle, Star, Settings } from "lucide-react";
+import { Package, DollarSign, Utensils, Users, MessageCircle, Star, Settings, Bell } from "lucide-react";
 interface Stats {
   total_orders: number;
   pending_orders: number;
+  confirmed_orders: number;
   total_revenue: string;
   today_revenue: string;
   total_users: number;
@@ -94,17 +95,24 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (!token) return;
+    const t = token;
 
-    Promise.all([
-      adminGet<Stats>(`${ADMIN}/stats/`, token),
-      adminGet<PaginatedOrders>(`${ADMIN}/orders/?page_size=10`, token),
-    ])
-      .then(([statsData, ordersData]) => {
-        setStats(statsData);
-        setRecentOrders(ordersData.results ?? []);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    function fetchData(isInitial = false) {
+      Promise.all([
+        adminGet<Stats>(`${ADMIN}/stats/`, t),
+        adminGet<PaginatedOrders>(`${ADMIN}/orders/?page_size=10`, t),
+      ])
+        .then(([statsData, ordersData]) => {
+          setStats(statsData);
+          setRecentOrders(ordersData.results ?? []);
+        })
+        .catch(console.error)
+        .finally(() => { if (isInitial) setLoading(false); });
+    }
+
+    fetchData(true);
+    const interval = setInterval(() => fetchData(false), 30_000);
+    return () => clearInterval(interval);
   }, [token]);
 
   const today = new Date().toLocaleDateString("en-GB", {
@@ -117,8 +125,8 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="space-y-5">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {[...Array(5)].map((_, i) => (
             <div
               key={i}
               className="bg-[#0a0f1e] border border-white/5 rounded-2xl p-4 animate-pulse h-24"
@@ -141,13 +149,20 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatCard
           label="Total Orders"
           accent
           value={stats?.total_orders ?? 0}
           sub={`${stats?.pending_orders ?? 0} pending`}
           icon={<Package />}
+          to="/admin/orders"
+        />
+        <StatCard
+          label="New Orders"
+          value={stats?.confirmed_orders ?? 0}
+          sub="confirmed, not yet started"
+          icon={<Bell />}
           to="/admin/orders"
         />
         <StatCard

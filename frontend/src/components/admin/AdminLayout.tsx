@@ -15,6 +15,7 @@ import {
   Menu,
   Globe,
   LogOut,
+  Layers,
 } from "lucide-react";
 
 const NAV = [
@@ -22,6 +23,7 @@ const NAV = [
   { label: "Orders", path: "/admin/orders", icon: Package },
   { label: "Menu Items", path: "/admin/menu", icon: Utensils },
   { label: "Categories", path: "/admin/categories", icon: Ticket },
+  { label: "Extras", path: "/admin/extras", icon: Layers },
   { label: "Users", path: "/admin/users", icon: Users },
   { label: "Reviews", path: "/admin/reviews", icon: Stars },
   { label: "Messages", path: "/admin/messages", icon: MessageCircle },

@@ -33,6 +33,8 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
 import AdminMessagesPage from "./pages/admin/AdminMessagesPage";
 import AdminRestaurantPage from "./pages/admin/AdminRestaurantPage";
+import AdminExtrasPage from "./pages/admin/AdminExtrasPage";
+import AdminExtraOptionsPage from "./pages/admin/AdminExtraOptionPage";
 
 import Footer from "./components/Footer";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
@@ -208,6 +210,14 @@ export default function App() {
                                 <Route
                                   path="restaurant"
                                   element={<AdminRestaurantPage />}
+                                />
+                                <Route
+                                  path="extras"
+                                  element={<AdminExtrasPage />}
+                                />
+                                <Route
+                                  path="extras/:id/options"
+                                  element={<AdminExtraOptionsPage />}
                                 />
                               </Routes>
                             </AdminLayout>
