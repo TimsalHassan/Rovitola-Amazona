@@ -37,10 +37,8 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Verification link generate karo (same token generator as password reset)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-        verification_link = f"{settings.FRONTEND_URL}/verify-email/{uid}/{token}/"
+        # Simple UUID token — expire nahi hota jab tak verify na ho
+        verification_link = f"{settings.FRONTEND_URL}/verify-email/{user.email_verification_token}/"
 
         send_verification_email.delay(
             user_email=user.email,
@@ -204,21 +202,18 @@ class ResetPasswordView(APIView):
 class VerifyEmailView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request, uid, token):
+    def get(self, request, token):
         try:
-            user_id = urlsafe_base64_decode(uid).decode()
-            user = User.objects.get(pk=user_id)
-        except (User.DoesNotExist, Exception):
+            user = User.objects.get(email_verification_token=token)
+        except User.DoesNotExist:
             return Response({'error': 'Invalid verification link.'}, status=400)
 
         if user.is_email_verified:
             return Response({'detail': 'Email is already verified.'})
 
-        if not default_token_generator.check_token(user, token):
-            return Response({'error': 'Verification link is expired or invalid.'}, status=400)
-
         user.is_email_verified = True
-        user.save(update_fields=['is_email_verified'])
+        user.email_verification_token = None  # token use ho gaya — clear karo
+        user.save(update_fields=['is_email_verified', 'email_verification_token'])
 
         return Response({'detail': 'Email verified successfully. You can now log in.'})
 
@@ -234,15 +229,17 @@ class ResendVerificationView(APIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # Security: existence reveal mat karo
             return Response({'detail': 'If this email exists and is unverified, a new link has been sent.'})
 
         if user.is_email_verified:
             return Response({'detail': 'This email is already verified.'})
 
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-        verification_link = f"{settings.FRONTEND_URL}/verify-email/{uid}/{token}/"
+        # Naya token generate karo
+        import uuid
+        user.email_verification_token = uuid.uuid4()
+        user.save(update_fields=['email_verification_token'])
+
+        verification_link = f"{settings.FRONTEND_URL}/verify-email/{user.email_verification_token}/"
 
         send_verification_email.delay(
             user_email=user.email,
@@ -251,7 +248,6 @@ class ResendVerificationView(APIView):
         )
 
         return Response({'detail': 'If this email exists and is unverified, a new link has been sent.'})
-
 
 class AddressViewSet(viewsets.ModelViewSet):
     serializer_class = AddressSerializer
