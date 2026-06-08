@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useRestaurant } from "../context/RestaurantContext";
+import Logo from "./Logo";
 
 function formatTime(time: string | null) {
   if (!time) return null;
@@ -20,7 +21,7 @@ export default function Footer() {
 
           {/* Brand */}
           <div>
-            <h3 className="text-white font-bold text-lg mb-1">{info?.name ?? "Ravintola Amazona"}</h3>
+            <Logo className='mb-4'/>
             <div className="flex items-center gap-1.5 mb-4">
               <span className={`w-2 h-2 rounded-full ${isOpen ? "bg-green-400" : "bg-red-400"}`} />
               <span className="text-xs text-gray-400">{openStatusMessage}</span>
