@@ -135,6 +135,10 @@ export default function App() {
                         <Route path="/checkout" element={<CheckoutPage />} />
                         <Route path="/my-orders" element={<MyOrdersPage />} />
                         <Route
+                          path="/order/:orderId/track"
+                          element={<OrderTrackingPage />}
+                        />
+                        <Route
                           path="/order/:orderId"
                           element={<OrderConfirmedPage />}
                         />
@@ -147,14 +151,6 @@ export default function App() {
                           }
                         />
 
-                        <Route
-                          path="/order/:orderId/track"
-                          element={
-                            <ProtectedRoute>
-                              <OrderTrackingPage />
-                            </ProtectedRoute>
-                          }
-                        />
                         <Route
                           path="/account"
                           element={

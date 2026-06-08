@@ -500,6 +500,9 @@ export default function CartPage() {
   const handleProceed = () => {
     if (!validate()) return;
     // Format structured address fields into a clean string for the order payload
+
+    // Store the email and password of the guest account to session storage
+    
     const deliveryAddressStr = [
       form.deliveryAddress.street,
       form.deliveryAddress.city,

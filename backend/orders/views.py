@@ -12,24 +12,15 @@ from .tasks import (
     send_restaurant_notification_email,
 )
 
-from rest_framework.throttling import AnonRateThrottle
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-
-class GuestOrderLookupThrottle(AnonRateThrottle):
-    rate = "10/hour"
 
 
 class OrderListView(generics.ListAPIView):
     serializer_class = OrderSerializer
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
-
-    def get_throttles(self):
-        if not self.request.user.is_authenticated:
-            return [GuestOrderLookupThrottle()]
-        return []
 
     def get_queryset(self):
         user = self.request.user
@@ -198,9 +189,7 @@ class OrderCancelView(generics.UpdateAPIView):
     def get_object(self):
         obj = super().get_object()
         user = self.request.user
-
-        # Authenticated customer must own the order
-        print("Authenticated user:", user.email)
+        
         if user.is_authenticated:
             if obj.customer and obj.customer != user and not user.is_staff:
                 raise PermissionDenied
