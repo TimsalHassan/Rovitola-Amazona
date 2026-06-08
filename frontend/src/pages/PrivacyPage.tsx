@@ -5,12 +5,12 @@ import { ArrowLeft, ShieldCheck } from "lucide-react";
 const content = {
   fi: {
     title: "Tietosuojakäytäntö",
-    lastUpdated: "Viimeksi päivitetty: 2024",
+    lastUpdated: "Viimeksi päivitetty: 2026",
     backToHome: "Takaisin etusivulle",
     sections: [
       {
         heading: "Rekisterinpitäjä",
-        body: "Ravintola Amazona (y-tunnus 3299425-7)\nAleksanterinkatu 3, 15110 Lahti\nSähköposti: info@ravintolaamazona.fi\nPuhelin: +358 037333366",
+        body: "Ravintola Amazona (Y-tunnus 3299425-7)\nAleksanterinkatu 3, 15110 Lahti\nSähköposti: [info@ravintolaamazona.fi](mailto:info@ravintolaamazona.fi)\nPuhelin: +358 037333366",
       },
       {
         heading: "Kerättävät henkilötiedot",
@@ -26,7 +26,7 @@ const content = {
       },
       {
         heading: "Tietojen luovuttaminen",
-        body: "Emme myy tai luovuta henkilötietojasi kolmansille osapuolille, lukuun ottamatta:\n– Visma Pay / Paybyway Oy: maksutapahtumien käsittelyä varten\n– Toimitusjärjestelmät: tilauksen toimittamiseksi\n\nKaikki kolmannet osapuolet on velvoitettu käsittelemään tietoja tietosuojalain mukaisesti.",
+        body: "Emme myy tai luovuta henkilötietojasi kolmansille osapuolille, lukuun ottamatta:\n– Paytrail Oyj: maksutapahtumien käsittelyä varten\n– Toimitusjärjestelmät: tilauksen toimittamiseksi\n\nKaikki kolmannet osapuolet on velvoitettu käsittelemään tietoja tietosuojalainsäädännön mukaisesti.",
       },
       {
         heading: "Evästeet",
@@ -34,7 +34,7 @@ const content = {
       },
       {
         heading: "Rekisteröidyn oikeudet",
-        body: "Sinulla on oikeus:\n– Saada tietoa henkilötietojesi käsittelystä\n– Tarkastaa itseäsi koskevat tiedot\n– Vaatia virheellisten tietojen oikaisemista\n– Vaatia tietojesi poistamista (\"oikeus tulla unohdetuksi\")\n– Vastustaa tietojesi käsittelyä markkinointitarkoituksiin\n\nPyyntöjä voi lähettää sähköpostitse osoitteeseen info@ravintolaamazona.fi",
+        body: `Sinulla on oikeus:\n– Saada tietoa henkilötietojesi käsittelystä\n– Tarkastaa itseäsi koskevat tiedot\n– Vaatia virheellisten tietojen oikaisemista\n– Vaatia tietojesi poistamista ("oikeus tulla unohdetuksi")\n– Vastustaa tietojesi käsittelyä markkinointitarkoituksiin\n\nPyyntöjä voi lähettää sähköpostitse osoitteeseen [info@ravintolaamazona.fi](mailto:info@ravintolaamazona.fi)`,
       },
       {
         heading: "Tietoturva",
@@ -46,10 +46,11 @@ const content = {
       },
       {
         heading: "Yhteydenotot",
-        body: "Tietosuojaan liittyvissä kysymyksissä ota yhteyttä:\ninfo@ravintolaamazona.fi\nRavintola Amazona, Aleksanterinkatu 3, 15110 Lahti",
+        body: "Tietosuojaan liittyvissä kysymyksissä ota yhteyttä:[ninfo@ravintolaamazona.fi](mailto:ninfo@ravintolaamazona.fi)\nRavintola Amazona, Aleksanterinkatu 3, 15110 Lahti",
       },
     ],
   },
+
   en: {
     title: "Privacy Policy",
     lastUpdated: "Last updated: 2026",
@@ -57,7 +58,7 @@ const content = {
     sections: [
       {
         heading: "Data Controller",
-        body: "Restaurant Amazona (Business ID 3299425-7)\nAleksanterinkatu 3, 15110 Lahti, Finland\nEmail: info@ravintolaamazona.fi\nPhone: +358 037333366",
+        body: "Restaurant Amazona (Business ID 3299425-7)\nAleksanterinkatu 3, 15110 Lahti, Finland\nEmail: [info@ravintolaamazona.fi](mailto:info@ravintolaamazona.fi)\nPhone: +358 037333366",
       },
       {
         heading: "Personal Data We Collect",
@@ -73,7 +74,7 @@ const content = {
       },
       {
         heading: "Sharing of Data",
-        body: "We do not sell or share your personal data with third parties, except:\n– Visma Pay / Paybyway Oy: for processing payment transactions\n– Delivery systems: to fulfil your order\n\nAll third parties are obligated to handle data in accordance with data protection legislation.",
+        body: "We do not sell or share your personal data with third parties, except:\n– Paytrail Oyj: for processing payment transactions\n– Delivery systems: to fulfil your order\n\nAll third parties are obligated to handle data in accordance with applicable data protection legislation.",
       },
       {
         heading: "Cookies",
@@ -81,7 +82,7 @@ const content = {
       },
       {
         heading: "Your Rights",
-        body: "You have the right to:\n– Be informed about how your personal data is processed\n– Access your personal data\n– Request correction of inaccurate data\n– Request deletion of your data (\"right to be forgotten\")\n– Object to processing of your data for marketing purposes\n\nRequests can be sent by email to info@ravintolaamazona.fi",
+        body: `You have the right to:\n– Be informed about how your personal data is processed\n– Access your personal data\n– Request correction of inaccurate data\n– Request deletion of your data ("right to be forgotten")\n– Object to processing of your data for marketing purposes\n\nRequests can be sent by email to [info@ravintolaamazona.fi](mailto:info@ravintolaamazona.fi)`,
       },
       {
         heading: "Data Security",
@@ -93,7 +94,7 @@ const content = {
       },
       {
         heading: "Contact",
-        body: "For privacy-related questions, please contact us:\ninfo@ravintolaamazona.fi\nRavintola Amazona, Aleksanterinkatu 3, 15110 Lahti",
+        body: `For privacy-related questions, please contact us:[ninfo@ravintolaamazona.fi](mailto:ninfo@ravintolaamazona.fi)\nRavintola Amazona, Aleksanterinkatu 3, 15110 Lahti, Finland`,
       },
     ],
   },
@@ -136,10 +137,13 @@ export default function PrivacyPage() {
               <div className="space-y-2">
                 {section.body.split("\n").map((line, j) =>
                   line.trim() ? (
-                    <p key={j} className="text-sm text-gray-400 leading-relaxed">
+                    <p
+                      key={j}
+                      className="text-sm text-gray-400 leading-relaxed"
+                    >
                       {line}
                     </p>
-                  ) : null
+                  ) : null,
                 )}
               </div>
             </section>

@@ -5,7 +5,7 @@ import { ArrowLeft, FileText } from "lucide-react";
 const content = {
   fi: {
     title: "Toimitusehdot",
-    lastUpdated: "Viimeksi päivitetty: 2024",
+    lastUpdated: "Viimeksi päivitetty: 2026",
     backToHome: "Takaisin etusivulle",
     sections: [
       {
@@ -14,7 +14,7 @@ const content = {
       },
       {
         heading: "Verkkokaupan yhteystiedot",
-        body: "Sähköposti: info@ravintolaamazona.fi\nPuhelin: +358 037333366 ; +358 40 809 9885\nPostiosoite: Aleksanterinkatu 3, 15110 Lahti, Finland",
+        body: "Sähköposti: [info@ravintolaamazona.fi](mailto:info@ravintolaamazona.fi)\nPuhelin: +358 037333366 ; +358 40 809 9885\nPostiosoite: Aleksanterinkatu 3, 15110 Lahti, Finland",
       },
       {
         heading: "Tilaaminen",
@@ -22,11 +22,11 @@ const content = {
       },
       {
         heading: "Maksaminen",
-        body: "Verkkokaupan maksuvälittäjänä toimii Visma Pay (Paybyway Oy, y-tunnus 2486559-4), joka on rekisteröity Finanssivalvonnan ylläpitämään maksulaitosrekisteriin. Maksaminen tapahtuu Visma Payn verkkopalvelun kautta, ja maksunsaajana tiliotteessa ja laskussa näkyy Visma Pay tai Paybyway Oy. Visma Pay välittää maksut verkkokauppiaalle. Maksaminen on turvallista, sillä kaikki maksutapahtumaa koskevat tiedot välitetään salattua yhteyttä käyttäen niin, ettei ulkopuolinen taho näe maksutapahtuman tietoja.\n\nLue lisää Visma Paysta: https://www.visma.fi/vismapay/",
+        body: "Verkkokaupan maksuvälittäjänä toimii Paytrail Oyj (Y-tunnus 2122839-7), joka on rekisteröity Finanssivalvonnan ylläpitämään maksulaitosrekisteriin. Maksaminen tapahtuu Paytrailin verkkopalvelun kautta, ja maksunsaajana tiliotteella ja laskulla näkyy Paytrail tai Paytrail Oyj. Paytrail välittää maksut verkkokauppiaalle. Maksaminen on turvallista, sillä kaikki maksutapahtumaa koskevat tiedot välitetään salattua yhteyttä käyttäen niin, ettei ulkopuolinen taho näe maksutapahtuman tietoja.\n\nLue lisää Paytrailista: https://www.paytrail.com",
       },
       {
         heading: "Maksutavat",
-        body: "Visma Pay -palvelun kautta voit maksaa verkkopankkitunnuksilla, lompakolla, maksukorteilla (luotto/debit), laskulla tai osamaksulla. Seuraavat maksutavat ovat käytettävissä: Osuuspankki, Nordea, Danske Bank, Oma Säästöpankki, Säästöpankki, Aktia, Paikallisosuuspankit, S-Pankki, Handelsbanken, Ålandsbanken, MobilePay, Masterpass, Pivo, Visa, Visa Debit, Visa Electron, MasterCard ja Debit MasterCard -kortit sekä Jousto ja Enterpay Lasku yrityksille.",
+        body: "Paytrail-palvelun kautta voit maksaa verkkopankkitunnuksilla, maksukorteilla (credit/debit), MobilePaylla sekä muilla Paytrailin tarjoamilla maksutavoilla. Käytettävissä olevat maksutavat näytetään kassalla tilauksen yhteydessä.",
       },
       {
         heading: "Toimitus",
@@ -41,11 +41,12 @@ const content = {
         body: "Ennen tilauksen toimittamista voit peruuttaa sen lähettämällä kirjallisen ilmoituksen sähköpostitse.\n\nVerkkokaupalla on lakisääteinen vastuu myytyjen tuotteiden virheistä. Reklamaatiotapauksessa ota yhteyttä asiakaspalveluumme. Kuluttajalla on oikeus saattaa mahdolliset riidat kuluttajariitalautakunnan ratkaistavaksi.",
       },
       {
-        heading: "Visma Pay -maksupalvelun yhteystiedot",
-        body: "Visma Pay, Paybyway Oy (Y-tunnus 2486559-4)\nSähköposti: helpdesk@vismapay.com\nPuhelin: 09 315 42 037 (arkisin klo 8–16)\nPostiosoite: Laserkatu 6, 53850 Lappeenranta",
+        heading: "Paytrail-maksupalvelun yhteystiedot",
+        body: "Paytrail Oyj (Y-tunnus 2122839-7)\nInnova 2\nLutakonaukio 7\n40100 Jyväskylä\nSuomi\n\nVerkkosivusto: https://www.paytrail.com",
       },
     ],
   },
+
   en: {
     title: "Terms of Service",
     lastUpdated: "Last updated: 2026",
@@ -65,11 +66,11 @@ const content = {
       },
       {
         heading: "Payment",
-        body: "The payment intermediary for the online store is Visma Pay (Paybyway Oy, business ID 2486559-4), which is registered in the payment institution register maintained by the Financial Supervisory Authority. Payment is made via Visma Pay's online service, and the recipient of the payment appears on the bank statement and invoice as Visma Pay or Paybyway Oy. Visma Pay forwards payments to the online merchant. Payment is secure, as all information regarding the payment transaction is transmitted using an encrypted connection so that no outside party can see the payment transaction information.\n\nRead more about Visma Pay: https://www.visma.fi/vismapay/",
+        body: "The payment intermediary for the online store is Paytrail Oyj (business ID 2122839-7), which is registered in the payment institution register maintained by the Finnish Financial Supervisory Authority. Payment is made via Paytrail's online service, and the recipient of the payment appears on the bank statement and invoice as Paytrail or Paytrail Oyj. Paytrail forwards payments to the online merchant. Payment is secure, as all information regarding the payment transaction is transmitted using an encrypted connection so that no outside party can see the payment transaction information.\n\nRead more about Paytrail: https://www.paytrail.com",
       },
       {
         heading: "Payment Methods",
-        body: "Through the Visma Pay service, you can pay with online banking credentials, wallet, payment cards (credit/debit), invoice or installment payment. The following payment methods are available: Osuuspankki, Nordea, Danske Bank, Oma Säästöpankki, Säästöpankki, Aktia, Paikallisosuuspankit, S-Pankki, Handelsbanken, Ålandsbanken, MobilePay, Masterpass, Pivo, Visa, Visa Debit, Visa Electron, MasterCard and Debit MasterCard cards, as well as Jousto and Enterpay Invoice for companies.",
+        body: "Through the Paytrail service, you can pay using online banking credentials, payment cards (credit/debit), MobilePay, and other payment methods offered by Paytrail. Available payment methods are displayed at checkout when placing your order.",
       },
       {
         heading: "Delivery",
@@ -84,8 +85,8 @@ const content = {
         body: "Before the order is delivered, you can cancel it by sending a written notification via email.\n\nThe online store has statutory liability for defects in the products sold. In case of complaints, please contact our customer service. The consumer has the right to refer any disputes to the Consumer Disputes Board for resolution.",
       },
       {
-        heading: "Visma Pay Payment Service Contact Information",
-        body: "Visma Pay, Paybyway Oy (Business ID 2486559-4)\nEmail: helpdesk@vismapay.com\nPhone: 09 315 42 037 (weekdays 8 am–4 pm)\nPostal address: Laserkatu 6, 53850 Lappeenranta",
+        heading: "Paytrail Payment Service Contact Information",
+        body: "Paytrail Oyj (Business ID 2122839-7)\nInnova 2\nLutakonaukio 7\n40100 Jyväskylä\nFinland\n\nWebsite: https://www.paytrail.com",
       },
     ],
   },
@@ -121,20 +122,20 @@ export default function TermsPage() {
         {/* Sections */}
         <div className="space-y-8">
           {c.sections.map((section, i) => (
-            <section
-              key={i}
-              className="border-l-2 border-amber-500/20 pl-5"
-            >
+            <section key={i} className="border-l-2 border-amber-500/20 pl-5">
               <h2 className="text-base font-semibold text-white mb-2">
                 {section.heading}
               </h2>
               <div className="space-y-2">
                 {section.body.split("\n").map((line, j) =>
                   line.trim() ? (
-                    <p key={j} className="text-sm text-gray-400 leading-relaxed">
+                    <p
+                      key={j}
+                      className="text-sm text-gray-400 leading-relaxed"
+                    >
                       {line}
                     </p>
-                  ) : null
+                  ) : null,
                 )}
               </div>
             </section>
