@@ -26,10 +26,23 @@ class RestaurantInfoView(APIView):
         serializer = RestaurantSettingsSerializer(settings)
         open_now, message = is_restaurant_open(settings.opening_hours.all())
 
+        # Lunch hours alag nikalo
+        lunch_hours = [
+            {
+                "day": oh.day,
+                "is_closed": oh.is_closed,
+                "lunch_open": str(oh.lunch_open) if oh.lunch_open else None,
+                "lunch_close": str(oh.lunch_close) if oh.lunch_close else None,
+            }
+            for oh in settings.opening_hours.all().order_by("day")
+            if oh.lunch_open and oh.lunch_close
+        ]
+
         data = {
             **serializer.data,
             "is_open_now": open_now,
             "open_status_message": message,
+            "lunch_hours": lunch_hours,
         }
 
         cache.set(CACHE_KEY, data, timeout=60 * 15)
