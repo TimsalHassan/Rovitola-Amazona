@@ -65,7 +65,7 @@ INSTALLED_APPS = [
     'payments',
     'restaurant.apps.RestaurantConfig',
     'contact',
-    # 'notifications.apps.NotificationsConfig',
+    'notifications.apps.NotificationsConfig',
 ]
 
 MIDDLEWARE = [

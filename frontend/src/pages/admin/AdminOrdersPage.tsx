@@ -177,11 +177,12 @@ export default function AdminOrdersPage() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              
                 {orders.map((order) => (
-                  <>
-                    <tr
+                  <tbody
                       key={order.order_number}
+                  >
+                    <tr
                       className="hover:bg-white/[0.02] transition-colors cursor-pointer"
                       onClick={() => setExpanded(expanded === order.order_number ? null : order.order_number)}
                     >
@@ -291,9 +292,8 @@ export default function AdminOrdersPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </tbody>
                 ))}
-              </tbody>
             </table>
           </div>
         )}

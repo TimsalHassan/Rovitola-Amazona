@@ -39,7 +39,7 @@ export default function AdminMessagesPage() {
       if (filter === "unread") params.set("is_read", "false");
       if (filter === "read")   params.set("is_read", "true");
 
-      const data = await adminGet<PaginatedResponse>(`${ADMIN}/messages/?${params}`, token);
+      const data = await adminGet<PaginatedResponse>(`${ADMIN}/notifications/`, token);
       setMessages(data.results ?? []);
       setCount(data.count ?? 0);
     } catch {

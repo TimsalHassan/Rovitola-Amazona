@@ -48,7 +48,7 @@ export default function AdminMenuPage() {
       const params = new URLSearchParams({ page: String(pageNum), page_size: String(PAGE_SIZE) });
       if (search.trim()) params.set("search", search.trim());
 
-      const data = await adminGet<PaginatedResponse>(`${ADMIN}/menu-items/?${params}`, token);
+      const data = await adminGet<PaginatedResponse>(`${ADMIN}/menu/items/?${params}`, token);
       setItems(data.results ?? []);
       setCount(data.count ?? 0);
     } catch {
@@ -61,11 +61,11 @@ export default function AdminMenuPage() {
   useEffect(() => {
     setPage(1);
     fetchItems(1);
-  }, [search]);
+  }, [search, fetchItems]);
 
   useEffect(() => {
     fetchItems(page);
-  }, [page]);
+  }, [page, fetchItems]);
 
   async function handleDelete(id: number) {
     if (!confirm("Delete this menu item? This cannot be undone.")) return;
@@ -173,7 +173,7 @@ export default function AdminMenuPage() {
                     {/* Category */}
                     <td className="px-4 py-3">
                       <code className="text-amber-400 text-xs bg-amber-500/5 px-2 py-0.5 rounded">
-                        {item.category_slug}
+                        {item.category_name}
                       </code>
                     </td>
 
