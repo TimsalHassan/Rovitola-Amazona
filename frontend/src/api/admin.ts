@@ -1,7 +1,7 @@
 
 import { BASE } from "./base";
 
-export const ADMIN = `${BASE}`;
+export const ADMIN = `${BASE}/admin`;
 
 export function adminHeaders(token: string): HeadersInit {
   return {

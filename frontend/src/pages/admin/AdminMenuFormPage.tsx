@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
 import { ADMIN, adminGet, adminPostForm, adminPatchForm } from "../../api/admin";
-import { BASE } from "../../api/base";
-
+import {MenuItem} from "../../api/menu"
 interface Category {
   id: number;
   name: string;
@@ -50,14 +49,14 @@ export default function AdminMenuFormPage() {
     // Load categories from admin endpoint
     adminGet<{ results?: Category[]; } | Category[]>(`${ADMIN}/categories/?page_size=100`, token)
       .then((data) => {
-        const list = Array.isArray(data) ? data : (data as any).results ?? [];
+        const list = Array.isArray(data) ? data : data.results ?? [];
         setCategories(list);
       })
       .catch(console.error);
 
     if (isEdit) {
       setFetching(true);
-      adminGet<any>(`${ADMIN}/menu-items/${id}/`, token)
+      adminGet<MenuItem>(`${ADMIN}/menu-items/${id}/`, token)
         .then((data) => {
           setForm({
             name: data.name ?? "",

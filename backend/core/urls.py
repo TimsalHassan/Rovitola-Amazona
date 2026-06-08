@@ -31,4 +31,5 @@ urlpatterns = [
     path('api/notifications/', include('notifications.urls')),
     path('api/restaurant/', include('restaurant.urls')),
     path('api/contact/', include('contact.urls')),
+    path("api/admin/", include("admin_api.urls"))
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

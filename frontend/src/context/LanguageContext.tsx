@@ -146,6 +146,8 @@ const resources = {
         specialInstructionPlaceholder: "Esim. ei sipulia, extra kastiketta…",
         addedToCart: "Lisätty!",
         requiredExtraError: "Tee valinta kohdassa",
+        showMoreExtras: "Näytä kaikki lisukkeet",
+        showLessExtras: "Näytä vähemmän lisukkeet"
       },
 
       // ── Nav ───────────────────────────────────────────────────────────────
@@ -739,6 +741,8 @@ const resources = {
         specialInstructionPlaceholder: "E.g. no onions, extra sauce…",
         addedToCart: "Added!",
         requiredExtraError: "Please make a selection for",
+        showMoreExtras: "Show more extras",
+        showLessExtras: "Show less extras"
       },
 
       // ── Nav ───────────────────────────────────────────────────────────────

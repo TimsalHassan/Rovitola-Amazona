@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.db.models import Sum, Q
+from django.db.models import Count, Sum, Q
 from django.utils import timezone
 
 from rest_framework import generics, status
@@ -120,8 +120,8 @@ class AdminCategoryListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return Category.objects.annotate(
-            item_count=None  # we use SerializerMethodField — no annotation needed
-        ).order_by("order")
+        item_count=Count('items')
+    ).order_by("order")
 
     def perform_create(self, serializer):
         serializer.save()

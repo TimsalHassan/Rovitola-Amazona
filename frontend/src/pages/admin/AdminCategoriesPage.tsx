@@ -45,10 +45,10 @@ export default function AdminCategoriesPage() {
     setLoading(true);
     try {
       const data = await adminGet<{ results?: Category[] } | Category[]>(
-        `${ADMIN}/categories/?page_size=100`,
+        `${ADMIN}/categories/`,
         token
       );
-      const list = Array.isArray(data) ? data : (data as any).results ?? [];
+      const list = Array.isArray(data) ? data : data.results ?? [];
       setCategories(list);
     } catch {
       console.error("Failed to load categories");

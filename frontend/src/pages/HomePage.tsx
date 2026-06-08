@@ -430,8 +430,7 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchReviews() {
       try {
-        const data = await reviewsApi.getAll();
-        console.log("Fetched reviews:", data.results);
+        const data = await reviewsApi.getAll();;
         setReviews(data.results);
       } catch {
         setReviews([]);

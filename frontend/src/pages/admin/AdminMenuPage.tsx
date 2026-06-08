@@ -48,7 +48,7 @@ export default function AdminMenuPage() {
       const params = new URLSearchParams({ page: String(pageNum), page_size: String(PAGE_SIZE) });
       if (search.trim()) params.set("search", search.trim());
 
-      const data = await adminGet<PaginatedResponse>(`${ADMIN}/menu/items/?${params}`, token);
+      const data = await adminGet<PaginatedResponse>(`${ADMIN}/menu-items/?${params}`, token);
       setItems(data.results ?? []);
       setCount(data.count ?? 0);
     } catch {
@@ -116,7 +116,7 @@ export default function AdminMenuPage() {
         />
         <span className="text-gray-500 text-xs">{count} items</span>
         <Link
-          to="/admin/menu/add"
+          to="/admin/menu/new"
           className="ml-auto flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold text-sm rounded-xl transition-all"
         >
           <svg viewBox="0 0 20 20" className="w-4 h-4 fill-current">
@@ -226,7 +226,7 @@ export default function AdminMenuPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link
-                          to={`/admin/menu/edit/${item.id}`}
+                          to={`/admin/menu/${item.id}/edit`}
                           className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded-lg transition-colors"
                         >
                           Edit

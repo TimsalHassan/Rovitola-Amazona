@@ -60,7 +60,7 @@ export default function AdminRestaurantPage() {
 
   useEffect(() => {
     if (!token) return;
-    adminGet<RestaurantSettings>(`${ADMIN}/restaurant/info/`, token)
+    adminGet<RestaurantSettings>(`${ADMIN}/restaurant/`, token)
       .then((data) => {
         setSettings(data);
         setInfo({

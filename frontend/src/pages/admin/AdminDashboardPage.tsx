@@ -1,8 +1,9 @@
 // src/pages/admin/AdminDashboardPage.tsx
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
 import { ADMIN, adminGet } from "../../api/admin";
+import { Package, DollarSign, Utensils, Users, MessageCircle, Star, Settings } from "lucide-react";
 interface Stats {
   total_orders: number;
   pending_orders: number;
@@ -52,7 +53,7 @@ function StatCard({
   label: string;
   value: string | number;
   sub: string;
-  icon: string;
+  icon: React.ReactNode;
   accent?: boolean;
   to?: string;
 }) {
@@ -95,11 +96,10 @@ export default function AdminDashboardPage() {
     if (!token) return;
 
     Promise.all([
-      adminGet<Stats>(`${ADMIN}/restaurant/info/`, token),
+      adminGet<Stats>(`${ADMIN}/stats/`, token),
       adminGet<PaginatedOrders>(`${ADMIN}/orders/?page_size=5`, token),
     ])
       .then(([statsData, ordersData]) => {
-        console.log(ordersData);
         setStats(statsData);
         setRecentOrders(ordersData.results ?? []);
       })
@@ -147,27 +147,27 @@ export default function AdminDashboardPage() {
           accent
           value={stats?.total_orders ?? 0}
           sub={`${stats?.pending_orders ?? 0} pending`}
-          icon="📦"
+          icon={<Package />}
           to="/admin/orders"
         />
         <StatCard
           label="Total Revenue"
           value={`€${Number(stats?.total_revenue ?? 0).toFixed(2)}`}
           sub={`€${Number(stats?.today_revenue ?? 0).toFixed(2)} today`}
-          icon="💶"
+          icon={<DollarSign />}
         />
         <StatCard
           label="Menu Items"
           value={stats?.total_menu_items ?? 0}
           sub={`${stats?.total_categories ?? 0} categories`}
-          icon="🍽️"
+          icon={<Utensils />}
           to="/admin/menu"
         />
         <StatCard
           label="Customers"
           value={stats?.total_users ?? 0}
           sub="registered accounts"
-          icon="👥"
+          icon={<Users />}
           to="/admin/users"
         />
       </div>
@@ -178,7 +178,9 @@ export default function AdminDashboardPage() {
           to="/admin/messages"
           className="flex items-center gap-3 bg-[#0a0f1e] border border-white/5 rounded-xl p-3 hover:border-white/10 transition-all"
         >
-          <span className="text-xl">✉️</span>
+          <span className="text-xl">
+            <MessageCircle />
+          </span>
           <div>
             <p className="text-white text-sm font-bold">
               {stats?.unread_messages ?? 0} unread
@@ -190,7 +192,9 @@ export default function AdminDashboardPage() {
           to="/admin/reviews"
           className="flex items-center gap-3 bg-[#0a0f1e] border border-white/5 rounded-xl p-3 hover:border-white/10 transition-all"
         >
-          <span className="text-xl">⭐</span>
+          <span className="text-xl">
+            <Star />
+          </span>
           <div>
             <p className="text-white text-sm font-bold">
               {stats?.pending_reviews ?? 0} pending
@@ -202,7 +206,9 @@ export default function AdminDashboardPage() {
           to="/admin/restaurant"
           className="flex items-center gap-3 bg-[#0a0f1e] border border-white/5 rounded-xl p-3 hover:border-white/10 transition-all"
         >
-          <span className="text-xl">⚙️</span>
+          <span className="text-xl">
+            <Settings/>
+          </span>
           <div>
             <p className="text-white text-sm font-bold">Settings</p>
             <p className="text-gray-500 text-xs">Restaurant & hours</p>

@@ -57,7 +57,6 @@ export default function VerifyEmailPage() {
   const {email} = location.state || {};
   // If email is passed via state (e.g. from RegisterPage), store it for potential resending
   useEffect(() => {
-    console.log("VerifyEmailPage received email via state:", email);
     if (email) {
       sessionStorage.setItem(PENDING_VERIFY_EMAIL_KEY, email);
     }

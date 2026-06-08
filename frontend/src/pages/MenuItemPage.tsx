@@ -37,6 +37,9 @@ function validateSelections(
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const EXTRAS_PREVIEW = 4;
+const OPTIONS_PREVIEW = 4;
+
 const MenuItemPage = () => {
   const { t, language } = useLanguage();
   const { items, isItemsLoading } = useMenu();
@@ -49,6 +52,8 @@ const MenuItemPage = () => {
   const [specialInstruction, setSpecialInstruction] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [showAllExtras, setShowAllExtras] = useState(false);
+  const [expandedExtras, setExpandedExtras] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const foundItem = items.find((i) => i.id === Number(id));
@@ -75,6 +80,8 @@ const MenuItemPage = () => {
     setSpecialInstruction("");
     setValidationError(null);
     setAddedToCart(false);
+    setShowAllExtras(false);
+    setExpandedExtras({});
   }, [id, items]);
 
   const getLocalizedText = (en: string, fi: string, fallback: string) => {
@@ -103,27 +110,27 @@ const MenuItemPage = () => {
       const current = new Set(prev[extra.id] ?? []);
 
       if (current.has(option.id)) {
-        // Deselect
         current.delete(option.id);
       } else {
         if (extra.extra_type === "choice") {
-          // Radio behaviour: replace selection
           current.clear();
           current.add(option.id);
         } else {
-          // Checkbox / addon behaviour: multi-select within max_selections
           if (
             extra.max_selections === null ||
             current.size < extra.max_selections
           ) {
             current.add(option.id);
           }
-          // If at max, silently ignore (could show a toast if desired)
         }
       }
 
       return { ...prev, [extra.id]: current };
     });
+  }, []);
+
+  const toggleExtraOptions = useCallback((extraId: number) => {
+    setExpandedExtras((prev) => ({ ...prev, [extraId]: !prev[extraId] }));
   }, []);
 
   // ── Computed unit price ──────────────────────────────────────────────────
@@ -157,7 +164,6 @@ const MenuItemPage = () => {
       return;
     }
 
-    // Flatten selected option IDs — backend expects ExtraOption PKs
     const selectedOptionIds: number[] = [];
     for (const extra of item.extras) {
       const chosen = selections[extra.id];
@@ -170,7 +176,7 @@ const MenuItemPage = () => {
 
     try {
       await addItem({
-        menu_item_id: item.id, // must be number, not string
+        menu_item_id: item.id,
         quantity,
         selected_option_ids: selectedOptionIds,
         special_instruction: specialInstruction,
@@ -390,123 +396,157 @@ const MenuItemPage = () => {
               </div>
 
               {item.extras.length ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {item.extras.map((extra) => {
-                    const extraName = getLocalizedText(
-                      extra.name,
-                      extra.name_fi,
-                      t("menuItem.unnamedExtra"),
-                    );
-                    const typeLabel =
-                      extra.extra_type === "choice"
-                        ? t("menuItem.choice")
-                        : t("menuItem.addon");
-                    const selectionLabel = extra.is_required
-                      ? t("menuItem.required")
-                      : t("menuItem.optional");
-                    const maxLabel =
-                      extra.max_selections !== null
-                        ? t("menuItem.maxSelections", {
-                            count: extra.max_selections,
-                          })
-                        : null;
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {(showAllExtras
+                      ? item.extras
+                      : item.extras.slice(0, EXTRAS_PREVIEW)
+                    ).map((extra) => {
+                      const extraName = getLocalizedText(
+                        extra.name,
+                        extra.name_fi,
+                        t("menuItem.unnamedExtra"),
+                      );
+                      const typeLabel =
+                        extra.extra_type === "choice"
+                          ? t("menuItem.choice")
+                          : t("menuItem.addon");
+                      const selectionLabel = extra.is_required
+                        ? t("menuItem.required")
+                        : t("menuItem.optional");
+                      const maxLabel =
+                        extra.max_selections !== null
+                          ? t("menuItem.maxSelections", {
+                              count: extra.max_selections,
+                            })
+                          : null;
 
-                    const isInvalid =
-                      validationError === extra.name && extra.is_required;
-                    const chosenSet = selections[extra.id] ?? new Set<number>();
+                      const isInvalid =
+                        validationError === extra.name && extra.is_required;
+                      const chosenSet =
+                        selections[extra.id] ?? new Set<number>();
 
-                    return (
-                      <div
-                        key={extra.id}
-                        className={`bg-gray-900/60 border rounded-2xl p-4 transition-colors ${
-                          isInvalid ? "border-red-500/50" : "border-white/10"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3 mb-4">
-                          <div>
-                            <h3 className="text-white font-semibold">
-                              {extraName}
-                            </h3>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {typeLabel} • {selectionLabel}
-                              {maxLabel ? ` • ${maxLabel}` : ""}
-                            </p>
+                      const isOptionsExpanded = !!expandedExtras[extra.id];
+                      const visibleOptions = isOptionsExpanded
+                        ? extra.options
+                        : extra.options.slice(0, OPTIONS_PREVIEW);
+
+                      return (
+                        <div
+                          key={extra.id}
+                          className={`bg-gray-900/60 border rounded-2xl p-4 transition-colors ${
+                            isInvalid ? "border-red-500/50" : "border-white/10"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-4">
+                            <div>
+                              <h3 className="text-white font-semibold">
+                                {extraName}
+                              </h3>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {typeLabel} • {selectionLabel}
+                                {maxLabel ? ` • ${maxLabel}` : ""}
+                              </p>
+                            </div>
+                            <span
+                              className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${
+                                extra.is_required
+                                  ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                                  : "bg-white/5 border-white/10 text-gray-300"
+                              }`}
+                            >
+                              {selectionLabel}
+                            </span>
                           </div>
-                          <span
-                            className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${
-                              extra.is_required
-                                ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                                : "bg-white/5 border-white/10 text-gray-300"
-                            }`}
-                          >
-                            {selectionLabel}
-                          </span>
-                        </div>
 
-                        <div className="space-y-2">
-                          {extra.options.map((option) => {
-                            const optionName = getLocalizedText(
-                              option.name,
-                              option.name_fi,
-                              t("menuItem.unnamedOption"),
-                            );
-                            const optionPrice = Number(option.display_price);
-                            const priceLabel = Number.isFinite(optionPrice)
-                              ? optionPrice === 0
-                                ? t("menuItem.included")
-                                : `+€${formatPrice(optionPrice)}`
-                              : t("menuItem.included");
+                          <div className="space-y-2">
+                            {visibleOptions.map((option) => {
+                              const optionName = getLocalizedText(
+                                option.name,
+                                option.name_fi,
+                                t("menuItem.unnamedOption"),
+                              );
+                              const optionPrice = Number(option.display_price);
+                              const priceLabel = Number.isFinite(optionPrice)
+                                ? optionPrice === 0
+                                  ? t("menuItem.included")
+                                  : `+€${formatPrice(optionPrice)}`
+                                : t("menuItem.included");
 
-                            const isSelected = chosenSet.has(option.id);
-                            const isChoice = extra.extra_type === "choice";
+                              const isSelected = chosenSet.has(option.id);
+                              const isChoice = extra.extra_type === "choice";
 
-                            return (
-                              <button
-                                key={option.id}
-                                type="button"
-                                onClick={() => toggleOption(extra, option)}
-                                className={`w-full flex items-center justify-between text-sm px-3 py-2.5 rounded-xl border transition-all duration-150 text-left ${
-                                  isSelected
-                                    ? "bg-amber-500/15 border-amber-500/40 text-white"
-                                    : "bg-white/[0.03] border-white/8 text-gray-300 hover:bg-white/[0.07] hover:border-white/15"
-                                }`}
-                              >
-                                <span className="flex items-center gap-2.5">
-                                  {/* Radio or checkbox indicator */}
-                                  <span
-                                    className={`flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-full border transition-colors ${
-                                      isSelected
-                                        ? "bg-amber-500 border-amber-500"
-                                        : "border-gray-600"
-                                    } ${!isChoice ? "rounded-md" : ""}`}
-                                  >
-                                    {isSelected && (
-                                      <Check
-                                        size={10}
-                                        className="text-gray-900"
-                                        strokeWidth={3}
-                                      />
-                                    )}
-                                  </span>
-                                  {optionName}
-                                </span>
-                                <span
-                                  className={`text-xs font-medium ${
+                              return (
+                                <button
+                                  key={option.id}
+                                  type="button"
+                                  onClick={() => toggleOption(extra, option)}
+                                  className={`w-full flex items-center justify-between text-sm px-3 py-2.5 rounded-xl border transition-all duration-150 text-left ${
                                     isSelected
-                                      ? "text-amber-400"
-                                      : "text-gray-500"
+                                      ? "bg-amber-500/15 border-amber-500/40 text-white"
+                                      : "bg-white/[0.03] border-white/8 text-gray-300 hover:bg-white/[0.07] hover:border-white/15"
                                   }`}
                                 >
-                                  {priceLabel}
-                                </span>
+                                  <span className="flex items-center gap-2.5">
+                                    <span
+                                      className={`flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-full border transition-colors ${
+                                        isSelected
+                                          ? "bg-amber-500 border-amber-500"
+                                          : "border-gray-600"
+                                      } ${!isChoice ? "rounded-md" : ""}`}
+                                    >
+                                      {isSelected && (
+                                        <Check
+                                          size={10}
+                                          className="text-gray-900"
+                                          strokeWidth={3}
+                                        />
+                                      )}
+                                    </span>
+                                    {optionName}
+                                  </span>
+                                  <span
+                                    className={`text-xs font-medium ${
+                                      isSelected
+                                        ? "text-amber-400"
+                                        : "text-gray-500"
+                                    }`}
+                                  >
+                                    {priceLabel}
+                                  </span>
+                                </button>
+                              );
+                            })}
+
+                            {extra.options.length > OPTIONS_PREVIEW && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExtraOptions(extra.id)}
+                                className="w-full py-2 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-xs text-gray-400 hover:text-white transition-all mt-1"
+                              >
+                                {isOptionsExpanded
+                                  ? t("menuItem.showLessExtras") ?? "Show less"
+                                  : `${t("menuItem.showMoreExtras") ?? "Show"} ${extra.options.length - OPTIONS_PREVIEW} more options`}
                               </button>
-                            );
-                          })}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+
+                  {item.extras.length > EXTRAS_PREVIEW && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllExtras((v) => !v)}
+                      className="mt-4 w-full py-3 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-sm text-gray-400 hover:text-white transition-all"
+                    >
+                      {showAllExtras
+                        ? t("menuItem.showLessExtras") ?? "Show less"
+                        : `${t("menuItem.showMoreExtras") ?? "Show more"} (${item.extras.length - EXTRAS_PREVIEW} more)`}
+                    </button>
+                  )}
+                </>
               ) : (
                 <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-8 text-center">
                   <p className="text-white font-semibold mb-2">

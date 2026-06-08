@@ -385,7 +385,6 @@ export default function MenuPage() {
   const visibleSectionsRef = useRef<Set<string>>(new Set());
   const isScrollingRef = useRef(false);
 
-  console.log(items[0])
   const isLunch = isLunchHours();
 
   const sortedCategories = useMemo(
