@@ -1,13 +1,17 @@
+// src/components/admin/AdminLayout.tsx
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
 
 const NAV = [
-  { label: "Dashboard", path: "/admin/dashboard", icon: "📊" },
-  { label: "Orders", path: "/admin/orders", icon: "📦", badge: true },
-  { label: "Menu Items", path: "/admin/menu", icon: "🍽️" },
-  { label: "Categories", path: "/admin/categories", icon: "🏷️" },
-  { label: "Users", path: "/admin/users", icon: "👥" },
+  { label: "Dashboard",   path: "/admin/dashboard",   icon: "📊" },
+  { label: "Orders",      path: "/admin/orders",       icon: "📦" },
+  { label: "Menu Items",  path: "/admin/menu",         icon: "🍽️" },
+  { label: "Categories",  path: "/admin/categories",   icon: "🏷️" },
+  { label: "Users",       path: "/admin/users",        icon: "👥" },
+  { label: "Reviews",     path: "/admin/reviews",      icon: "⭐" },
+  { label: "Messages",    path: "/admin/messages",     icon: "✉️" },
+  { label: "Restaurant",  path: "/admin/restaurant",   icon: "⚙️" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -51,7 +55,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV.map((item) => {
             const active = location.pathname.startsWith(item.path);
             return (
@@ -77,7 +81,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Footer */}
         <div className="p-3">
-          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-1" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.1)" }}>
+          <div
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-1"
+            style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.1)" }}
+          >
             <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-xs font-black text-gray-900 shrink-0">
               {admin?.name?.charAt(0)?.toUpperCase() ?? "A"}
             </div>
@@ -106,7 +113,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
         <header
-          className="h-13 flex items-center px-5 gap-3 sticky top-0 z-10"
+          className="flex items-center px-5 gap-3 sticky top-0 z-10"
           style={{ height: "52px", background: "#0a0f1e", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
         >
           <button

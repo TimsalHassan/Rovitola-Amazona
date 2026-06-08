@@ -1,7 +1,8 @@
+// src/pages/admin/AdminMenuPage.tsx
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
-import { BASE } from "../../api/base";
+import { ADMIN, adminGet, adminDelete, adminPatch } from "../../api/admin";
 
 interface MenuItem {
   id: number;
@@ -28,6 +29,8 @@ interface PaginatedResponse {
   results: MenuItem[];
 }
 
+const PAGE_SIZE = 20;
+
 export default function AdminMenuPage() {
   const { token } = useAdminAuth();
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -39,15 +42,13 @@ export default function AdminMenuPage() {
   const [page, setPage] = useState(1);
 
   const fetchItems = useCallback(async (pageNum = 1) => {
+    if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`${BASE}/menu/items/?page=${pageNum}&page_size=20`, {
-        headers: {
-          Authorization: `Token ${token}`,
-          "ngrok-skip-browser-warning": "true",
-        },
-      });
-      const data: PaginatedResponse = await res.json();
+      const params = new URLSearchParams({ page: String(pageNum), page_size: String(PAGE_SIZE) });
+      if (search.trim()) params.set("search", search.trim());
+
+      const data = await adminGet<PaginatedResponse>(`${ADMIN}/menu-items/?${params}`, token);
       setItems(data.results ?? []);
       setCount(data.count ?? 0);
     } catch {
@@ -55,75 +56,68 @@ export default function AdminMenuPage() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, search]);
+
+  useEffect(() => {
+    setPage(1);
+    fetchItems(1);
+  }, [search]);
 
   useEffect(() => {
     fetchItems(page);
-  }, [fetchItems, page]);
+  }, [page]);
 
-  async function toggleAvailability(item: MenuItem) {
-    setTogglingId(item.id);
-    try {
-      await fetch(`${BASE}/menu/items/${item.id}/`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Token ${token}`,
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify({ is_available: !item.is_available }),
-      });
-      setItems((prev) =>
-        prev.map((i) => i.id === item.id ? { ...i, is_available: !i.is_available } : i)
-      );
-    } catch {
-      console.error("Failed to toggle");
-    } finally {
-      setTogglingId(null);
-    }
-  }
-
-  async function deleteItem(id: number) {
-    if (!confirm("Delete this item?")) return;
+  async function handleDelete(id: number) {
+    if (!confirm("Delete this menu item? This cannot be undone.")) return;
+    if (!token) return;
     setDeletingId(id);
     try {
-      await fetch(`${BASE}/menu/items/${id}/`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Token ${token}`,
-          "ngrok-skip-browser-warning": "true",
-        },
-      });
+      await adminDelete(`${ADMIN}/menu-items/${id}/`, token);
       setItems((prev) => prev.filter((i) => i.id !== id));
       setCount((c) => c - 1);
     } catch {
-      console.error("Failed to delete");
+      alert("Failed to delete item.");
     } finally {
       setDeletingId(null);
     }
   }
 
-  const filtered = items.filter(
-    (i) =>
-      i.name.toLowerCase().includes(search.toLowerCase()) ||
-      i.name_fi?.toLowerCase().includes(search.toLowerCase()) ||
-      i.category_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  async function handleToggle(item: MenuItem) {
+    if (!token) return;
+    setTogglingId(item.id);
+    try {
+      const res = await adminPatch<{ id: number; is_available: boolean }>(
+        `${ADMIN}/menu-items/${item.id}/toggle/`,
+        token,
+        {}
+      );
+      setItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, is_available: res.is_available } : i))
+      );
+    } catch {
+      alert("Failed to toggle availability.");
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  const totalPages = Math.ceil(count / PAGE_SIZE);
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
+      {/* Header */}
+      <div className="flex items-center gap-3 flex-wrap">
         <input
           type="text"
-          placeholder="Search items..."
+          placeholder="Search menu items…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-gray-900 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
+          className="flex-1 min-w-0 max-w-sm bg-gray-900 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
         />
-        <span className="text-gray-500 text-xs whitespace-nowrap">{count} items</span>
+        <span className="text-gray-500 text-xs">{count} items</span>
         <Link
-          to="/admin/menu/new"
-          className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold text-sm rounded-xl transition-all whitespace-nowrap"
+          to="/admin/menu/add"
+          className="ml-auto flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold text-sm rounded-xl transition-all"
         >
           <svg viewBox="0 0 20 20" className="w-4 h-4 fill-current">
             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -132,21 +126,22 @@ export default function AdminMenuPage() {
         </Link>
       </div>
 
+      {/* Table */}
       <div className="bg-gray-900 border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-10 text-center">
             <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
-        ) : filtered.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="p-10 text-center">
-            <p className="text-gray-500 text-sm">No items found.</p>
+            <p className="text-gray-500 text-sm">No menu items found.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5">
-                  {["Item", "Category", "Price", "Sale", "Lunch", "Available", "Actions"].map((h) => (
+                  {["Item", "Category", "Price", "Tags", "Available", "Actions"].map((h) => (
                     <th key={h} className="text-left text-gray-500 text-xs font-medium px-4 py-3 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
@@ -154,66 +149,94 @@ export default function AdminMenuPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filtered.map((item) => (
+                {items.map((item) => (
                   <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
+                    {/* Item */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} className="w-9 h-9 rounded-lg object-cover shrink-0 bg-gray-800" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center shrink-0">
-                            <span className="text-gray-600 text-lg">🍽️</span>
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-white font-medium">{item.name}</p>
-                          {item.name_fi && item.name_fi !== item.name && (
-                            <p className="text-gray-500 text-xs">{item.name_fi}</p>
+                        <div className="w-10 h-10 rounded-xl bg-gray-800 overflow-hidden shrink-0 flex items-center justify-center">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-lg">🍽️</span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-medium text-sm leading-tight truncate max-w-[160px]">{item.name || item.name_fi}</p>
+                          {item.name_fi && item.name && (
+                            <p className="text-gray-500 text-xs truncate max-w-[160px]">{item.name_fi}</p>
                           )}
                         </div>
                       </div>
                     </td>
+
+                    {/* Category */}
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 bg-gray-800 text-gray-300 text-xs rounded-lg">{item.category_name}</span>
+                      <code className="text-amber-400 text-xs bg-amber-500/5 px-2 py-0.5 rounded">
+                        {item.category_slug}
+                      </code>
                     </td>
-                    <td className="px-4 py-3 text-white font-semibold">€{Number(item.base_price).toFixed(2)}</td>
+
+                    {/* Price */}
                     <td className="px-4 py-3">
-                      {item.sale_price ? (
-                        <span className="text-amber-400 text-xs font-semibold">€{Number(item.sale_price).toFixed(2)}</span>
+                      {item.is_on_sale ? (
+                        <div>
+                          <span className="text-green-400 font-semibold text-sm">€{Number(item.current_price).toFixed(2)}</span>
+                          <span className="text-gray-600 line-through text-xs ml-1">€{Number(item.base_price).toFixed(2)}</span>
+                        </div>
                       ) : (
-                        <span className="text-gray-600 text-xs">—</span>
+                        <span className="text-white font-semibold text-sm">€{Number(item.base_price).toFixed(2)}</span>
                       )}
                     </td>
+
+                    {/* Tags */}
                     <td className="px-4 py-3">
-                      {item.is_lunch_item ? (
-                        <span className="text-amber-400 text-xs">✓ Yes</span>
-                      ) : (
-                        <span className="text-gray-600 text-xs">No</span>
-                      )}
+                      <div className="flex gap-1 flex-wrap">
+                        {item.is_lunch_item && (
+                          <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 text-[10px] rounded border border-blue-500/20">
+                            Lunch
+                          </span>
+                        )}
+                        {item.is_on_sale && (
+                          <span className="px-1.5 py-0.5 bg-green-500/10 text-green-400 text-[10px] rounded border border-green-500/20">
+                            Sale
+                          </span>
+                        )}
+                      </div>
                     </td>
+
+                    {/* Available toggle */}
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => toggleAvailability(item)}
+                        onClick={() => handleToggle(item)}
                         disabled={togglingId === item.id}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${item.is_available ? "bg-amber-500" : "bg-gray-700"}`}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${
+                          item.is_available ? "bg-amber-500" : "bg-gray-700"
+                        }`}
                       >
-                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${item.is_available ? "translate-x-4" : "translate-x-1"}`} />
+                        <span
+                          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                            item.is_available ? "translate-x-4" : "translate-x-1"
+                          }`}
+                        />
                       </button>
                     </td>
+
+                    {/* Actions */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link
-                          to={`/admin/menu/${item.id}/edit`}
+                          to={`/admin/menu/edit/${item.id}`}
                           className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded-lg transition-colors"
                         >
                           Edit
                         </Link>
                         <button
-                          onClick={() => deleteItem(item.id)}
+                          onClick={() => handleDelete(item.id)}
                           disabled={deletingId === item.id}
                           className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs rounded-lg transition-colors disabled:opacity-50"
                         >
-                          {deletingId === item.id ? "..." : "Delete"}
+                          {deletingId === item.id ? "…" : "Delete"}
                         </button>
                       </div>
                     </td>
@@ -226,9 +249,9 @@ export default function AdminMenuPage() {
       </div>
 
       {/* Pagination */}
-      {count > 20 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-gray-500 text-xs">Page {page} of {Math.ceil(count / 20)}</p>
+          <p className="text-gray-500 text-xs">Page {page} of {totalPages}</p>
           <div className="flex gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -238,8 +261,8 @@ export default function AdminMenuPage() {
               Previous
             </button>
             <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= Math.ceil(count / 20)}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
               className="px-3 py-1.5 bg-gray-900 border border-white/5 text-gray-400 text-xs rounded-lg disabled:opacity-30 hover:text-white transition-colors"
             >
               Next

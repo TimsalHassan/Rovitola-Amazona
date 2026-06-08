@@ -1,16 +1,33 @@
+// src/pages/admin/AdminCategoriesPage.tsx
 import { useEffect, useState } from "react";
 import { useAdminAuth } from "../../hooks/useAuth";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+import { ADMIN, adminGet, adminPost, adminPut, adminDelete } from "../../api/admin";
 
 interface Category {
   id: number;
   name: string;
-  name_en: string;
+  name_fi: string;
   slug: string;
   order: number;
   items_count: number;
+  has_deal: boolean;
+  deal_label: string;
+  deal_label_fi: string;
 }
+
+interface FormState {
+  name: string;
+  name_fi: string;
+  order: string;
+  has_deal: boolean;
+  deal_label: string;
+  deal_label_fi: string;
+}
+
+const EMPTY: FormState = {
+  name: "", name_fi: "", order: "0",
+  has_deal: false, deal_label: "", deal_label_fi: "",
+};
 
 export default function AdminCategoriesPage() {
   const { token } = useAdminAuth();
@@ -18,19 +35,23 @@ export default function AdminCategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Category | null>(null);
-  const [form, setForm] = useState({ name: "", name_en: "", order: "0" });
+  const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function fetchCategories() {
+    if (!token) return;
+    setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/admin/categories/`, {
-        headers: { Authorization: `Token ${token}` },
-      });
-      const data = await res.json();
-      setCategories(data.results ?? data);
+      const data = await adminGet<{ results?: Category[] } | Category[]>(
+        `${ADMIN}/categories/?page_size=100`,
+        token
+      );
+      const list = Array.isArray(data) ? data : (data as any).results ?? [];
+      setCategories(list);
     } catch {
-      console.error("Failed to load");
+      console.error("Failed to load categories");
     } finally {
       setLoading(false);
     }
@@ -42,37 +63,49 @@ export default function AdminCategoriesPage() {
 
   function openAdd() {
     setEditItem(null);
-    setForm({ name: "", name_en: "", order: "0" });
+    setForm(EMPTY);
+    setError(null);
     setShowForm(true);
   }
 
   function openEdit(cat: Category) {
     setEditItem(cat);
-    setForm({ name: cat.name, name_en: cat.name_en ?? "", order: String(cat.order) });
+    setForm({
+      name: cat.name ?? "",
+      name_fi: cat.name_fi ?? "",
+      order: String(cat.order),
+      has_deal: cat.has_deal ?? false,
+      deal_label: cat.deal_label ?? "",
+      deal_label_fi: cat.deal_label_fi ?? "",
+    });
+    setError(null);
     setShowForm(true);
   }
 
   async function handleSave() {
+    if (!token) return;
     setSaving(true);
+    setError(null);
     try {
-      const url = editItem
-        ? `${BASE_URL}/admin/categories/${editItem.id}/`
-        : `${BASE_URL}/admin/categories/`;
-      const method = editItem ? "PUT" : "POST";
+      const payload = {
+        name: form.name,
+        name_fi: form.name_fi,
+        order: Number(form.order),
+        has_deal: form.has_deal,
+        deal_label: form.deal_label,
+        deal_label_fi: form.deal_label_fi,
+      };
 
-      await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Token ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ...form, order: Number(form.order) }),
-      });
+      if (editItem) {
+        await adminPut(`${ADMIN}/categories/${editItem.id}/`, token, payload);
+      } else {
+        await adminPost(`${ADMIN}/categories/`, token, payload);
+      }
 
       setShowForm(false);
       fetchCategories();
-    } catch {
-      console.error("Failed to save");
+    } catch (err) {
+      setError((err as Error).message || "Failed to save.");
     } finally {
       setSaving(false);
     }
@@ -80,18 +113,20 @@ export default function AdminCategoriesPage() {
 
   async function handleDelete(id: number) {
     if (!confirm("Delete this category? All menu items in it will be unassigned.")) return;
+    if (!token) return;
     setDeletingId(id);
     try {
-      await fetch(`${BASE_URL}/admin/categories/${id}/`, {
-        method: "DELETE",
-        headers: { Authorization: `Token ${token}` },
-      });
+      await adminDelete(`${ADMIN}/categories/${id}/`, token);
       setCategories((prev) => prev.filter((c) => c.id !== id));
     } catch {
-      console.error("Failed to delete");
+      alert("Failed to delete category.");
     } finally {
       setDeletingId(null);
     }
+  }
+
+  function setField(key: keyof FormState, value: string | boolean) {
+    setForm((p) => ({ ...p, [key]: value }));
   }
 
   return (
@@ -114,35 +149,86 @@ export default function AdminCategoriesPage() {
           <h3 className="text-white font-semibold text-sm">
             {editItem ? "Edit Category" : "New Category"}
           </h3>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">
+              <p className="text-red-400 text-xs font-mono">{error}</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-400 text-xs mb-1.5">Name (Finnish)</label>
               <input
                 type="text"
                 value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors"
+                onChange={(e) => setField("name", e.target.value)}
+                placeholder="e.g. Pizzat"
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
               />
             </div>
             <div>
               <label className="block text-gray-400 text-xs mb-1.5">Name (English)</label>
               <input
                 type="text"
-                value={form.name_en}
-                onChange={(e) => setForm((p) => ({ ...p, name_en: e.target.value }))}
-                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors"
+                value={form.name_fi}
+                onChange={(e) => setField("name_fi", e.target.value)}
+                placeholder="e.g. Pizzas"
+                className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
               />
             </div>
           </div>
+
           <div className="w-32">
             <label className="block text-gray-400 text-xs mb-1.5">Sort order</label>
             <input
               type="number"
               value={form.order}
-              onChange={(e) => setForm((p) => ({ ...p, order: e.target.value }))}
+              onChange={(e) => setField("order", e.target.value)}
               className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors"
             />
           </div>
+
+          {/* Deal toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white text-sm font-medium">Has deal label</p>
+              <p className="text-gray-500 text-xs">Show a badge on this category (e.g. "Lunch special")</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setField("has_deal", !form.has_deal)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${form.has_deal ? "bg-amber-500" : "bg-gray-700"}`}
+            >
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${form.has_deal ? "translate-x-4" : "translate-x-1"}`} />
+            </button>
+          </div>
+
+          {form.has_deal && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-400 text-xs mb-1.5">Deal label (Finnish)</label>
+                <input
+                  type="text"
+                  value={form.deal_label}
+                  onChange={(e) => setField("deal_label", e.target.value)}
+                  placeholder="e.g. Lounastarjous"
+                  className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-xs mb-1.5">Deal label (English)</label>
+                <input
+                  type="text"
+                  value={form.deal_label_fi}
+                  onChange={(e) => setField("deal_label_fi", e.target.value)}
+                  placeholder="e.g. Lunch special"
+                  className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               onClick={() => setShowForm(false)}
@@ -155,13 +241,15 @@ export default function AdminCategoriesPage() {
               disabled={saving}
               className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-gray-900 font-bold text-sm rounded-xl transition-all"
             >
-              {saving ? "Saving..." : editItem ? "Save changes" : "Create"}
+              {saving ? (
+                <><span className="w-4 h-4 border-2 border-gray-700 border-t-transparent rounded-full animate-spin" />Saving…</>
+              ) : editItem ? "Save changes" : "Create"}
             </button>
           </div>
         </div>
       )}
 
-      {/* List */}
+      {/* Table */}
       <div className="bg-gray-900 border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-10 text-center">
@@ -175,8 +263,8 @@ export default function AdminCategoriesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5">
-                {["Name", "English", "Slug", "Items", "Order", "Actions"].map((h) => (
-                  <th key={h} className="text-left text-gray-500 text-xs font-medium px-4 py-3 uppercase tracking-wider">
+                {["Name (FI)", "Name (EN)", "Slug", "Items", "Order", "Deal", "Actions"].map((h) => (
+                  <th key={h} className="text-left text-gray-500 text-xs font-medium px-4 py-3 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
                 ))}
@@ -186,14 +274,21 @@ export default function AdminCategoriesPage() {
               {categories.map((cat) => (
                 <tr key={cat.id} className="hover:bg-white/[0.02] transition-colors">
                   <td className="px-4 py-3 text-white font-medium">{cat.name}</td>
-                  <td className="px-4 py-3 text-gray-400">{cat.name_en}</td>
+                  <td className="px-4 py-3 text-gray-400">{cat.name_fi}</td>
                   <td className="px-4 py-3">
-                    <code className="text-amber-400 text-xs bg-amber-500/5 px-2 py-0.5 rounded">
-                      {cat.slug}
-                    </code>
+                    <code className="text-amber-400 text-xs bg-amber-500/5 px-2 py-0.5 rounded">{cat.slug}</code>
                   </td>
                   <td className="px-4 py-3 text-gray-300">{cat.items_count ?? "—"}</td>
                   <td className="px-4 py-3 text-gray-400">{cat.order}</td>
+                  <td className="px-4 py-3">
+                    {cat.has_deal ? (
+                      <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] rounded border border-amber-500/20">
+                        {cat.deal_label || "Deal"}
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button
@@ -207,7 +302,7 @@ export default function AdminCategoriesPage() {
                         disabled={deletingId === cat.id}
                         className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs rounded-lg transition-colors disabled:opacity-50"
                       >
-                        {deletingId === cat.id ? "..." : "Delete"}
+                        {deletingId === cat.id ? "…" : "Delete"}
                       </button>
                     </div>
                   </td>

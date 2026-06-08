@@ -1,22 +1,28 @@
+// src/pages/admin/AdminOrdersPage.tsx
 import { useEffect, useState } from "react";
 import { useAdminAuth } from "../../hooks/useAuth";
-import { BASE } from "../../api/base";
+import { ADMIN, adminGet, adminPatch } from "../../api/admin";
 
 interface OrderItem {
   id: number;
   menu_item_name: string;
   quantity: number;
   total_price: string;
+  special_instruction: string;
 }
 
 interface Order {
   id: number;
   order_number: string;
   customer_name: string;
+  customer_email: string;
+  customer_phone: string;
   guest_name: string;
   guest_phone: string;
   guest_email: string;
   total: string;
+  subtotal: string;
+  delivery_charge: string;
   status: string;
   payment_status: string;
   payment_method: string;
@@ -58,34 +64,32 @@ const PAYMENT_STYLES: Record<string, string> = {
   refunded: "text-blue-400",
 };
 
+const PAGE_SIZE = 20;
+
 export default function AdminOrdersPage() {
   const { token } = useAdminAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [updating, setUpdating] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
 
   async function fetchOrders(pageNum = 1) {
+    if (!token) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(pageNum) });
-      // Backend OrderListView filters by authenticated user — admin uses IsAdminUser
-      // to get all orders we need the admin endpoint; since that doesn't exist,
-      // we use IsAdminUser check: admin token returns all orders via the standard endpoint
-      const res = await fetch(`${BASE}/orders/?${params}`, {
-        headers: {
-          Authorization: `Token ${token}`,
-          "ngrok-skip-browser-warning": "true",
-        },
-      });
-      const data: PaginatedResponse = await res.json();
+      const params = new URLSearchParams({ page: String(pageNum), page_size: String(PAGE_SIZE) });
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (search.trim()) params.set("search", search.trim());
+
+      const data = await adminGet<PaginatedResponse>(`${ADMIN}/orders/?${params}`, token);
       setOrders(data.results ?? []);
       setCount(data.count ?? 0);
-    } catch {
-      console.error("Failed to load orders");
+    } catch (err) {
+      console.error("Failed to load orders", err);
     } finally {
       setLoading(false);
     }
@@ -94,54 +98,61 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     setPage(1);
     fetchOrders(1);
-  }, [filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, search]);
 
   useEffect(() => {
     fetchOrders(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   async function updateStatus(orderNumber: string, newStatus: string) {
+    if (!token) return;
     setUpdating(orderNumber);
     try {
-      await fetch(`${BASE}/orders/${orderNumber}/status/`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Token ${token}`,
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      await adminPatch(`${ADMIN}/orders/${orderNumber}/status/`, token, { status: newStatus });
       setOrders((prev) =>
         prev.map((o) => (o.order_number === orderNumber ? { ...o, status: newStatus } : o))
       );
-    } catch {
-      console.error("Failed to update status");
+    } catch (err) {
+      console.error("Failed to update status", err);
     } finally {
       setUpdating(null);
     }
   }
 
-  const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
+  const totalPages = Math.ceil(count / PAGE_SIZE);
 
   return (
     <div className="space-y-5">
-      {/* Filter tabs */}
-      <div className="flex gap-1.5 flex-wrap">
-        {STATUSES.map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-              filter === s
-                ? "bg-amber-500 text-gray-900"
-                : "bg-gray-900 border border-white/5 text-gray-400 hover:text-white"
-            }`}
-          >
-            {s.replace("_", " ")}
-          </button>
-        ))}
-        <span className="ml-auto text-gray-500 text-xs self-center">{count} total</span>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Status tabs */}
+        <div className="flex gap-1.5 flex-wrap">
+          {STATUSES.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+                statusFilter === s
+                  ? "bg-amber-500 text-gray-900"
+                  : "bg-gray-900 border border-white/5 text-gray-400 hover:text-white"
+              }`}
+            >
+              {s.replace("_", " ")}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search order #, name, email, phone…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="sm:ml-auto w-full sm:w-64 bg-gray-900 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-1.5 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
+        />
+        <span className="text-gray-500 text-xs self-center shrink-0">{count} total</span>
       </div>
 
       {/* Table */}
@@ -150,7 +161,7 @@ export default function AdminOrdersPage() {
           <div className="p-10 text-center">
             <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
-        ) : filtered.length === 0 ? (
+        ) : orders.length === 0 ? (
           <div className="p-10 text-center">
             <p className="text-gray-500 text-sm">No orders found.</p>
           </div>
@@ -167,7 +178,7 @@ export default function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filtered.map((order) => (
+                {orders.map((order) => (
                   <>
                     <tr
                       key={order.order_number}
@@ -179,7 +190,10 @@ export default function AdminOrdersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-white font-medium">{order.customer_name || order.guest_name || "Guest"}</p>
-                        {order.guest_phone && <p className="text-gray-500 text-xs">{order.guest_phone}</p>}
+                        <p className="text-gray-500 text-xs">{order.customer_email || order.guest_email}</p>
+                        {(order.customer_phone || order.guest_phone) && (
+                          <p className="text-gray-600 text-xs">{order.customer_phone || order.guest_phone}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-400 capitalize">{order.order_type}</td>
                       <td className="px-4 py-3 text-white font-semibold">€{Number(order.total).toFixed(2)}</td>
@@ -206,19 +220,22 @@ export default function AdminOrdersPage() {
                             disabled={updating === order.order_number}
                             className="px-3 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 text-xs rounded-lg capitalize transition-all disabled:opacity-50 whitespace-nowrap"
                           >
-                            {updating === order.order_number ? "..." : `→ ${NEXT_STATUS[order.status].replace("_", " ")}`}
+                            {updating === order.order_number ? "…" : `→ ${NEXT_STATUS[order.status].replace("_", " ")}`}
                           </button>
+                        ) : order.status !== "cancelled" ? (
+                          <span className="text-gray-600 text-xs">Final</span>
                         ) : (
                           <span className="text-gray-600 text-xs">—</span>
                         )}
                       </td>
                     </tr>
 
-                    {/* Expanded row */}
+                    {/* Expanded detail row */}
                     {expanded === order.order_number && (
                       <tr key={`${order.order_number}-expanded`}>
                         <td colSpan={8} className="px-4 pb-4 bg-gray-800/40">
-                          <div className="grid grid-cols-2 gap-4 pt-3">
+                          <div className="grid grid-cols-2 gap-6 pt-3">
+                            {/* Items */}
                             <div>
                               <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">Items</p>
                               <div className="space-y-1">
@@ -228,14 +245,46 @@ export default function AdminOrdersPage() {
                                     <span className="text-gray-400">€{Number(item.total_price).toFixed(2)}</span>
                                   </div>
                                 ))}
+                                <div className="border-t border-white/5 pt-1 mt-1 flex justify-between text-xs">
+                                  <span className="text-gray-500">Subtotal</span>
+                                  <span className="text-gray-300">€{Number(order.subtotal).toFixed(2)}</span>
+                                </div>
+                                {Number(order.delivery_charge) > 0 && (
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500">Delivery</span>
+                                    <span className="text-gray-300">€{Number(order.delivery_charge).toFixed(2)}</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between text-xs font-bold">
+                                  <span className="text-gray-300">Total</span>
+                                  <span className="text-white">€{Number(order.total).toFixed(2)}</span>
+                                </div>
                               </div>
                             </div>
-                            <div className="space-y-1 text-xs">
+
+                            {/* Order info */}
+                            <div className="space-y-2 text-xs">
                               {order.delivery_address && (
-                                <p className="text-gray-400"><span className="text-gray-600">Address: </span>{order.delivery_address}</p>
+                                <div>
+                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">Delivery Address</p>
+                                  <p className="text-gray-300">{order.delivery_address}</p>
+                                </div>
                               )}
                               {order.order_notes && (
-                                <p className="text-gray-400"><span className="text-gray-600">Notes: </span>{order.order_notes}</p>
+                                <div>
+                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">Notes</p>
+                                  <p className="text-gray-300">{order.order_notes}</p>
+                                </div>
+                              )}
+                              {order.items.some((i) => i.special_instruction) && (
+                                <div>
+                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">Special Instructions</p>
+                                  {order.items.filter((i) => i.special_instruction).map((i) => (
+                                    <p key={i.id} className="text-gray-300">
+                                      <span className="text-gray-500">{i.menu_item_name}:</span> {i.special_instruction}
+                                    </p>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           </div>
@@ -251,9 +300,9 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Pagination */}
-      {count > 10 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <p className="text-gray-500 text-xs">Page {page} of {Math.ceil(count / 10)}</p>
+          <p className="text-gray-500 text-xs">Page {page} of {totalPages}</p>
           <div className="flex gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -263,8 +312,8 @@ export default function AdminOrdersPage() {
               Previous
             </button>
             <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= Math.ceil(count / 10)}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
               className="px-3 py-1.5 bg-gray-900 border border-white/5 text-gray-400 text-xs rounded-lg disabled:opacity-30 hover:text-white transition-colors"
             >
               Next

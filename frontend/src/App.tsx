@@ -21,6 +21,8 @@ import AccountPage from "./pages/AccountPage";
 import MyOrdersPage from "./pages/MyOrdersPage";
 import { MenuProvider } from "./context/MenuContext";
 import MenuItemPage from "./pages/MenuItemPage";
+
+// Admin pages
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
@@ -28,6 +30,10 @@ import AdminMenuPage from "./pages/admin/AdminMenuPage";
 import AdminMenuFormPage from "./pages/admin/AdminMenuFormPage";
 import AdminCategoriesPage from "./pages/admin/AdminCategoriesPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
+import AdminMessagesPage from "./pages/admin/AdminMessagesPage";
+import AdminRestaurantPage from "./pages/admin/AdminRestaurantPage";
+
 import Footer from "./components/Footer";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
@@ -203,6 +209,18 @@ export default function App() {
                                 <Route
                                   path="users"
                                   element={<AdminUsersPage />}
+                                />
+                                <Route
+                                  path="reviews"
+                                  element={<AdminReviewsPage />}
+                                />
+                                <Route
+                                  path="messages"
+                                  element={<AdminMessagesPage />}
+                                />
+                                <Route
+                                  path="restaurant"
+                                  element={<AdminRestaurantPage />}
                                 />
                               </Routes>
                             </AdminLayout>
