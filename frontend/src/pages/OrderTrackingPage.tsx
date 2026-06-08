@@ -132,87 +132,71 @@ export default function OrderTrackingPage() {
               : t("orderTracking.trackOrder")}
           </h1>
         </div>
-        {canCancel ? (
-          <button
-            onClick={() => cancelOrder(currentOrder.order_number)}
-            disabled={isCancelling}
-            className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <XCircle size={17} />
-            {isCancelling
-              ? t("orderTracking.cancelling")
-              : t("orderTracking.cancelOrder")}
-          </button>
-        ) : (
-          <div className="bg-gray-900 border border-white/5 rounded-2xl p-6 mb-5">
-            <h2 className="text-white font-semibold mb-6">
-              {t("orderTracking.orderStatusTitle")}
-            </h2>
+        <div className="bg-gray-900 border border-white/5 rounded-2xl p-6 mb-5">
+          <h2 className="text-white font-semibold mb-6">
+            {t("orderTracking.orderStatusTitle")}
+          </h2>
 
-            <div className="relative">
-              <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-gray-800" />
-              <div
-                className="absolute left-5 top-5 w-0.5 bg-amber-400 transition-all duration-700"
-                style={{
-                  height: `${(currentIndex / (STATUS_ORDER.length - 1)) * 100}%`,
-                }}
-              />
+          <div className="relative">
+            <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-gray-800" />
+            <div
+              className="absolute left-5 top-5 w-0.5 bg-amber-400 transition-all duration-700"
+              style={{
+                height: `${(currentIndex / (STATUS_ORDER.length - 1)) * 100}%`,
+              }}
+            />
 
-              <div className="space-y-6">
-                {STATUS_ORDER.map((status: OrderStatus, idx) => {
-                  const config = STATUS_CONFIG[status];
-                  const Icon = config.icon;
-                  const isCompleted = idx < currentIndex;
-                  const isCurrent = idx === currentIndex;
+            <div className="space-y-6">
+              {STATUS_ORDER.map((status: OrderStatus, idx) => {
+                const config = STATUS_CONFIG[status];
+                const Icon = config.icon;
+                const isCompleted = idx < currentIndex;
+                const isCurrent = idx === currentIndex;
 
-                  return (
+                return (
+                  <div key={status} className="flex items-start gap-4 relative">
                     <div
-                      key={status}
-                      className="flex items-start gap-4 relative"
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 transition-all duration-300 ${
+                        isCompleted
+                          ? "bg-green-500/20 border border-green-500/40"
+                          : isCurrent
+                            ? "bg-amber-500/20 border border-amber-500/40"
+                            : "bg-gray-800 border border-white/10"
+                      }`}
                     >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 transition-all duration-300 ${
+                      {isCompleted ? (
+                        <CheckCircle size={20} className="text-green-400" />
+                      ) : isCurrent ? (
+                        <Icon size={20} className="text-amber-400" />
+                      ) : (
+                        <Circle size={20} className="text-gray-600" />
+                      )}
+                    </div>
+                    <div className="pt-1.5">
+                      <p
+                        className={`font-semibold text-sm ${
                           isCompleted
-                            ? "bg-green-500/20 border border-green-500/40"
+                            ? "text-green-400"
                             : isCurrent
-                              ? "bg-amber-500/20 border border-amber-500/40"
-                              : "bg-gray-800 border border-white/10"
+                              ? "text-amber-400"
+                              : "text-gray-600"
                         }`}
                       >
-                        {isCompleted ? (
-                          <CheckCircle size={20} className="text-green-400" />
-                        ) : isCurrent ? (
-                          <Icon size={20} className="text-amber-400" />
-                        ) : (
-                          <Circle size={20} className="text-gray-600" />
-                        )}
-                      </div>
-                      <div className="pt-1.5">
-                        <p
-                          className={`font-semibold text-sm ${
-                            isCompleted
-                              ? "text-green-400"
-                              : isCurrent
-                                ? "text-amber-400"
-                                : "text-gray-600"
-                          }`}
-                        >
-                          {t(config.labelKey)}
+                        {t(config.labelKey)}
+                      </p>
+                      {isCurrent && (
+                        <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                          {t("orderTracking.currentStatus")}
                         </p>
-                        {isCurrent && (
-                          <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-                            {t("orderTracking.currentStatus")}
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )}
+        </div>
         <div className="bg-gray-900 border border-white/5 rounded-2xl p-5 mb-5">
           <h2 className="text-white font-semibold mb-4">
             {t("orderTracking.deliveryInfo")}
@@ -282,13 +266,14 @@ export default function OrderTrackingPage() {
           <div className="mb-5">
             {canCancel ? (
               <button
-                onClick={() => {
-                  /* wire up your cancel handler here */
-                }}
-                className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold py-3.5 rounded-xl transition-colors"
+                onClick={() => cancelOrder(currentOrder.order_number)}
+                disabled={isCancelling}
+                className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <XCircle size={17} />
-                {t("orderTracking.cancelOrder")}
+                {isCancelling
+                  ? t("orderTracking.cancelling")
+                  : t("orderTracking.cancelOrder")}
               </button>
             ) : (
               <div className="flex items-start gap-3 bg-gray-900 border border-white/5 rounded-xl px-4 py-3.5">

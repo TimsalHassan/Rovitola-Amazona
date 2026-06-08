@@ -501,9 +501,10 @@ const resources = {
         cancelOrder: "Peru Tilaus",
         cancelNotAllowed:
           "Tilausta ei voi enää peruuttaa — ravintola on jo aloittanut valmistuksen.",
+        cancelling: "Perutaan…",
         backHome: "Takaisin Etusivulle",
         paymentMethod:{
-          cash: "Käteinen",
+          cash_on_delivery: "Käteinen toimituksessa",
           card: "Kortti",
           online: "Verkkomaksu",
         }
@@ -1092,9 +1093,10 @@ const resources = {
         cancelOrder: "Cancel Order",
         cancelNotAllowed:
           "Order can no longer be cancelled — the restaurant has already started preparation.",
+        cancelling: "Cancelling…",
         backHome: "Back to Home",
         paymentMethod:{
-          cash: "Cash",
+          cash_on_delivery: "Cash on Delivery",
           card: "Card",
           online: "Online payment",
         }

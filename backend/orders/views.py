@@ -14,6 +14,8 @@ from .tasks import (
 
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 class GuestOrderLookupThrottle(AnonRateThrottle):
     rate = "10/hour"
@@ -184,7 +186,7 @@ class OrderStatusUpdateView(generics.UpdateAPIView):
     lookup_field = "order_number"
     queryset = Order.objects.all()
 
-
+@method_decorator(csrf_exempt, name="dispatch")
 class OrderCancelView(generics.UpdateAPIView):
     serializer_class = OrderStatusSerializer
     permission_classes = [AllowAny]
@@ -198,6 +200,7 @@ class OrderCancelView(generics.UpdateAPIView):
         user = self.request.user
 
         # Authenticated customer must own the order
+        print("Authenticated user:", user.email)
         if user.is_authenticated:
             if obj.customer and obj.customer != user and not user.is_staff:
                 raise PermissionDenied
