@@ -11,6 +11,9 @@ function formatTime(time: string | null) {
 export default function AboutPage() {
   const { t } = useLanguage();
   const { info } = useRestaurant();
+  const day = t("footer.day");
+  const openingHours = t("contact.openingHours");  
+  const lunchHours = t("contact.lunchHours");
 
   return (
     <main className="bg-gray-950 min-h-screen pt-16">
@@ -81,16 +84,47 @@ export default function AboutPage() {
               <Clock size={18} className="text-amber-400" />
               {t("contact.openingHoursTitle")}
             </h2>
-            <table className="w-full text-sm max-w-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="py-2 text-left text-gray-500 text-xs uppercase tracking-wider">
+                    {day === "footer.day" ? "Day" : day}
+                  </th>
+                  <th className="py-2 text-right text-gray-500 text-xs uppercase tracking-wider">
+                    {openingHours === "contact.openingHours" ? "Opening Hours" : openingHours}
+                  </th>
+                  <th className="py-2 text-right text-gray-500 text-xs uppercase tracking-wider">
+                    {lunchHours === "contact.lunchHours" ? "Lunch Hours" : lunchHours}
+                  </th>
+                </tr>
+              </thead>
               <tbody>
                 {info.opening_hours.map((row) => (
                   <tr key={row.day} className="border-b border-white/5 last:border-0">
-                    <td className="py-2 text-gray-400 capitalize">{t(`footer.days.${row.day}`)}</td>
-                    <td className="py-2 text-gray-300 text-right">
+                    {/* Day */}
+                    <td className="py-2.5 text-gray-400 capitalize">
+                      {t(`footer.days.${row.day}`)}
+                    </td>
+
+                    {/* Opening hours */}
+                    <td className="py-2.5 text-gray-300 text-right">
                       {row.is_closed
                         ? <span className="text-red-400">{t("contact.closed") ?? "Closed"}</span>
                         : `${formatTime(row.open_time)} – ${formatTime(row.close_time)}`
                       }
+                    </td>
+
+                    {/* Lunch hours */}
+                    <td className="py-2.5 text-right">
+                      {row.is_closed ? (
+                        <span className="text-gray-600">—</span>
+                      ) : row.lunch_open && row.lunch_close ? (
+                        <span className="text-amber-400 font-medium">
+                          {formatTime(row.lunch_open)} – {formatTime(row.lunch_close)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
