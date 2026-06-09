@@ -522,6 +522,8 @@ const resources = {
         onTheWay: "Matkalla",
         delivered: "Toimitettu",
         cancelled: "Peruttu",
+        readyForPickup: "Valmis noudettavaksi",
+        completed: "Valmis",
       },
 
       // ── Auth layout ───────────────────────────────────────────────────────
@@ -1118,6 +1120,8 @@ const resources = {
         onTheWay: "On the Way",
         delivered: "Delivered",
         cancelled: "Cancelled",
+        readyForPickup: "Ready for Pickup",
+        completed: "Completed",
       },
 
       // ── Auth layout ───────────────────────────────────────────────────────

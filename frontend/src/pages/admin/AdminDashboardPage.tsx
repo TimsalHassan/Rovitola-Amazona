@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
 import { ADMIN, adminGet } from "../../api/admin";
 import { Package, DollarSign, Utensils, Users, MessageCircle, Star, Settings, Bell } from "lucide-react";
+import { useAdminStats } from "../../context/admin/AdminStatsContext";
 interface Stats {
   total_orders: number;
   pending_orders: number;
@@ -92,6 +93,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const { confirmedOrdersDelta, resetDelta } = useAdminStats();
 
   useEffect(() => {
     if (!token) return;
@@ -105,6 +107,8 @@ export default function AdminDashboardPage() {
         .then(([statsData, ordersData]) => {
           setStats(statsData);
           setRecentOrders(ordersData.results ?? []);
+          // Fresh data from server — clear the local delta
+          resetDelta();
         })
         .catch(console.error)
         .finally(() => { if (isInitial) setLoading(false); });
@@ -113,7 +117,7 @@ export default function AdminDashboardPage() {
     fetchData(true);
     const interval = setInterval(() => fetchData(false), 30_000);
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, resetDelta]);
 
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
@@ -158,13 +162,19 @@ export default function AdminDashboardPage() {
           icon={<Package />}
           to="/admin/orders"
         />
-        <StatCard
-          label="New Orders"
-          value={stats?.confirmed_orders ?? 0}
-          sub="confirmed, not yet started"
-          icon={<Bell />}
-          to="/admin/orders"
-        />
+        {(() => {
+          const newOrdersCount = Math.max(0, (stats?.confirmed_orders ?? 0) + confirmedOrdersDelta);
+          return (
+            <StatCard
+              label="New Orders"
+              accent={newOrdersCount > 0}
+              value={newOrdersCount}
+              sub="confirmed, not yet started"
+              icon={<Bell />}
+              to="/admin/orders"
+            />
+          );
+        })()}
         <StatCard
           label="Total Revenue"
           value={`€${Number(stats?.total_revenue ?? 0).toFixed(2)}`}

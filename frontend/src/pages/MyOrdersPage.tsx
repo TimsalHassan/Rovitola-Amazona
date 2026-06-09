@@ -41,6 +41,8 @@ const STATUS_CONFIG: Record<
   on_the_way: { label: "On the way", color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20", Icon: Truck        },
   delivered:  { label: "Delivered",  color: "text-green-400",  bg: "bg-green-500/10",  border: "border-green-500/20",  Icon: CheckCircle2 },
   cancelled:  { label: "Cancelled",  color: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/20",    Icon: XCircle      },
+  ready_for_pickup: { label: "Ready for Pickup", color: "text-orange-400",  bg: "bg-orange-500/10",  border: "border-orange-500/20",  Icon: ShoppingBag  },
+  completed:        { label: "Completed",        color: "text-green-400",   bg: "bg-green-500/10",   border: "border-green-500/20",   Icon: CheckCircle2 },
 };
 
 function StatusBadge({ status }: { status: OrderStatus }) {
@@ -285,7 +287,7 @@ function OrderCard({ order, language }: { order: Order; language: string }) {
                 </p>
               )}
 
-              {["confirmed", "preparing", "on_the_way"].includes(order.status) && (
+              {["confirmed", "preparing", "on_the_way", "ready_for_pickup"].includes(order.status) && (
                 <button
                   onClick={() =>
                     navigate(`/order/${order.order_number}/track`, {

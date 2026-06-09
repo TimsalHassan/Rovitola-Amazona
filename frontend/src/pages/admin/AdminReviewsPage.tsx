@@ -1,6 +1,7 @@
 // src/pages/admin/AdminReviewsPage.tsx
 import { useEffect, useRef, useState } from "react";
 import { useAdminAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast";
 import { ADMIN, adminGet, adminPatch, adminDelete } from "../../api/admin";
 
 interface Review {
@@ -42,6 +43,7 @@ export default function AdminReviewsPage() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { addToast } = useToast();
 
   async function fetchReviews(pageNum = 1) {
     if (!token) return;
@@ -111,8 +113,9 @@ export default function AdminReviewsPage() {
       setReviews((prev) =>
         prev.map((r) => r.id === review.id ? { ...r, is_approved: !r.is_approved } : r)
       );
+      addToast({ type: "success", title: review.is_approved ? "Review unapproved" : "Review approved", duration: 3000 });
     } catch {
-      alert("Failed to update review.");
+      addToast({ type: "error", title: "Failed to update review", duration: 4000 });
     } finally {
       setTogglingId(null);
     }
@@ -126,8 +129,9 @@ export default function AdminReviewsPage() {
       await adminDelete(`${ADMIN}/reviews/${id}/`, token);
       setReviews((prev) => prev.filter((r) => r.id !== id));
       setCount((c) => c - 1);
+      addToast({ type: "success", title: "Review deleted", duration: 3000 });
     } catch {
-      alert("Failed to delete review.");
+      addToast({ type: "error", title: "Failed to delete review", duration: 4000 });
     } finally {
       setDeletingId(null);
     }

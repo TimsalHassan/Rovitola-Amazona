@@ -22,5 +22,11 @@ class RestaurantSettingsSerializer(serializers.ModelSerializer):
 
 
 class DeliveryCheckSerializer(serializers.Serializer):
-    latitude = serializers.FloatField()
-    longitude = serializers.FloatField()
+    # existing lat/lng (optional rakho — ab dono support karega)
+    latitude = serializers.FloatField(required=False)
+    longitude = serializers.FloatField(required=False)
+    # NEW: address-based check
+    street = serializers.CharField(required=False, allow_blank=True)
+    city = serializers.CharField(required=False, allow_blank=True)
+    postal = serializers.CharField(required=False, allow_blank=True)
+    country = serializers.CharField(required=False, default="Finland")

@@ -14,6 +14,7 @@ import {
 import { useCart } from "../hooks/useCart";
 import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../hooks/useToast";
 import {
   ordersApi,
   type CreateOrderPayload,
@@ -44,6 +45,7 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { addToast } = useToast();
   const state = location.state as CartLocationState | null;
 
   const [paymentMethod, setPaymentMethod] = useState<
@@ -169,6 +171,7 @@ export default function CheckoutPage() {
         window.location.replace(payment_url); // replace so back-button doesn't return to checkout
       } else {
         clearCart();
+        addToast({ type: "success", title: "Order placed!", duration: 4000 });
         navigate(`/order/${order.order_number}/track`, { replace: true });
       }
     } catch (err) {

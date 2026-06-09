@@ -1,5 +1,19 @@
 import math
 from django.utils import timezone
+from geopy.geocoders import Nominatim
+
+
+def geocode_address(street, city, postal, country="Finland"):
+    """Address string ko lat/lon mein convert karta hai."""
+    geolocator = Nominatim(user_agent="ravintola-amazona")
+    query = f"{street}, {postal} {city}, {country}"
+    try:
+        location = geolocator.geocode(query, timeout=5)
+        if location:
+            return location.latitude, location.longitude
+    except Exception:
+        pass
+    return None, None
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):

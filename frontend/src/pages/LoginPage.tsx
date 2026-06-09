@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
+import { useToast } from "../hooks/useToast";
 import { FormField, PasswordField, Button, Alert } from "../components/FormElements";
 
 type T = (text: string) => string;
@@ -23,6 +24,7 @@ function validatePassword(value: string, t: T): string | null {
 export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useLanguage();
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -80,15 +82,15 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
+      addToast({ type: "success", title: "Logged in successfully", duration: 3000 });
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const e = err as Error & { field?: string };
       if (e.field) {
         setFieldErrors({ [e.field]: e.message });
       } else {
-        setError(
-          t("login.signInError")
-        );
+        setError(t("login.signInError"));
+        addToast({ type: "error", title: "Login failed", duration: 4000 });
       }
     } finally {
       setLoading(false);

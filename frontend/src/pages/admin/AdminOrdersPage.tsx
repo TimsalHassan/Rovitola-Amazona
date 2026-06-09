@@ -1,7 +1,9 @@
 // src/pages/admin/AdminOrdersPage.tsx
 import { useEffect, useState } from "react";
 import { useAdminAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast";
 import { ADMIN, adminGet, adminPatch } from "../../api/admin";
+import { useAdminStats } from "../../context/admin/AdminStatsContext";
 
 type OrderStatus = "all"
   | "pending"
@@ -121,6 +123,8 @@ export default function AdminOrdersPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
+  const { addToast } = useToast();
+  const { adjustConfirmedOrders } = useAdminStats();
 
   async function fetchOrders(pageNum = 1) {
     if (!token) return;
@@ -165,12 +169,24 @@ export default function AdminOrdersPage() {
         status: newStatus,
       });
       setOrders((prev) =>
-        prev.map((o) =>
-          o.order_number === orderNumber ? { ...o, status: newStatus } : o,
-        ),
+        prev.map((o) => {
+          if (o.order_number !== orderNumber) return o;
+          // Track confirmed-order count changes for the dashboard stat card:
+          // pending → confirmed: new confirmed order (+1)
+          if (o.status === "pending" && newStatus === "confirmed") {
+            adjustConfirmedOrders(+1);
+          }
+          // confirmed → anything else: it's no longer a "new" order (-1)
+          if (o.status === "confirmed" && newStatus !== "confirmed") {
+            adjustConfirmedOrders(-1);
+          }
+          return { ...o, status: newStatus };
+        }),
       );
+      addToast({ type: "success", title: `Status updated to ${newStatus}`, duration: 3000 });
     } catch (err) {
       console.error("Failed to update status", err);
+      addToast({ type: "error", title: `Failed to update status to ${newStatus}`, duration: 3000 });
     } finally {
       setUpdating(null);
     }

@@ -8,6 +8,8 @@ export type OrderStatus =
   | "preparing"
   | "on_the_way"
   | "delivered"
+  | "ready_for_pickup"
+  | "completed"
   | "cancelled";
 
 export type OrderType = "delivery" | "pickup";

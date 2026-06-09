@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast"; 
 import { ADMIN, adminGet, adminDelete, adminPatch } from "../../api/admin";
 
 interface MenuItem {
@@ -40,6 +41,7 @@ export default function AdminMenuPage() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
+  const { addToast } = useToast();
 
   const fetchItems = useCallback(async (pageNum = 1) => {
     if (!token) return;
@@ -75,8 +77,9 @@ export default function AdminMenuPage() {
       await adminDelete(`${ADMIN}/menu-items/${id}/`, token);
       setItems((prev) => prev.filter((i) => i.id !== id));
       setCount((c) => c - 1);
+      addToast({ type: "success", title: "Item deleted", duration: 3000 });
     } catch {
-      alert("Failed to delete item.");
+      addToast({ type: "error", title: "Failed to delete item", duration: 4000 });
     } finally {
       setDeletingId(null);
     }
@@ -94,8 +97,9 @@ export default function AdminMenuPage() {
       setItems((prev) =>
         prev.map((i) => (i.id === item.id ? { ...i, is_available: res.is_available } : i))
       );
+      addToast({ type: "success", title: `Item ${res.is_available ? "enabled" : "disabled"}`, duration: 3000 });
     } catch {
-      alert("Failed to toggle availability.");
+      addToast({ type: "error", title: "Failed to toggle availability", duration: 4000 });
     } finally {
       setTogglingId(null);
     }

@@ -16,16 +16,15 @@ import { useLanguage } from "../hooks/useLanguage";
 import { OrderStatus } from "../api/order";
 import { useOrders } from "../context/OrderContext";
 
-const STATUS_ORDER: OrderStatus[] = [
-  "pending",
-  "confirmed",
-  "preparing",
-  "on_the_way",
-  "delivered",
-  "cancelled",
+const DELIVERY_STATUS_ORDER: OrderStatus[] = [
+  "pending", "confirmed", "preparing", "on_the_way", "delivered",
 ];
 
-const STATUS_CONFIG = {
+const PICKUP_STATUS_ORDER: OrderStatus[] = [
+  "pending", "confirmed", "preparing", "ready_for_pickup", "completed",
+];
+
+const STATUS_CONFIG_DELIVERY = {
   pending: {
     labelKey: "orderStatus.pending",
     icon: CheckCircle,
@@ -56,11 +55,38 @@ const STATUS_CONFIG = {
     color: "text-green-400",
     bg: "bg-green-400",
   },
-  cancelled: {
-    labelKey: "orderStatus.cancelled",
-    icon: XCircle,
-    color: "text-red-400",
-    bg: "bg-red-400",
+};
+
+const STATUS_CONFIG_PICKUP = {
+  pending: {
+    labelKey: "orderStatus.pending",
+    icon: CheckCircle,
+    color: "text-amber-400",
+    bg: "bg-amber-400",
+  },
+  confirmed: {
+    labelKey: "orderStatus.confirmed",
+    icon: Package,
+    color: "text-blue-400",
+    bg: "bg-blue-400",
+  },
+  preparing: {
+    labelKey: "orderStatus.preparing",
+    icon: ChefHat,
+    color: "text-amber-400",
+    bg: "bg-amber-400",
+  },
+  ready_for_pickup: {
+    labelKey: "orderStatus.readyForPickup",  // "Ready for Pickup"
+    icon: ShoppingBag,
+    color: "text-green-400",
+    bg: "bg-green-400",
+  },
+  completed: {
+    labelKey: "orderStatus.completed",       // "Completed"
+    icon: CheckCircle,
+    color: "text-green-400",
+    bg: "bg-green-400",
   },
 };
 
@@ -109,12 +135,14 @@ export default function OrderTrackingPage() {
     );
   }
 
+  const isPickup = currentOrder.order_type === "pickup";
+  const STATUS_CONFIG = isPickup ? STATUS_CONFIG_PICKUP : STATUS_CONFIG_DELIVERY;
+  const STATUS_ORDER = isPickup ? PICKUP_STATUS_ORDER : DELIVERY_STATUS_ORDER;
   const currentStatus = currentOrder.status;
   const cancelled = currentStatus === "cancelled";
-  const currentIndex = STATUS_ORDER.indexOf(currentStatus);
+  const currentIndex = STATUS_ORDER.indexOf(currentStatus as OrderStatus);
 
-  const canCancel =
-    currentStatus === "pending" || currentStatus === "confirmed";
+  const canCancel = currentStatus === "pending";
 
   return (
     <main className="bg-gray-950 min-h-screen pt-16">
@@ -142,13 +170,17 @@ export default function OrderTrackingPage() {
             <div
               className="absolute left-5 top-5 w-0.5 bg-amber-400 transition-all duration-700"
               style={{
-                height: `${(currentIndex / (STATUS_ORDER.length - 1)) * 100}%`,
+                height: currentIndex <= 0 
+                  ? "0%" 
+                  : currentIndex >= STATUS_ORDER.length - 1
+                    ? "calc(100% - 40px)"
+                    : `${(currentIndex / (STATUS_ORDER.length - 1)) * 100}%`,
               }}
             />
 
             <div className="space-y-6">
               {STATUS_ORDER.map((status: OrderStatus, idx) => {
-                const config = STATUS_CONFIG[status];
+                const config = (STATUS_CONFIG as any)[status];
                 const Icon = config.icon;
                 const isCompleted = idx < currentIndex;
                 const isCurrent = idx === currentIndex;
@@ -265,21 +297,45 @@ export default function OrderTrackingPage() {
         {!cancelled && (
           <div className="mb-5">
             {canCancel ? (
-              <button
-                onClick={() => cancelOrder(currentOrder.order_number)}
-                disabled={isCancelling}
-                className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <XCircle size={17} />
-                {isCancelling
-                  ? t("orderTracking.cancelling")
-                  : t("orderTracking.cancelOrder")}
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={() => cancelOrder(currentOrder.order_number)}
+                  disabled={isCancelling}
+                  className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <XCircle size={17} />
+                  {isCancelling
+                    ? t("orderTracking.cancelling")
+                    : t("orderTracking.cancelOrder")}
+                </button>
+                <div className="flex items-center justify-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+                  <CheckCircle size={15} className="text-green-400 shrink-0" />
+                  <p className="text-green-400 text-sm font-medium">
+                    {isPickup
+                      ? "Your order has been placed! Come pick it up when ready."
+                      : "Your order has been placed! We'll deliver it to you soon."}
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="flex items-start gap-3 bg-gray-900 border border-white/5 rounded-xl px-4 py-3.5">
-                <XCircle size={16} className="text-gray-600 mt-0.5 shrink-0" />
+              <div className="flex items-center justify-center gap-3 bg-gray-900 border border-white/5 rounded-xl px-4 py-3.5">
+                <XCircle size={16} className="text-gray-600 shrink-0" />
                 <p className="text-gray-500 text-sm">
-                  {t("orderTracking.cancelNotAllowed")}
+                  {currentStatus === "confirmed"
+                    ? "Order has been confirmed — it can no longer be cancelled."
+                    : currentStatus === "preparing"
+                      ? isPickup
+                        ? "Order can no longer be cancelled — the restaurant has already started preparing your order."
+                        : "Order can no longer be cancelled — the restaurant has already started preparation."
+                      : currentStatus === "on_the_way"
+                        ? "Order is on the way — it can no longer be cancelled."
+                        : currentStatus === "ready_for_pickup"
+                          ? "Your order is ready for pickup — please come collect it."
+                          : currentStatus === "completed"
+                            ? "This order has already been picked up."
+                            : currentStatus === "delivered"
+                              ? "This order has already been delivered."
+                              : t("orderTracking.cancelNotAllowed")}
                 </p>
               </div>
             )}

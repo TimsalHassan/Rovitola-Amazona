@@ -23,6 +23,7 @@ import { type CartItem } from "../api/cart";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
+import { useToast } from "../hooks/useToast";
 import { addressApi, type Address } from "../api/auth";
 import { useRestaurant } from "../context/RestaurantContext";
 
@@ -34,6 +35,7 @@ function CartItemRow({ item }: { item: CartItem }) {
   const [showNote, setShowNote] = useState(false);
   const [note, setNote] = useState(item.special_instruction);
   const [saving, setSaving] = useState(false);
+  const { addToast } = useToast();
 
   const name =
     (language === "fi" ? item.menu_item_name_fi : item.menu_item_name) ||
@@ -44,8 +46,10 @@ function CartItemRow({ item }: { item: CartItem }) {
     const next = item.quantity + delta;
     if (next <= 0) {
       await removeItem(item.id);
+      addToast({ type: "success", title: "Item removed", duration: 3000 });
     } else {
       await updateItem(item.id, { quantity: next });
+      addToast({ type: "success", title: "Cart updated", duration: 3000 });
     }
   }
 
@@ -439,34 +443,67 @@ export default function CartPage() {
     guestEmail: "",
   });
 
+  const [deliveryCheck, setDeliveryCheck] = useState<{
+    is_eligible: boolean;
+    delivery_fee: number | null;
+    distance_km: number | null;
+    message: string;
+  } | null>(null);
+
+  const checkDeliveryByAddress = useCallback(
+    async (street: string, city: string, postal: string, country: string) => {
+      setCheckingDelivery(true);
+      try {
+        const res = await fetch("/api/restaurant/delivery-check/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ street, city, postal, country }),
+        });
+        const data = await res.json();
+        setDeliveryCheck(data);
+      } catch {
+        setDeliveryCheck(null);
+      } finally {
+        setCheckingDelivery(false);
+      }
+    },
+    []
+  );
+  
+
+  const [checkingDelivery, setCheckingDelivery] = useState(false);
+  const minOrder = restaurant.minOrder;
+  const meetsMinOrder = form.orderType === "pickup" || subtotal >= minOrder;
+
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [addressError, setAddressError] = useState<string | undefined>();
+  const [showDeliveryUnavailableModal, setShowDeliveryUnavailableModal] = useState(false);
   const [errors, setErrors] = useState<
     Partial<Record<keyof CheckoutFormData, string>>
   >({});
 
   // ── Fetch saved addresses ──────────────────────────────────────────────────
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!user || !token) return;
-    addressApi
-      .list(token)
-      .then((addresses) => {
-        setSavedAddresses(addresses);
-        const def = addresses.find((a) => a.is_default) ?? addresses[0];
-        if (def) {
-          setForm((f) => ({
-            ...f,
-            deliveryAddress: {
-              street: def.street_address,
-              city: def.city === "-" ? "" : def.city,
-              postal: def.postal_code === "-" ? "" : def.postal_code,
-              country: def.country || "Finland",
-            },
-          }));
-        }
-      })
-      .catch(() => {});
-  }, [user, token]);
+    if (form.orderType !== "delivery") {
+      setDeliveryCheck(null);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const { street, city, postal, country } = form.deliveryAddress;
+    if (!street.trim()) {
+      setDeliveryCheck(null);  // address empty → fee hide
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => {
+      checkDeliveryByAddress(street, city, postal, country);
+    }, 800);  // 800ms debounce
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [form.deliveryAddress, form.orderType, checkDeliveryByAddress]);
+
 
   const handleAddressSaved = useCallback((addr: Address) => {
     setSavedAddresses((prev) => {
@@ -478,8 +515,18 @@ export default function CartPage() {
 
   // Round at source so navigate() state never carries a floating-point artifact
   const round2 = (n: number) => Math.round(n * 100) / 100;
+
   const deliveryCharge =
-    form.orderType === "delivery" ? Number(restaurant.deliveryFee || 0) : 0;
+    form.orderType === "delivery" && deliveryCheck?.is_eligible
+      ? (deliveryCheck.delivery_fee ?? 0)
+      : 0;
+
+  // True when address was checked and delivery is NOT available to that location
+  const deliveryNotAvailable =
+    form.orderType === "delivery" &&
+    !!deliveryCheck &&
+    !deliveryCheck.is_eligible &&
+    deliveryCheck.distance_km !== null; // null means geocode failed, not out-of-range
 
   const total = round2(subtotal + deliveryCharge);
 
@@ -501,6 +548,10 @@ export default function CartPage() {
   };
 
   const handleProceed = () => {
+    if (deliveryNotAvailable) {
+      setShowDeliveryUnavailableModal(true);
+      return;
+    }
     if (!validate()) return;
     // Format structured address fields into a clean string for the order payload
 
@@ -521,9 +572,7 @@ export default function CartPage() {
         deliveryAddress: deliveryAddressStr,
         orderNotes: form.orderNotes,
         subtotal,
-        deliveryCharge: form.orderType === "delivery" && form.deliveryAddress.street.trim()
-          ? round2(Number(restaurant.deliveryFee))
-          : 0,
+        deliveryCharge: form.orderType === "delivery" ? round2(deliveryCharge) : 0,
         discountAmount: 0,
         total,
         guestName: form.guestName,
@@ -763,16 +812,29 @@ export default function CartPage() {
                   <span>{t("cart.subtotal")}</span>
                   <span>€{subtotal.toFixed(2)}</span>
                 </div>
-                {form.orderType === "delivery" && restaurant.deliveryFee && (
-                  <div className="flex justify-between text-sm text-gray-400">
+                {form.orderType === "delivery" && (
+                  <div className="flex justify-between text-sm">
                     <span>{t("cart.delivery")}</span>
-                    <span>
-                      {Number(restaurant.deliveryFee) === 0 ? (
-                        <span className="text-green-400">{t("cart.free")}</span>
+                    <div className="text-right">
+                      {!form.deliveryAddress.street.trim() ? (
+                        <span className="text-gray-600 text-xs">Enter address</span>
+                      ) : checkingDelivery ? (
+                        <span className="text-gray-500 text-xs">Checking…</span>
+                      ) : deliveryCheck ? (
+                        <div>
+                          {deliveryNotAvailable ? (
+                            <span className="text-red-400 font-medium text-sm">Not available</span>
+                          ) : (
+                            <span className={deliveryCharge === 0 ? "text-green-400 font-medium" : "text-white"}>
+                              {deliveryCharge === 0 ? t("cart.free") : `€${deliveryCharge.toFixed(2)}`}
+                            </span>
+                          )}
+                          <p className="text-gray-500 text-[10px] mt-0.5">{deliveryCheck.message}</p>
+                        </div>
                       ) : (
-                        `€${Number(restaurant.deliveryFee).toFixed(2)}`
+                        <span className="text-gray-600 text-xs">—</span>
                       )}
-                    </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -782,9 +844,35 @@ export default function CartPage() {
                 <span className="text-amber-400">€{total.toFixed(2)}</span>
               </div>
 
+              {/* Min order warning */}
+              {form.orderType === "delivery" && minOrder > 0 && !meetsMinOrder && (
+                <div className="mt-4 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+                  <span className="text-amber-400 text-sm">🛒</span>
+                  <p className="text-amber-400 text-xs font-medium">
+                    Minimum order for delivery is €{minOrder.toFixed(2)}.
+                    Add €{(minOrder - subtotal).toFixed(2)} more to proceed.
+                  </p>
+                </div>
+              )}
+
+              {/* Delivery not available warning */}
+              {deliveryNotAvailable && (
+                <div className="mt-4 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  <Truck size={15} className="text-red-400 shrink-0" />
+                  <p className="text-red-400 text-xs font-medium">
+                    Delivery is not available to this address. Switch to pickup or change your address.
+                  </p>
+                </div>
+              )}
+
               <button
                 onClick={handleProceed}
-                className="mt-5 w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-3.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                disabled={!meetsMinOrder}
+                className={`mt-5 w-full font-bold py-3.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 ${
+                  meetsMinOrder
+                    ? "bg-amber-500 hover:bg-amber-400 text-gray-900"
+                    : "bg-gray-800 text-gray-500 cursor-not-allowed"
+                }`}
               >
                 {t("cart.proceedToCheckout")}
                 <ArrowRight size={15} />
@@ -797,6 +885,53 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Delivery Unavailable Modal ──────────────────────────────────────── */}
+      {showDeliveryUnavailableModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            {/* Icon */}
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/15 mx-auto mb-4">
+              <Truck size={22} className="text-red-400" />
+            </div>
+
+            <h2 className="text-white font-bold text-lg text-center mb-2">
+              Delivery Not Available
+            </h2>
+            <p className="text-gray-400 text-sm text-center mb-1">
+              Sorry, we don't deliver to your address.
+            </p>
+            {deliveryCheck?.distance_km != null && (
+              <p className="text-gray-500 text-xs text-center mb-5">
+                Your address is {deliveryCheck.distance_km}km away — outside our delivery area.
+              </p>
+            )}
+
+            <div className="flex flex-col gap-3 mt-5">
+              {/* Switch to Pickup */}
+              <button
+                onClick={() => {
+                  setForm((f) => ({ ...f, orderType: "pickup" }));
+                  setDeliveryCheck(null);
+                  setShowDeliveryUnavailableModal(false);
+                }}
+                className="w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                <Package size={16} />
+                Switch to Pickup
+              </button>
+
+              {/* Keep delivery address */}
+              <button
+                onClick={() => setShowDeliveryUnavailableModal(false)}
+                className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium py-3 rounded-xl text-sm transition-colors"
+              >
+                Change Address
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

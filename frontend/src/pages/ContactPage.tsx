@@ -4,6 +4,7 @@ import { useLanguage } from "../hooks/useLanguage";
 import { useRestaurant } from "../context/RestaurantContext";
 import { BASE } from "../api/base";
 import { Link } from "react-router-dom";
+import { useToast } from "../hooks/useToast";
 
 function formatTime(time: string | null) {
   if (!time) return null;
@@ -22,7 +23,7 @@ const INITIAL_FORM = {
 export default function ContactPage() {
   const { t } = useLanguage();
   const { info } = useRestaurant();
-
+  const { addToast } = useToast();
   const [form, setForm] = useState(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -55,6 +56,7 @@ export default function ContactPage() {
 
       setSubmitted(true);
       setForm(INITIAL_FORM);
+      addToast({ type: "success", title: "Message sent!", duration: 3000 });
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

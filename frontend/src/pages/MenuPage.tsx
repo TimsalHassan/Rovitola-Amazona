@@ -247,9 +247,12 @@ function DealsBanner({ items }: { items: ApiMenuItem[] }) {
 
   // Sale items to spotlight
   const saleItems = useMemo(
-    () => items.filter((i) => i.is_on_sale).slice(0, 6),
-    [items],
-  );
+  () => items
+    .filter((i) => i.is_on_sale)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 6),
+  [items],
+);
 
   if (!dealCategories.length && !saleItems.length) return null;
 
@@ -628,6 +631,13 @@ export default function MenuPage() {
                         <span className="text-gray-600 text-sm ml-1">
                           ({categoryItems.length})
                         </span>
+                        {/* Deal tag — category ke saath */}
+                        {cat.has_deal && cat.deal_label && (
+                          <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-semibold px-2 py-0.5 rounded-full ml-1">
+                            <Tag size={10} />
+                            {cat.deal_label}
+                          </span>
+                        )}
                       </div>
 
                       {categoryItems.length ? (
