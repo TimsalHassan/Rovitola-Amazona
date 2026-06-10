@@ -52,6 +52,7 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const isSnapping = useRef(false);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   const total = items.length;
   const gapPx = 16;
@@ -67,13 +68,16 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  // Shuffle on mount — new random order every page visit
+  const shuffledItems = useMemo(() => shuffle([...items]), [items]);
+
   const cloned = useMemo(
     () => [
-      ...items.slice(total - visible),
-      ...items,
-      ...items.slice(0, visible),
+      ...shuffledItems.slice(total - visible),
+      ...shuffledItems,
+      ...shuffledItems.slice(0, visible),
     ],
-    [items, visible, total],
+    [shuffledItems, visible, total],
   );
 
   const cardWidthPercent = 100 / visible;
@@ -81,11 +85,25 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
 
   const x = useMotionValue(0);
 
+  // Per-card pixel width from DOM for accurate 1-card scroll
+  const getCardPxWidth = useCallback(() => {
+    if (!trackRef.current) return 0;
+    const card = trackRef.current.children[0] as HTMLElement;
+    if (!card) return 0;
+    return card.offsetWidth + gapPx;
+  }, []);
+
   const getTargetX = useCallback(
     (idx: number) => {
+      const cardPx = getCardPxWidth();
+      if (cardPx > 0) {
+        // Pixel-based: move exactly one card width per step
+        return -(visible + idx) * cardPx;
+      }
+      // Fallback to percent-based
       return -(visible + idx) * cardWidthPercent;
     },
-    [visible, cardWidthPercent],
+    [visible, cardWidthPercent, getCardPxWidth],
   );
 
   const snapTo = useCallback(
@@ -94,7 +112,7 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
       if (animate) {
         motionAnimate(x, target, {
           type: "tween",
-          duration: 0.25,
+          duration: 0.35,
           ease: [0.25, 0.1, 0.25, 1],
         });
       } else {
@@ -155,7 +173,7 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="overflow-hidden">
-        <motion.div className="flex" style={{ x, gap: `${gapPx}px` }}>
+        <motion.div ref={trackRef} className="flex" style={{ x, gap: `${gapPx}px` }}>
           {cloned.map((item, i) => (
             <Link
               key={`${item.id}-${i}`}
@@ -423,7 +441,7 @@ export default function HomePage() {
       is_on_sale: item.is_on_sale,
     }));
 
-    setCarouselItems(shuffle(mapped).slice(0, 12));
+    setCarouselItems(mapped.slice(0, 12));
     setCarouselLoading(false);
   }, [items, isItemsLoading, error, language, t]);
 
