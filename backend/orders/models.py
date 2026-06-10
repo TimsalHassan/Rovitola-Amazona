@@ -14,6 +14,16 @@ class Order(models.Model):
         null=True, blank=True,
         related_name='orders'
     )
+    STATUS_CHOICES = [
+        ("pending",           "Pending"),
+        ("confirmed",         "Confirmed"),
+        ("preparing",         "Preparing"),
+        ("ready_for_pickup",  "Ready for Pickup"),
+        ("on_the_way",        "On the Way"),
+        ("delivered",         "Delivered"),
+        ("completed",         "Completed"),
+        ("cancelled",         "Cancelled"),
+    ]
     PAYMENT_STATUS = [
         ("unpaid",    "Unpaid"),
         ("paid",      "Paid"),
@@ -30,7 +40,7 @@ class Order(models.Model):
     guest_email = models.EmailField(blank=True)
 
     order_number = models.CharField(max_length=20, unique=True)
-    status = models.CharField(max_length=20, default="pending")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     order_type = models.CharField(
         max_length=10, choices=ORDER_TYPE_CHOICES, default="delivery"
     )

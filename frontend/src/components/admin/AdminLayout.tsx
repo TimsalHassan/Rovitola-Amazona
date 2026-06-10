@@ -1,5 +1,5 @@
 // src/components/admin/AdminLayout.tsx
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
 import Logo from "../Logo";
@@ -17,6 +17,11 @@ import {
   LogOut,
   Layers,
 } from "lucide-react";
+import { useToast } from "../../hooks/useToast";
+import { ToastProvider } from "../../context/admin/ToastContext";
+import ToastContainer from "./ToastContainer";
+import { ADMIN, adminGet } from "../../api/admin";
+import { AdminStatsProvider } from "../../context/admin/AdminStatsContext";
 
 const NAV = [
   { label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
@@ -30,11 +35,105 @@ const NAV = [
   { label: "Restaurant", path: "/admin/restaurant", icon: Settings },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { admin, logout } = useAdminAuth();
+interface Stats {
+  total_orders: number;
+  pending_orders: number;
+  confirmed_orders: number;
+  total_revenue: string;
+  today_revenue: string;
+  total_users: number;
+  total_menu_items: number;
+  total_categories: number;
+  unread_messages: number;
+  pending_reviews: number;
+}
+
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
+  const { admin, token, logout } = useAdminAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ── Toast system ────────────────────────────────────────────────────────────
+  const { toasts, addToast, removeToast } = useToast();
+
+  // Previous stats refs — to detect changes between polls
+  const prevTotalOrders = useRef<number | null>(null);
+  const prevMessages    = useRef<number | null>(null);
+  const prevReviews     = useRef<number | null>(null);
+  const isFirstPoll     = useRef(true);
+
+  // ── Poll stats every 30s, fire toasts on new activity ──────────────────────
+  useEffect(() => {
+    if (!token) return;
+
+    async function pollStats() {
+      try {
+        const stats = await adminGet<Stats>(`${ADMIN}/stats/`, token!);
+
+        if (isFirstPoll.current) {
+          // Seed the refs on first load — don't fire toasts for existing data
+          prevTotalOrders.current = stats.total_orders;
+          prevMessages.current    = stats.unread_messages;
+          prevReviews.current     = stats.pending_reviews;
+          isFirstPoll.current     = false;
+          return;
+        }
+
+        // New orders → compare total_orders so any new order fires the toast,
+        // regardless of whether it's still pending or already confirmed.
+        if (
+          prevTotalOrders.current !== null &&
+          stats.total_orders > prevTotalOrders.current
+        ) {
+          const diff = stats.total_orders - prevTotalOrders.current;
+          addToast({
+            type: "order",
+            title: `${diff} New Order${diff > 1 ? "s" : ""}!`,
+            body: `You have ${diff} new order${diff > 1 ? "s" : ""} — head to Orders to confirm.`,
+            // No duration → sticky until dismissed
+          });
+          prevTotalOrders.current = stats.total_orders;
+        }
+
+        // New unread messages → 8s auto-dismiss
+        if (
+          prevMessages.current !== null &&
+          stats.unread_messages > prevMessages.current
+        ) {
+          const diff = stats.unread_messages - prevMessages.current;
+          addToast({
+            type: "message",
+            title: `${diff} New Message${diff > 1 ? "s" : ""}`,
+            body: "You have unread contact messages.",
+            duration: 8000,
+          });
+          prevMessages.current = stats.unread_messages;
+        }
+
+        // New pending reviews → 8s auto-dismiss
+        if (
+          prevReviews.current !== null &&
+          stats.pending_reviews > prevReviews.current
+        ) {
+          const diff = stats.pending_reviews - prevReviews.current;
+          addToast({
+            type: "review",
+            title: `${diff} New Review${diff > 1 ? "s" : ""}`,
+            body: "New review(s) waiting for your approval.",
+            duration: 8000,
+          });
+          prevReviews.current = stats.pending_reviews;
+        }
+      } catch {
+        // Silently ignore poll errors
+      }
+    }
+
+    pollStats(); // immediate first check
+    const interval = setInterval(pollStats, 10_000);
+    return () => clearInterval(interval);
+  }, [token, addToast]);
 
   function handleLogout() {
     logout();
@@ -49,6 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     NAV.find((n) => location.pathname.startsWith(n.path))?.label ?? "Admin";
 
   return (
+    <AdminStatsProvider>
     <div className="h-screen overflow-hidden bg-gray-950 flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -83,7 +183,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
 
-        {/* Nav — only this scrolls */}
+        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV.map((item) => {
             const active = location.pathname.startsWith(item.path);
@@ -151,7 +251,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main — offset by sidebar width, fills remaining space */}
+      {/* Main */}
       <div className="flex flex-col flex-1 min-w-0 lg:ml-52">
         {/* Topbar */}
         <header
@@ -173,6 +273,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <main className="flex-1 overflow-y-auto p-5">{children}</main>
       </div>
+
+      {/* ── Toast notifications ─────────────────────────────────────────────── */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
+    </AdminStatsProvider>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ToastProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </ToastProvider>
   );
 }

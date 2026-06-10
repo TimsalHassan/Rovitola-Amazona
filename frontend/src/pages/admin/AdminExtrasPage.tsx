@@ -2,25 +2,35 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
-import { ADMIN, adminGet, adminPost, adminPut, adminDelete } from "../../api/admin";
+import { ADMIN, adminGet, adminPost, adminPatch, adminDelete } from "../../api/admin";
 import { ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
 
 export interface Extra {
   id: number;
+  category: number;
+  category_name: string;
   name: string;
   name_fi: string;
   description: string;
   description_fi: string;
   selection_type: "single" | "multiple";
+  extra_type: "choice" | "extra";
   is_required: boolean;
+  is_active: boolean;
   min_selections: number;
   max_selections: number | null;
-  is_active: boolean;
   order: number;
   options_count: number;
 }
 
+interface Category {
+  id: number;
+  name: string;
+  name_fi: string;
+}
+
 interface FormState {
+  category: string;
   name: string;
   name_fi: string;
   description: string;
@@ -34,6 +44,7 @@ interface FormState {
 }
 
 const EMPTY: FormState = {
+  category: "",
   name: "",
   name_fi: "",
   description: "",
@@ -73,6 +84,7 @@ function Toggle({
 export default function AdminExtrasPage() {
   const { token } = useAdminAuth();
   const [extras, setExtras] = useState<Extra[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Extra | null>(null);
@@ -81,26 +93,26 @@ export default function AdminExtrasPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchExtras = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await adminGet<{ results?: Extra[] } | Extra[]>(
-        `${ADMIN}/extras/`,
-        token
-      );
-      const list = Array.isArray(data) ? data : (data.results ?? []);
-      setExtras(list);
+      const [extrasData, catsData] = await Promise.all([
+        adminGet<{ results?: Extra[] } | Extra[]>(`${ADMIN}/extras/`, token),
+        adminGet<{ results?: Category[] } | Category[]>(`${ADMIN}/categories/`, token),
+      ]);
+      setExtras(Array.isArray(extrasData) ? extrasData : (extrasData.results ?? []));
+      setCategories(Array.isArray(catsData) ? catsData : (catsData.results ?? []));
     } catch {
-      console.error("Failed to load extras");
+      console.error("Failed to load data");
     } finally {
       setLoading(false);
     }
   }, [token]);
 
   useEffect(() => {
-    fetchExtras();
-  }, [fetchExtras]);
+    fetchData();
+  }, [fetchData]);
 
   function openNew() {
     setEditItem(null);
@@ -112,6 +124,7 @@ export default function AdminExtrasPage() {
   function openEdit(item: Extra) {
     setEditItem(item);
     setForm({
+      category: String(item.category),
       name: item.name,
       name_fi: item.name_fi,
       description: item.description ?? "",
@@ -139,9 +152,14 @@ export default function AdminExtrasPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!token) return;
+    if (!form.category) {
+      setError("Please select a category.");
+      return;
+    }
     setSaving(true);
     setError(null);
     const payload = {
+      category: parseInt(form.category),
       name: form.name,
       name_fi: form.name_fi,
       description: form.description,
@@ -155,7 +173,7 @@ export default function AdminExtrasPage() {
     };
     try {
       if (editItem) {
-        const updated = await adminPut<Extra>(
+        const updated = await adminPatch<Extra>(
           `${ADMIN}/extras/${editItem.id}/`,
           token,
           payload
@@ -221,7 +239,7 @@ export default function AdminExtrasPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5">
-                  {["Name", "Type", "Required", "Options", "Active", "Actions"].map((h) => (
+                  {["Name", "Category", "Type", "Required", "Options", "Active", "Actions"].map((h) => (
                     <th
                       key={h}
                       className="text-left text-gray-500 text-xs font-medium px-4 py-3 uppercase tracking-wider whitespace-nowrap"
@@ -239,6 +257,11 @@ export default function AdminExtrasPage() {
                       {item.name && item.name_fi && (
                         <p className="text-gray-500 text-xs">{item.name_fi}</p>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 text-[10px] rounded border font-medium bg-gray-700/50 text-gray-300 border-white/10">
+                        {item.category_name || "—"}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -332,6 +355,27 @@ export default function AdminExtrasPage() {
                   {error}
                 </div>
               )}
+
+              {/* Category */}
+              <div className="bg-gray-900 border border-white/5 rounded-xl p-4 space-y-2">
+                <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Category</p>
+                <select
+                  value={form.category}
+                  onChange={(e) => set("category", e.target.value)}
+                  required
+                  className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-3 py-2 text-white text-sm outline-none transition-colors"
+                >
+                  <option value="" disabled>Select a category…</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.name_fi ? ` / ${c.name_fi}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-gray-600 text-xs">
+                  These extras will apply to all items in this category.
+                </p>
+              </div>
 
               {/* Names */}
               <div className="bg-gray-900 border border-white/5 rounded-xl p-4 space-y-3">

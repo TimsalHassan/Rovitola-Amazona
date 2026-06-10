@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../hooks/useLanguage";
+import { useToast } from "../hooks/useToast";
 import { FormField, PasswordField, Button, Alert } from "../components/FormElements";
 
 type FormKey = "name" | "email" | "phone" | "password" | "confirmPassword";
@@ -32,6 +33,7 @@ function validateSingle(field: FormKey, value: string, form: Record<FormKey, str
 export default function RegisterPage() {
   const { register } = useAuth();
   const { t } = useLanguage();
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<Record<FormKey, string>>({
@@ -94,6 +96,7 @@ export default function RegisterPage() {
         password: form.password,
         confirm_password: form.confirmPassword,
       });
+      addToast({ type: "success", title: "Account created! Please verify your email.", duration: 4000 });
       // Backend returns { detail } — redirect to check-email page with email in state
       navigate("/verify-email", { replace: true, state: { email: form.email.trim() } });
     } catch (err: unknown) {
@@ -102,6 +105,7 @@ export default function RegisterPage() {
         setFieldErrors({ [e.field]: e.message });
       } else {
         setError(e.message || t("register.errorGeneric"));
+        addToast({ type: "error", title: "Registration failed", duration: 4000 });
       }
     } finally {
       setLoading(false);

@@ -6,7 +6,7 @@ from django.core.cache import cache
 
 from .models import RestaurantSettings
 from .serializers import RestaurantSettingsSerializer, DeliveryCheckSerializer
-from .utils import get_delivery_fee, is_restaurant_open
+from .utils import get_delivery_fee, is_restaurant_open, geocode_address 
 
 
 class RestaurantInfoView(APIView):
@@ -68,8 +68,36 @@ class DeliveryCheckView(APIView):
                 "message": "Delivery is currently not available.",
             })
 
-        lat = serializer.validated_data['latitude']
-        lon = serializer.validated_data['longitude']
+        data = serializer.validated_data
+        lat = data.get('latitude')
+        lon = data.get('longitude')
+
+        # ── NEW: agar lat/lon nahi, address se geocode karo ──
+        if lat is None or lon is None:
+            street = data.get('street', '')
+            city = data.get('city', '')
+            postal = data.get('postal', '')
+            country = data.get('country', 'Finland')
+
+            if not street.strip():
+                return Response({
+                    "is_eligible": False,
+                    "delivery_fee": None,
+                    "distance_km": None,
+                    "message": "Please enter a delivery address.",
+                })
+
+            lat, lon = geocode_address(street, city, postal, country)
+
+            if lat is None:
+                return Response({
+                    "is_eligible": False,
+                    "delivery_fee": None,
+                    "distance_km": None,
+                    "message": "Could not find your address. Please check and try again.",
+                })
+        # ── existing logic same rehti hai ──
+
         fee, distance = get_delivery_fee(lat, lon, settings)
         distance_rounded = round(distance, 1)
 
@@ -81,10 +109,11 @@ class DeliveryCheckView(APIView):
                 "message": f"Sorry, delivery is not available to your location ({distance_rounded}km). Maximum delivery radius is {settings.paid_delivery_radius_km}km.",
             })
 
-        message = f"Free delivery! ({distance_rounded}km)" if fee == 0 else f"€{fee} delivery fee. ({distance_rounded}km)"
+        fee_float = round(float(fee), 2)
+        message = f"Free delivery! ({distance_rounded}km)" if fee_float == 0 else f"€{fee_float:.2f} delivery fee. ({distance_rounded}km)"
         return Response({
             "is_eligible": True,
-            "delivery_fee": fee,
+            "delivery_fee": fee_float,
             "distance_km": distance_rounded,
             "message": message,
         })

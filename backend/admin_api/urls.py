@@ -17,7 +17,10 @@ from .views import (
     AdminMenuItemToggleView,
 
     # Extras
-    AdminExtraListView,
+    AdminExtraListCreateView,
+    AdminExtraDetailView,
+    AdminExtraOptionListCreateView,
+    AdminExtraOptionDetailView,
 
     # Orders
     AdminOrderListView,
@@ -55,7 +58,10 @@ urlpatterns = [
     path("menu-items/<int:pk>/toggle/",     AdminMenuItemToggleView.as_view(),          name="admin-menu-item-toggle"),
 
     # ── Extras ─────────────────────────────────────────────────────────────
-    path("extras/",                         AdminExtraListView.as_view(),               name="admin-extras"),
+    path("extras/",                         AdminExtraListCreateView.as_view(),         name="admin-extras"),
+    path("extras/<int:pk>/",               AdminExtraDetailView.as_view(),             name="admin-extra-detail"),
+    path("extras/<int:extra_pk>/options/",          AdminExtraOptionListCreateView.as_view(),  name="admin-extra-options"),
+    path("extras/<int:extra_pk>/options/<int:pk>/", AdminExtraOptionDetailView.as_view(),       name="admin-extra-option-detail"),
 
     # ── Orders ─────────────────────────────────────────────────────────────
     path("orders/",                         AdminOrderListView.as_view(),               name="admin-orders"),

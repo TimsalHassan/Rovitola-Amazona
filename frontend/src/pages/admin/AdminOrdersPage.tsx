@@ -1,7 +1,9 @@
 // src/pages/admin/AdminOrdersPage.tsx
 import { useEffect, useState } from "react";
 import { useAdminAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast";
 import { ADMIN, adminGet, adminPatch } from "../../api/admin";
+import { useAdminStats } from "../../context/admin/AdminStatsContext";
 
 type OrderStatus = "all"
   | "pending"
@@ -111,6 +113,9 @@ function getNextStatus(order: Order): string | null {
 
 const PAGE_SIZE = 20;
 
+const formatStatus = (s: string) =>
+  s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
 export default function AdminOrdersPage() {
   const { token } = useAdminAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -121,6 +126,8 @@ export default function AdminOrdersPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
+  const { addToast } = useToast();
+  const { adjustConfirmedOrders } = useAdminStats();
 
   async function fetchOrders(pageNum = 1) {
     if (!token) return;
@@ -165,12 +172,24 @@ export default function AdminOrdersPage() {
         status: newStatus,
       });
       setOrders((prev) =>
-        prev.map((o) =>
-          o.order_number === orderNumber ? { ...o, status: newStatus } : o,
-        ),
+        prev.map((o) => {
+          if (o.order_number !== orderNumber) return o;
+          // Track confirmed-order count changes for the dashboard stat card:
+          // pending → confirmed: new confirmed order (+1)
+          if (o.status === "pending" && newStatus === "confirmed") {
+            adjustConfirmedOrders(+1);
+          }
+          // confirmed → anything else: it's no longer a "new" order (-1)
+          if (o.status === "confirmed" && newStatus !== "confirmed") {
+            adjustConfirmedOrders(-1);
+          }
+          return { ...o, status: newStatus };
+        }),
       );
+      addToast({ type: "success", title: `Status updated to ${formatStatus(newStatus)}`, duration: 3000 });
     } catch (err) {
       console.error("Failed to update status", err);
+      addToast({ type: "error", title: `Failed to update status to ${formatStatus(newStatus)}`, duration: 3000 });
     } finally {
       setUpdating(null);
     }
@@ -194,7 +213,7 @@ export default function AdminOrdersPage() {
                   : "bg-gray-900 border border-white/5 text-gray-400 hover:text-white"
               }`}
             >
-              {s.replace("_", " ")}
+              {formatStatus(s)}
             </button>
           ))}
         </div>
@@ -289,7 +308,7 @@ export default function AdminOrdersPage() {
                         <span
                           className={`text-xs font-medium capitalize ${PAYMENT_STYLES[order.payment_status] ?? "text-gray-400"}`}
                         >
-                          {order.payment_status}
+                          {formatStatus(order.payment_status)}
                         </span>
                         <p className="text-gray-600 text-[10px] capitalize">
                           {order.payment_method?.replace(/_/g, " ")}
@@ -299,7 +318,7 @@ export default function AdminOrdersPage() {
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_STYLES[order.status] ?? STATUS_STYLES.pending}`}
                         >
-                          {order.status.replace("_", " ")}
+                          {formatStatus(order.status)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
@@ -326,7 +345,7 @@ export default function AdminOrdersPage() {
                           >
                             {updating === order.order_number
                               ? "…"
-                              : `→ ${nextStatus.replace("_", " ")}`}
+                              : `→ ${formatStatus(nextStatus)}`}
                           </button>
                         ) : order.status !== "cancelled" ? (
                           <span className="text-gray-600 text-xs">Final</span>

@@ -1,6 +1,7 @@
 // src/pages/admin/AdminRestaurantPage.tsx
 import { useEffect, useState } from "react";
 import { useAdminAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast";
 import { ADMIN, adminGet, adminPatch, adminPut } from "../../api/admin";
 
 interface OpeningHours {
@@ -63,7 +64,7 @@ export default function AdminRestaurantPage() {
   const [savingHours, setSavingHours] = useState(false);
   const [tab, setTab] = useState<Tab>("info");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   // Tracks which day rows have the lunch section expanded
   const [lunchOpen, setLunchOpen] = useState<Record<number, boolean>>({});
@@ -116,23 +117,18 @@ export default function AdminRestaurantPage() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  function flash(msg: string) {
-    setSuccess(msg);
-    setTimeout(() => setSuccess(null), 3500);
-  }
-
   async function saveInfo() {
     if (!token) return;
     setSaving(true);
     setError(null);
     try {
       await adminPatch(`${ADMIN}/restaurant/`, token, info);
-      flash("Restaurant info saved.");
+      addToast({ type: "success", title: "Settings saved", duration: 3000 });
     } catch (err) {
-      setError((err as Error).message || "Failed to save.");
-    } finally {
-      setSaving(false);
-    }
+      addToast({ type: "error", title: "Failed to save", duration: 4000 });
+      } finally {
+        setSaving(false);
+      }
   }
 
   async function saveDelivery() {
@@ -141,9 +137,10 @@ export default function AdminRestaurantPage() {
     setError(null);
     try {
       await adminPatch(`${ADMIN}/restaurant/`, token, delivery);
-      flash("Delivery settings saved.");
+      addToast({ type: "success", title: "Delivery settings saved", duration: 3000 });
+      // This won't help the customer-facing app directly, but clears server cache:
     } catch (err) {
-      setError((err as Error).message || "Failed to save.");
+      addToast({ type: "error", title: "Failed to save delivery settings", duration: 4000 });
     } finally {
       setSaving(false);
     }
@@ -213,10 +210,12 @@ export default function AdminRestaurantPage() {
           return next;
         });
 
-        if (!response.errors?.length) flash("Opening hours saved.");
+        if (!response.errors?.length) {
+          addToast({ type: "success", title: "Opening hours saved", duration: 3000 });
+        }
       }
     } catch (err) {
-      setError((err as Error).message || "Failed to save hours.");
+      addToast({ type: "error", title: "Failed to save", duration: 4000 });
     } finally {
       setSavingHours(false);
     }
@@ -272,11 +271,6 @@ export default function AdminRestaurantPage() {
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
           <p className="text-red-400 text-sm">{error}</p>
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
-          <p className="text-green-400 text-sm">✓ {success}</p>
         </div>
       )}
 

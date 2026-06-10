@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
 import { ADMIN, adminGet } from "../../api/admin";
 import { Package, DollarSign, Utensils, Users, MessageCircle, Star, Settings, Bell } from "lucide-react";
+// import { useAdminStats } from "../../context/admin/AdminStatsContext";
 interface Stats {
   total_orders: number;
   pending_orders: number;
@@ -87,6 +88,9 @@ function StatCard({
   return to ? <Link to={to}>{inner}</Link> : inner;
 }
 
+const formatStatus = (s: string) =>
+  s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
 export default function AdminDashboardPage() {
   const { token } = useAdminAuth();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -105,13 +109,14 @@ export default function AdminDashboardPage() {
         .then(([statsData, ordersData]) => {
           setStats(statsData);
           setRecentOrders(ordersData.results ?? []);
+          // Fresh data from server — clear the local delta
         })
         .catch(console.error)
         .finally(() => { if (isInitial) setLoading(false); });
     }
 
     fetchData(true);
-    const interval = setInterval(() => fetchData(false), 30_000);
+    const interval = setInterval(() => fetchData(false), 15_000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -160,6 +165,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="New Orders"
+          accent={(stats?.confirmed_orders ?? 0) > 0}
           value={stats?.confirmed_orders ?? 0}
           sub="confirmed, not yet started"
           icon={<Bell />}
@@ -168,7 +174,7 @@ export default function AdminDashboardPage() {
         <StatCard
           label="Total Revenue"
           value={`€${Number(stats?.total_revenue ?? 0).toFixed(2)}`}
-          sub={`€${Number(stats?.today_revenue ?? 0).toFixed(2)} today`}
+          sub={`€${Number(stats?.today_revenue ?? 0).toFixed(2)} earned today`}  // ← clearer
           icon={<DollarSign />}
         />
         <StatCard
@@ -205,13 +211,17 @@ export default function AdminDashboardPage() {
         </Link>
         <Link
           to="/admin/reviews"
-          className="flex items-center gap-3 bg-[#0a0f1e] border border-white/5 rounded-xl p-3 hover:border-white/10 transition-all"
+          className={`flex items-center gap-3 border rounded-xl p-3 transition-all ${
+            (stats?.pending_reviews ?? 0) > 0
+              ? "bg-amber-500/10 border-amber-500/20"        // ← highlights when pending
+              : "bg-[#0a0f1e] border-white/5 hover:border-white/10"
+          }`}
         >
-          <span className="text-xl">
+          <span className={`text-xl ${(stats?.pending_reviews ?? 0) > 0 ? "text-amber-400" : ""}`}>
             <Star />
           </span>
           <div>
-            <p className="text-white text-sm font-bold">
+            <p className={`text-sm font-bold ${(stats?.pending_reviews ?? 0) > 0 ? "text-amber-400" : "text-white"}`}>
               {stats?.pending_reviews ?? 0} pending
             </p>
             <p className="text-gray-500 text-xs">Reviews to approve</p>
@@ -280,7 +290,7 @@ export default function AdminDashboardPage() {
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border capitalize shrink-0 ${STATUS_STYLES[order.status] ?? STATUS_STYLES.pending}`}
                   >
-                    {order.status.replace("_", " ")}
+                    {formatStatus(order.status)}
                   </span>
                 </div>
               ))}

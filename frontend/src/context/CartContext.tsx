@@ -139,14 +139,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(async () => {
     try {
+      // Pehle optimistically UI clear karo — delay nahi lagega
+      dispatch({ type: "FETCH_SUCCESS", cart: { items: [], total_items: 0, subtotal: "0.00" } as any });
+      // Phir backend call karo background mein
       await cartApi.clear();
-      const cart = await cartApi.get();
-      dispatch({ type: "FETCH_SUCCESS", cart });
     } catch (err) {
-      dispatch({
-        type: "FETCH_ERROR",
-        error: err instanceof Error ? err.message : "Failed to clear cart",
-      });
+      // Silent fail — cart already clear dikha raha hai UI mein
+      console.error("Cart clear failed:", err);
     }
   }, []);
 
