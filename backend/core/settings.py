@@ -178,7 +178,10 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://123.456.789.0",
+    "https://ravintolaamazona.fi",
+    "https://www.ravintolaamazona.fi",
 ]
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
@@ -202,8 +205,8 @@ AUTH_USER_MODEL = 'users.User'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://eceb-2406-d00-aaaa-879b-21d0-fd3a-d02d-79ef.ngrok-free.app",
-    "http://123.456.789.0"
+     "https://ravintolaamazona.fi",
+    "https://www.ravintolaamazona.fi",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
