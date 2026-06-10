@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAdminAuth } from "../../hooks/useAuth";
-import { ADMIN, adminGet, adminPost, adminPut, adminDelete } from "../../api/admin";
+import { ADMIN, adminGet, adminPost, adminPatch, adminDelete } from "../../api/admin";
 import type { Extra } from "./AdminExtrasPage";
 import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 
@@ -13,9 +13,10 @@ interface ExtraOption {
   name_fi: string;
   description: string;
   description_fi: string;
-  price: string;
-  is_default: boolean;
-  is_active: boolean;
+  price: string;         // mapped from additional_price by the serializer
+  sale_price: string | null;
+  is_default: boolean;   // virtual field, always false from backend
+  is_active: boolean;    // virtual field, always true from backend
   order: number;
 }
 
@@ -148,7 +149,7 @@ export default function AdminExtraOptionsPage() {
     };
     try {
       if (editItem) {
-        const updated = await adminPut<ExtraOption>(
+        const updated = await adminPatch<ExtraOption>(
           `${ADMIN}/extras/${id}/options/${editItem.id}/`,
           token,
           payload

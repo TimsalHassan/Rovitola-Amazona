@@ -21,6 +21,8 @@ from .serializers import (
     AdminMenuItemListSerializer,
     AdminMenuItemWriteSerializer,
     AdminExtraSerializer,
+    AdminExtraWriteSerializer,
+    AdminExtraOptionSerializer,
     AdminOrderSerializer,
     AdminOrderStatusSerializer,
     AdminReviewSerializer,
@@ -53,19 +55,27 @@ class AdminDashboardStatsView(APIView):
     def get(self, request):
         today = timezone.now().date()
 
-        paid_orders = Order.objects.filter(payment_status="paid")
-        today_paid = paid_orders.filter(created_at__date=today)
+        # "Earned" = paid online OR cash/card-on-delivery that reached delivered/completed
+        # Excludes cancelled orders in both cases.
+        earned_orders = Order.objects.filter(
+            Q(payment_status="paid") |
+            Q(payment_method__in=["cash_on_delivery", "card_on_delivery"],
+              status__in=["delivered", "completed"])
+        ).exclude(status="cancelled")
+
+        today_earned = earned_orders.filter(created_at__date=today)
 
         stats = {
-            "total_orders": Order.objects.count(),
-            "pending_orders": Order.objects.filter(status="pending").count(),
-            "total_revenue": paid_orders.aggregate(s=Sum("total"))["s"] or 0,
-            "today_revenue": today_paid.aggregate(s=Sum("total"))["s"] or 0,
-            "total_users": User.objects.filter(is_staff=False).count(),
+            "total_orders":     Order.objects.count(),
+            "pending_orders":   Order.objects.filter(status="pending").count(),
+            "confirmed_orders": Order.objects.filter(status="confirmed").count(),
+            "total_revenue":    earned_orders.aggregate(s=Sum("total"))["s"] or 0,
+            "today_revenue":    today_earned.aggregate(s=Sum("total"))["s"] or 0,
+            "total_users":      User.objects.filter(is_staff=False).count(),
             "total_menu_items": MenuItem.objects.count(),
             "total_categories": Category.objects.count(),
-            "unread_messages": ContactMessage.objects.filter(is_read=False).count(),
-            "pending_reviews": Review.objects.filter(is_approved=False).count(),
+            "unread_messages":  ContactMessage.objects.filter(is_read=False).count(),
+            "pending_reviews":  Review.objects.filter(is_approved=False).count(),
         }
         serializer = AdminDashboardStatsSerializer(stats)
         return Response(serializer.data)
@@ -217,13 +227,21 @@ class AdminMenuItemDetailView(generics.RetrieveUpdateDestroyAPIView):
 # EXTRAS  (read-only in admin panel — managed via Django admin or future form)
 # ──────────────────────────────────────────────────────────────────────────────
 
-class AdminExtraListView(generics.ListAPIView):
+# ──────────────────────────────────────────────────────────────────────────────
+# EXTRAS
+# ──────────────────────────────────────────────────────────────────────────────
+
+class AdminExtraListCreateView(generics.ListCreateAPIView):
     """
-    GET /api/admin/extras/?category=<slug>
-    Returns extras + options for a given category (used in menu form).
+    GET  /api/admin/extras/?category=<slug>
+    POST /api/admin/extras/
     """
     permission_classes = [IsAdminUser]
-    serializer_class = AdminExtraSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return AdminExtraWriteSerializer
+        return AdminExtraSerializer
 
     def get_queryset(self):
         qs = Extra.objects.select_related("category").prefetch_related("options")
@@ -231,6 +249,77 @@ class AdminExtraListView(generics.ListAPIView):
         if category_slug:
             qs = qs.filter(category__slug=category_slug)
         return qs.order_by("category__order", "order")
+
+    def perform_create(self, serializer):
+        serializer.save()
+        cache.clear()
+
+
+# Keep old name as alias so the URL import still works
+AdminExtraListView = AdminExtraListCreateView
+
+
+class AdminExtraDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET    /api/admin/extras/<id>/
+    PUT    /api/admin/extras/<id>/
+    PATCH  /api/admin/extras/<id>/
+    DELETE /api/admin/extras/<id>/
+    """
+    permission_classes = [IsAdminUser]
+    queryset = Extra.objects.select_related("category").prefetch_related("options")
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return AdminExtraWriteSerializer
+        return AdminExtraSerializer
+
+    def perform_update(self, serializer):
+        serializer.save()
+        cache.clear()
+
+    def perform_destroy(self, instance):
+        instance.delete()
+        cache.clear()
+
+
+class AdminExtraOptionListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/admin/extras/<extra_pk>/options/
+    POST /api/admin/extras/<extra_pk>/options/
+    """
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminExtraOptionSerializer
+
+    def get_queryset(self):
+        return ExtraOption.objects.filter(extra_id=self.kwargs["extra_pk"]).order_by("order")
+
+    def perform_create(self, serializer):
+        extra = Extra.objects.get(pk=self.kwargs["extra_pk"])
+        serializer.save(extra=extra)
+        cache.clear()
+
+
+class AdminExtraOptionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET    /api/admin/extras/<extra_pk>/options/<pk>/
+    PUT    /api/admin/extras/<extra_pk>/options/<pk>/
+    PATCH  /api/admin/extras/<extra_pk>/options/<pk>/
+    DELETE /api/admin/extras/<extra_pk>/options/<pk>/
+    """
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminExtraOptionSerializer
+
+    def get_queryset(self):
+        return ExtraOption.objects.filter(extra_id=self.kwargs["extra_pk"])
+
+    def perform_update(self, serializer):
+        serializer.save()
+        cache.clear()
+
+    def perform_destroy(self, instance):
+        instance.delete()
+        cache.clear()
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -58,10 +58,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const { toasts, addToast, removeToast } = useToast();
 
   // Previous stats refs — to detect changes between polls
-  const prevOrders   = useRef<number | null>(null);
-  const prevMessages = useRef<number | null>(null);
-  const prevReviews  = useRef<number | null>(null);
-  const isFirstPoll  = useRef(true);
+  const prevTotalOrders = useRef<number | null>(null);
+  const prevMessages    = useRef<number | null>(null);
+  const prevReviews     = useRef<number | null>(null);
+  const isFirstPoll     = useRef(true);
 
   // ── Poll stats every 30s, fire toasts on new activity ──────────────────────
   useEffect(() => {
@@ -73,26 +73,27 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
         if (isFirstPoll.current) {
           // Seed the refs on first load — don't fire toasts for existing data
-          prevOrders.current   = stats.pending_orders;
-          prevMessages.current = stats.unread_messages;
-          prevReviews.current  = stats.pending_reviews;
-          isFirstPoll.current  = false;
+          prevTotalOrders.current = stats.total_orders;
+          prevMessages.current    = stats.unread_messages;
+          prevReviews.current     = stats.pending_reviews;
+          isFirstPoll.current     = false;
           return;
         }
 
-        // New pending orders → sticky (user must close)
+        // New orders → compare total_orders so any new order fires the toast,
+        // regardless of whether it's still pending or already confirmed.
         if (
-          prevOrders.current !== null &&
-          stats.pending_orders > prevOrders.current
+          prevTotalOrders.current !== null &&
+          stats.total_orders > prevTotalOrders.current
         ) {
-          const diff = stats.pending_orders - prevOrders.current;
+          const diff = stats.total_orders - prevTotalOrders.current;
           addToast({
             type: "order",
             title: `${diff} New Order${diff > 1 ? "s" : ""}!`,
-            body: `${stats.pending_orders} pending order${stats.pending_orders > 1 ? "s" : ""} awaiting confirmation.`,
-            // No duration → sticky
+            body: `You have ${diff} new order${diff > 1 ? "s" : ""} — head to Orders to confirm.`,
+            // No duration → sticky until dismissed
           });
-          prevOrders.current = stats.pending_orders;
+          prevTotalOrders.current = stats.total_orders;
         }
 
         // New unread messages → 8s auto-dismiss
@@ -130,7 +131,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     }
 
     pollStats(); // immediate first check
-    const interval = setInterval(pollStats, 30_000);
+    const interval = setInterval(pollStats, 10_000);
     return () => clearInterval(interval);
   }, [token, addToast]);
 

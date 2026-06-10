@@ -170,7 +170,7 @@ function CartItemRow({ item }: { item: CartItem }) {
   );
 }
 
-// ─── Address form with structured fields + manual save ──────────────────────
+// ─── Address form ─────────────────────────────────────────────────────────────
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -213,7 +213,6 @@ function AddressInput({
   const isSavingRef = useRef(false);
   const lastSavedRef = useRef<string>("");
 
-  // Format fields → single string for comparison & API
   const toFormatted = (a: AddressFields) =>
     [a.street, a.city, a.postal, a.country]
       .filter((s) => s && s !== "-")
@@ -226,19 +225,17 @@ function AddressInput({
     if (saveStatus === "saved" || saveStatus === "error") setSaveStatus("idle");
   };
 
-  // Select a saved address chip → populate all fields
   const selectSaved = (addr: Address) => {
     onChange({
       street: addr.street_address,
       city: addr.city === "-" ? "" : addr.city,
       postal: addr.postal_code === "-" ? "" : addr.postal_code,
-      country: addr.country || "Finland",
+      country: addr.country && addr.country !== "-" ? addr.country : "Finland",
     });
     setSaveStatus("idle");
     isSavingRef.current = false;
   };
 
-  // Already saved if the full formatted string matches any existing address
   const isAlreadySaved = savedAddresses.some((a) => {
     const f = [a.street_address, a.city, a.postal_code, a.country]
       .filter((s) => s && s !== "-")
@@ -341,34 +338,46 @@ function AddressInput({
         />
       </div>
 
-      {/* City + Postal in a row */}
+      {/* City + Postal */}
       <div className="grid grid-cols-2 gap-3">
         <input
           type="text"
           value={value.city}
           onChange={(e) => patchField("city", e.target.value)}
-          placeholder="City"
-          className="w-full bg-gray-900 border border-white/10 focus:border-amber-500/50 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors"
+          placeholder="City *"
+          className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
+            errorMsg?.toLowerCase().includes("city") && !value.city.trim()
+              ? "border-red-500/60"
+              : "border-white/10 focus:border-amber-500/50"
+          }`}
         />
         <input
           type="text"
           value={value.postal}
           onChange={(e) => patchField("postal", e.target.value)}
-          placeholder="Postal code"
-          className="w-full bg-gray-900 border border-white/10 focus:border-amber-500/50 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors"
+          placeholder="Postal code *"
+          className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
+            errorMsg?.toLowerCase().includes("postal") && !value.postal.trim()
+              ? "border-red-500/60"
+              : "border-white/10 focus:border-amber-500/50"
+          }`}
         />
       </div>
 
-      {/* Country */}
+      {/* Country — required, pre-filled with Finland */}
       <input
         type="text"
         value={value.country}
         onChange={(e) => patchField("country", e.target.value)}
-        placeholder="Country"
-        className="w-full bg-gray-900 border border-white/10 focus:border-amber-500/50 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors"
+        placeholder="Country *"
+        className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
+          errorMsg?.toLowerCase().includes("country") && !value.country.trim()
+            ? "border-red-500/60"
+            : "border-white/10 focus:border-amber-500/50"
+        }`}
       />
 
-      {/* Bottom row: validation error / save status / save button */}
+      {/* Save row */}
       <div className="flex items-center justify-between min-h-[20px]">
         <div className="flex items-center gap-1.5">
           {saveStatus === "saving" && (
@@ -414,6 +423,7 @@ function AddressInput({
     </div>
   );
 }
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CheckoutFormData {
@@ -450,6 +460,8 @@ export default function CartPage() {
     message: string;
   } | null>(null);
 
+  const [checkingDelivery, setCheckingDelivery] = useState(false);
+
   const checkDeliveryByAddress = useCallback(
     async (street: string, city: string, postal: string, country: string) => {
       setCheckingDelivery(true);
@@ -460,7 +472,12 @@ export default function CartPage() {
           body: JSON.stringify({ street, city, postal, country }),
         });
         const data = await res.json();
-        setDeliveryCheck(data);
+        // Parse delivery_fee as float — backend may return it as a string decimal
+        setDeliveryCheck({
+          ...data,
+          delivery_fee:
+            data.delivery_fee != null ? parseFloat(data.delivery_fee) : null,
+        });
       } catch {
         setDeliveryCheck(null);
       } finally {
@@ -469,20 +486,19 @@ export default function CartPage() {
     },
     []
   );
-  
 
-  const [checkingDelivery, setCheckingDelivery] = useState(false);
   const minOrder = restaurant.minOrder;
   const meetsMinOrder = form.orderType === "pickup" || subtotal >= minOrder;
 
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [addressError, setAddressError] = useState<string | undefined>();
-  const [showDeliveryUnavailableModal, setShowDeliveryUnavailableModal] = useState(false);
+  const [showDeliveryUnavailableModal, setShowDeliveryUnavailableModal] =
+    useState(false);
   const [errors, setErrors] = useState<
     Partial<Record<keyof CheckoutFormData, string>>
   >({});
 
-  // ── Fetch saved addresses ──────────────────────────────────────────────────
+  // ── Debounced delivery check ───────────────────────────────────────────────
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (form.orderType !== "delivery") {
@@ -492,18 +508,20 @@ export default function CartPage() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const { street, city, postal, country } = form.deliveryAddress;
-    if (!street.trim()) {
-      setDeliveryCheck(null);  // address empty → fee hide
+    // All three fields required — partial address causes Nominatim to guess
+    if (!street.trim() || !city.trim() || !postal.trim()) {
+      setDeliveryCheck(null);
       return;
     }
 
     debounceRef.current = setTimeout(() => {
-      checkDeliveryByAddress(street, city, postal, country);
-    }, 800);  // 800ms debounce
+      checkDeliveryByAddress(street, city, postal, country || "Finland");
+    }, 800);
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [form.deliveryAddress, form.orderType, checkDeliveryByAddress]);
-
 
   const handleAddressSaved = useCallback((addr: Address) => {
     setSavedAddresses((prev) => {
@@ -513,7 +531,6 @@ export default function CartPage() {
     });
   }, []);
 
-  // Round at source so navigate() state never carries a floating-point artifact
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
   const deliveryCharge =
@@ -521,12 +538,11 @@ export default function CartPage() {
       ? (deliveryCheck.delivery_fee ?? 0)
       : 0;
 
-  // True when address was checked and delivery is NOT available to that location
   const deliveryNotAvailable =
     form.orderType === "delivery" &&
     !!deliveryCheck &&
     !deliveryCheck.is_eligible &&
-    deliveryCheck.distance_km !== null; // null means geocode failed, not out-of-range
+    deliveryCheck.distance_km !== null;
 
   const total = round2(subtotal + deliveryCharge);
 
@@ -541,8 +557,20 @@ export default function CartPage() {
       e.guestName = t("cart.errors.nameRequired");
     if (!user && !form.guestPhone.trim())
       e.guestPhone = t("cart.errors.phoneRequired");
-    if (form.orderType === "delivery" && !form.deliveryAddress.street.trim())
-      e.deliveryAddress = t("cart.errors.deliveryAddressRequired");
+    if (form.orderType === "delivery") {
+      if (!form.deliveryAddress.street.trim())
+        e.deliveryAddress = t("cart.errors.deliveryAddressRequired");
+      else if (!form.deliveryAddress.city.trim())
+        e.deliveryAddress = "Please enter your city.";
+      else if (!form.deliveryAddress.postal.trim())
+        e.deliveryAddress = "Please enter your postal code.";
+      else if (!form.deliveryAddress.country.trim())
+        e.deliveryAddress = "Please enter your country.";
+      else if (!deliveryCheck)
+        e.deliveryAddress = "Please wait — checking delivery availability…";
+      else if (!deliveryCheck.is_eligible)
+        e.deliveryAddress = "Delivery is not available to this address.";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -553,9 +581,6 @@ export default function CartPage() {
       return;
     }
     if (!validate()) return;
-    // Format structured address fields into a clean string for the order payload
-
-    // Store the email and password of the guest account to session storage
 
     const deliveryAddressStr = [
       form.deliveryAddress.street,
@@ -572,7 +597,8 @@ export default function CartPage() {
         deliveryAddress: deliveryAddressStr,
         orderNotes: form.orderNotes,
         subtotal,
-        deliveryCharge: form.orderType === "delivery" ? round2(deliveryCharge) : 0,
+        deliveryCharge:
+          form.orderType === "delivery" ? round2(deliveryCharge) : 0,
         discountAmount: 0,
         total,
         guestName: form.guestName,
@@ -817,19 +843,40 @@ export default function CartPage() {
                     <span>{t("cart.delivery")}</span>
                     <div className="text-right">
                       {!form.deliveryAddress.street.trim() ? (
-                        <span className="text-gray-600 text-xs">Enter address</span>
+                        <span className="text-gray-600 text-xs">
+                          Enter address
+                        </span>
+                      ) : !form.deliveryAddress.city.trim() ||
+                        !form.deliveryAddress.postal.trim() ? (
+                        <span className="text-gray-600 text-xs">
+                          Enter city &amp; postal code
+                        </span>
                       ) : checkingDelivery ? (
-                        <span className="text-gray-500 text-xs">Checking…</span>
+                        <span className="text-gray-500 text-xs">
+                          Checking…
+                        </span>
                       ) : deliveryCheck ? (
                         <div>
                           {deliveryNotAvailable ? (
-                            <span className="text-red-400 font-medium text-sm">Not available</span>
+                            <span className="text-red-400 font-medium text-sm">
+                              Not available
+                            </span>
                           ) : (
-                            <span className={deliveryCharge === 0 ? "text-green-400 font-medium" : "text-white"}>
-                              {deliveryCharge === 0 ? t("cart.free") : `€${deliveryCharge.toFixed(2)}`}
+                            <span
+                              className={
+                                deliveryCharge === 0
+                                  ? "text-green-400 font-medium"
+                                  : "text-white font-medium"
+                              }
+                            >
+                              {deliveryCharge === 0
+                                ? t("cart.free")
+                                : `€${deliveryCharge.toFixed(2)}`}
                             </span>
                           )}
-                          <p className="text-gray-500 text-[10px] mt-0.5">{deliveryCheck.message}</p>
+                          <p className="text-gray-500 text-[10px] mt-0.5">
+                            {deliveryCheck.message}
+                          </p>
                         </div>
                       ) : (
                         <span className="text-gray-600 text-xs">—</span>
@@ -845,22 +892,25 @@ export default function CartPage() {
               </div>
 
               {/* Min order warning */}
-              {form.orderType === "delivery" && minOrder > 0 && !meetsMinOrder && (
-                <div className="mt-4 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
-                  <span className="text-amber-400 text-sm">🛒</span>
-                  <p className="text-amber-400 text-xs font-medium">
-                    Minimum order for delivery is €{minOrder.toFixed(2)}.
-                    Add €{(minOrder - subtotal).toFixed(2)} more to proceed.
-                  </p>
-                </div>
-              )}
+              {form.orderType === "delivery" &&
+                minOrder > 0 &&
+                !meetsMinOrder && (
+                  <div className="mt-4 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+                    <span className="text-amber-400 text-sm">🛒</span>
+                    <p className="text-amber-400 text-xs font-medium">
+                      Minimum order for delivery is €{minOrder.toFixed(2)}.
+                      Add €{(minOrder - subtotal).toFixed(2)} more to proceed.
+                    </p>
+                  </div>
+                )}
 
               {/* Delivery not available warning */}
               {deliveryNotAvailable && (
                 <div className="mt-4 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                   <Truck size={15} className="text-red-400 shrink-0" />
                   <p className="text-red-400 text-xs font-medium">
-                    Delivery is not available to this address. Switch to pickup or change your address.
+                    Delivery is not available to this address. Switch to pickup
+                    or change your address.
                   </p>
                 </div>
               )}
@@ -890,7 +940,6 @@ export default function CartPage() {
       {showDeliveryUnavailableModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            {/* Icon */}
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/15 mx-auto mb-4">
               <Truck size={22} className="text-red-400" />
             </div>
@@ -903,12 +952,12 @@ export default function CartPage() {
             </p>
             {deliveryCheck?.distance_km != null && (
               <p className="text-gray-500 text-xs text-center mb-5">
-                Your address is {deliveryCheck.distance_km}km away — outside our delivery area.
+                Your address is {deliveryCheck.distance_km}km away — outside
+                our delivery area.
               </p>
             )}
 
             <div className="flex flex-col gap-3 mt-5">
-              {/* Switch to Pickup */}
               <button
                 onClick={() => {
                   setForm((f) => ({ ...f, orderType: "pickup" }));
@@ -921,7 +970,6 @@ export default function CartPage() {
                 Switch to Pickup
               </button>
 
-              {/* Keep delivery address */}
               <button
                 onClick={() => setShowDeliveryUnavailableModal(false)}
                 className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium py-3 rounded-xl text-sm transition-colors"

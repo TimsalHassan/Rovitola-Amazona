@@ -109,10 +109,11 @@ class DeliveryCheckView(APIView):
                 "message": f"Sorry, delivery is not available to your location ({distance_rounded}km). Maximum delivery radius is {settings.paid_delivery_radius_km}km.",
             })
 
-        message = f"Free delivery! ({distance_rounded}km)" if fee == 0 else f"€{fee} delivery fee. ({distance_rounded}km)"
+        fee_float = round(float(fee), 2)
+        message = f"Free delivery! ({distance_rounded}km)" if fee_float == 0 else f"€{fee_float:.2f} delivery fee. ({distance_rounded}km)"
         return Response({
             "is_eligible": True,
-            "delivery_fee": fee,
+            "delivery_fee": fee_float,
             "distance_km": distance_rounded,
             "message": message,
         })

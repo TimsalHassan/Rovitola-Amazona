@@ -31,7 +31,10 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export async function adminGet<T>(url: string, token: string): Promise<T> {
-  const res = await fetch(url, { headers: adminHeaders(token) });
+  const res = await fetch(url, {
+    headers: adminHeaders(token),
+    cache: "no-store",
+  });
   return handleResponse<T>(res);
 }
 

@@ -54,6 +54,7 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState(state?.orderNotes || "");
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [confirmedOrder, setConfirmedOrder] = useState<{ orderNumber: string; total: number } | null>(null);
 
   // ── Payment method options (labels from i18n) ─────────────────────────────
 
@@ -171,8 +172,7 @@ export default function CheckoutPage() {
         window.location.replace(payment_url); // replace so back-button doesn't return to checkout
       } else {
         clearCart();
-        addToast({ type: "success", title: "Order placed!", duration: 4000 });
-        navigate(`/order/${order.order_number}/track`, { replace: true });
+        setConfirmedOrder({ orderNumber: order.order_number, total: round2(state.total) });
       }
     } catch (err) {
       setSubmitError(
@@ -493,6 +493,58 @@ export default function CheckoutPage() {
           </div>
         </div>
       </form>
+
+      {/* ── Thank-you modal (COD / card on delivery) ──────────────────────── */}
+      {confirmedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
+          <div className="relative bg-gray-900 border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Icon */}
+            <div className="w-20 h-20 bg-amber-500/10 border-2 border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
+              <span className="text-4xl">🎉</span>
+            </div>
+
+            <h2 className="text-white font-black text-2xl mb-2">
+              Thank you!
+            </h2>
+            <p className="text-gray-400 text-sm mb-1">
+              Your order has been placed successfully.
+            </p>
+            <p className="text-amber-400 font-mono font-bold text-sm mb-5">
+              #{confirmedOrder.orderNumber}
+            </p>
+
+            {/* Amount */}
+            <div className="bg-gray-800 rounded-2xl px-5 py-3 mb-6 inline-block">
+              <p className="text-gray-500 text-xs mb-0.5">Order total</p>
+              <p className="text-white font-black text-2xl">
+                €{confirmedOrder.total.toFixed(2)}
+              </p>
+            </div>
+
+            <p className="text-gray-500 text-xs mb-6 leading-relaxed">
+              {paymentMethod === "cash_on_delivery"
+                ? "Please have the exact cash amount ready when your order arrives."
+                : "Please have your card ready when your order arrives."}
+            </p>
+
+            <button
+              onClick={() => {
+                addToast({
+                  type: "success",
+                  title: "Order confirmed! 🎉",
+                  body: `Order #${confirmedOrder.orderNumber} is being prepared.`,
+                  duration: 6000,
+                });
+                navigate(`/order/${confirmedOrder.orderNumber}/track`, { replace: true });
+              }}
+              className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-gray-900 font-black text-sm rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              Track My Order
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

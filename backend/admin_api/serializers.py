@@ -69,27 +69,150 @@ class AdminCategorySerializer(serializers.ModelSerializer):
 # ──────────────────────────────────────────────────────────────────────────────
 
 class AdminExtraOptionSerializer(serializers.ModelSerializer):
+    # Frontend uses "price" — map it to additional_price on the model
+    price = serializers.DecimalField(
+        source="additional_price", max_digits=6, decimal_places=2, default=0
+    )
+    # Frontend sends/expects these flags; they don't exist on the model so we
+    # handle them as virtual fields (ignored on write, defaulted on read).
+    is_default = serializers.BooleanField(default=False, required=False)
+    is_active = serializers.BooleanField(default=True, required=False)
+    description = serializers.CharField(default="", required=False, allow_blank=True)
+    description_fi = serializers.CharField(default="", required=False, allow_blank=True)
+    extra = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = ExtraOption
         fields = [
-            "id", "name", "name_fi",
-            "additional_price", "sale_price",
+            "id", "extra",
+            "name", "name_fi",
+            "description", "description_fi",
+            "price", "sale_price",
+            "is_default", "is_active",
             "order",
         ]
+
+    def create(self, validated_data):
+        # Strip virtual fields before hitting the ORM
+        validated_data.pop("is_default", None)
+        validated_data.pop("is_active", None)
+        validated_data.pop("description", None)
+        validated_data.pop("description_fi", None)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data.pop("is_default", None)
+        validated_data.pop("is_active", None)
+        validated_data.pop("description", None)
+        validated_data.pop("description_fi", None)
+        return super().update(instance, validated_data)
 
 
 class AdminExtraSerializer(serializers.ModelSerializer):
     options = AdminExtraOptionSerializer(many=True, read_only=True)
+    options_count = serializers.SerializerMethodField()
+    # Frontend uses "selection_type" with values "single"/"multiple"
+    # Model uses "extra_type" with values "choice"/"extra"
+    selection_type = serializers.SerializerMethodField()
+    # Virtual fields the frontend expects (model doesn't have them)
+    is_active = serializers.BooleanField(default=True, required=False)
+    description = serializers.CharField(default="", required=False, allow_blank=True)
+    description_fi = serializers.CharField(default="", required=False, allow_blank=True)
+    min_selections = serializers.IntegerField(default=0, required=False)
+    category_name = serializers.CharField(source="category.name", read_only=True)
+
+    class Meta:
+        model = Extra
+        fields = [
+            "id", "category", "category_name",
+            "name", "name_fi",
+            "description", "description_fi",
+            "extra_type", "selection_type",
+            "is_required", "is_active",
+            "min_selections", "max_selections", "order",
+            "options", "options_count",
+        ]
+
+    def get_selection_type(self, obj):
+        return "single" if obj.extra_type == "choice" else "multiple"
+
+    def get_options_count(self, obj):
+        return obj.options.count()
+
+
+class AdminExtraWriteSerializer(serializers.ModelSerializer):
+    """Accepts the frontend's field names and maps them to the model."""
+    # Frontend sends "selection_type": "single"|"multiple"
+    selection_type = serializers.ChoiceField(
+        choices=["single", "multiple"], write_only=True, required=False
+    )
+    # Virtual frontend-only fields — accepted but not stored
+    is_active = serializers.BooleanField(default=True, required=False)
+    description = serializers.CharField(default="", required=False, allow_blank=True)
+    description_fi = serializers.CharField(default="", required=False, allow_blank=True)
+    min_selections = serializers.IntegerField(default=0, required=False)
+    options_count = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Extra
         fields = [
             "id", "category",
             "name", "name_fi",
-            "extra_type", "is_required",
-            "max_selections", "order",
-            "options",
+            "description", "description_fi",
+            "extra_type", "selection_type",
+            "is_required", "is_active",
+            "min_selections", "max_selections", "order",
+            "options_count",
         ]
+        extra_kwargs = {
+            "extra_type": {"required": False},
+            "category": {"required": False},  # not required on PATCH
+        }
+        # Suppress unique_together validation — we handle it manually below
+        # so that updates don't falsely reject the existing (category, name) pair.
+        validators = []
+
+    def get_options_count(self, obj):
+        return obj.options.count()
+
+    def validate(self, data):
+        # Map selection_type → extra_type
+        selection_type = data.pop("selection_type", None)
+        if selection_type is not None:
+            data["extra_type"] = "choice" if selection_type == "single" else "extra"
+        elif not data.get("extra_type") and not self.instance:
+            data["extra_type"] = "choice"
+
+        # Re-implement unique_together check, excluding self on update
+        category = data.get("category", getattr(self.instance, "category", None))
+        name = data.get("name", getattr(self.instance, "name", None))
+        if category and name:
+            qs = Extra.objects.filter(category=category, name=name)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {"name": "An extra with this name already exists in this category."}
+                )
+        return data
+
+    def create(self, validated_data):
+        validated_data.pop("is_active", None)
+        validated_data.pop("description", None)
+        validated_data.pop("description_fi", None)
+        validated_data.pop("min_selections", None)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data.pop("is_active", None)
+        validated_data.pop("description", None)
+        validated_data.pop("description_fi", None)
+        validated_data.pop("min_selections", None)
+        return super().update(instance, validated_data)
+
+    def to_representation(self, instance):
+        """After write, return the full read serializer shape."""
+        return AdminExtraSerializer(instance, context=self.context).data
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -287,6 +410,7 @@ class AdminOpeningHoursWriteSerializer(serializers.ModelSerializer):
 class AdminDashboardStatsSerializer(serializers.Serializer):
     total_orders = serializers.IntegerField()
     pending_orders = serializers.IntegerField()
+    confirmed_orders = serializers.IntegerField()
     total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
     today_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_users = serializers.IntegerField()

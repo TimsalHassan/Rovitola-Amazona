@@ -1,18 +1,87 @@
 import math
+import time
+import urllib.request
+import urllib.parse
+import json
 from django.utils import timezone
-from geopy.geocoders import Nominatim
+from django.conf import settings as django_settings
 
 
 def geocode_address(street, city, postal, country="Finland"):
-    """Address string ko lat/lon mein convert karta hai."""
-    geolocator = Nominatim(user_agent="ravintola-amazona")
-    query = f"{street}, {postal} {city}, {country}"
+    """
+    Primary: Positionstack API
+    Fallback: Nominatim
+    """
+    api_key = getattr(django_settings, 'POSITIONSTACK_API_KEY', None)
+
+    if api_key:
+        lat, lon = _geocode_positionstack(street, city, postal, country, api_key)
+        if lat is not None:
+            return lat, lon
+
+    return _geocode_nominatim(street, city, postal, country)
+
+
+def _geocode_positionstack(street, city, postal, country, api_key):
+    queries = [
+        f"{street}, {postal} {city}, {country}",
+        f"{street}, {city}, {country}",
+    ]
+    for query in queries:
+        try:
+            url = "http://api.positionstack.com/v1/forward?" + urllib.parse.urlencode({
+                "access_key": api_key,
+                "query": query,
+                "country": "FI",
+                "limit": 1,
+            })
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "RavintolaAmazona/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as r:
+                data = json.loads(r.read().decode("utf-8"))
+                results = data.get("data", [])
+                if results:
+                    return results[0]["latitude"], results[0]["longitude"]
+        except Exception:
+            pass
+        time.sleep(0.3)
+    return None, None
+
+
+def _geocode_nominatim(street, city, postal, country):
+    """Nominatim fallback."""
     try:
-        location = geolocator.geocode(query, timeout=5)
-        if location:
-            return location.latitude, location.longitude
+        from geopy.geocoders import Nominatim
+        from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+
+        geolocator = Nominatim(
+            user_agent="RavintolaAmazona/1.0 (contact@ravintolaamazona.fi)"
+        )
+
+        def try_geocode(query):
+            for attempt in range(2):
+                try:
+                    return geolocator.geocode(query, timeout=8)
+                except GeocoderTimedOut:
+                    if attempt == 0:
+                        time.sleep(1)
+                except GeocoderServiceError:
+                    pass
+            return None
+
+        loc = try_geocode(f"{street}, {postal} {city}, {country}")
+        if loc:
+            return loc.latitude, loc.longitude
+
+        loc = try_geocode(f"{street}, {city}, {country}")
+        if loc:
+            return loc.latitude, loc.longitude
+
     except Exception:
         pass
+
     return None, None
 
 
@@ -42,6 +111,7 @@ def get_delivery_fee(customer_lat, customer_lon, settings):
     else:
         return None, distance
 
+
 def is_restaurant_open(opening_hours_qs):
     now = timezone.localtime()
     day_name = now.strftime('%A').lower()
@@ -52,17 +122,11 @@ def is_restaurant_open(opening_hours_qs):
     except Exception:
         return False, "Opening hours not configured."
 
-    open_time_str = (
-        today.open_time.strftime("%H:%M")
-        if today.open_time else "N/A"
-    )
-    close_time_str = (
-        today.close_time.strftime("%H:%M")
-        if today.close_time else "N/A"
-    )
+    open_time_str = today.open_time.strftime("%H:%M") if today.open_time else "N/A"
+    close_time_str = today.close_time.strftime("%H:%M") if today.close_time else "N/A"
 
     if today.is_closed:
-        return False, f"We are closed today."
+        return False, "We are closed today."
 
     if today.open_time and today.close_time:
         if today.close_time < today.open_time:

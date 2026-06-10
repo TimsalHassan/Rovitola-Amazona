@@ -261,6 +261,9 @@ else:
 DEFAULT_FROM_EMAIL  = config('DEFAULT_FROM_EMAIL')      # verified domain wala
 RESTAURANT_EMAIL    = config('RESTAURANT_EMAIL')       # owner ka email
 
+
+POSITIONSTACK_API_KEY = config('POSITIONSTACK_API_KEY', default=None)
+
 # # settings.py mein add karo
 PAYTRAIL_ACCOUNT = config('PAYTRAIL_ACCOUNT', default='375917')
 PAYTRAIL_SECRET  = config('PAYTRAIL_SECRET',  default='SAIPPUAKAUPPIAS')
