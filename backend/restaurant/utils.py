@@ -9,49 +9,21 @@ from django.conf import settings as django_settings
 
 def geocode_address(street, city, postal, country="Finland"):
     """
-    Primary: Positionstack API
-    Fallback: Nominatim
+    Primary: Nominatim (free, unlimited — works on production VPS)
+    Fallback: Positionstack (for when Nominatim fails)
     """
+    lat, lon = _geocode_nominatim(street, city, postal, country)
+    if lat is not None:
+        return lat, lon
+
     api_key = getattr(django_settings, 'POSITIONSTACK_API_KEY', None)
-
     if api_key:
-        lat, lon = _geocode_positionstack(street, city, postal, country, api_key)
-        if lat is not None:
-            return lat, lon
+        return _geocode_positionstack(street, city, postal, country, api_key)
 
-    return _geocode_nominatim(street, city, postal, country)
-
-
-def _geocode_positionstack(street, city, postal, country, api_key):
-    queries = [
-        f"{street}, {postal} {city}, {country}",
-        f"{street}, {city}, {country}",
-    ]
-    for query in queries:
-        try:
-            url = "http://api.positionstack.com/v1/forward?" + urllib.parse.urlencode({
-                "access_key": api_key,
-                "query": query,
-                "country": "FI",
-                "limit": 1,
-            })
-            req = urllib.request.Request(
-                url,
-                headers={"User-Agent": "RavintolaAmazona/1.0"}
-            )
-            with urllib.request.urlopen(req, timeout=8) as r:
-                data = json.loads(r.read().decode("utf-8"))
-                results = data.get("data", [])
-                if results:
-                    return results[0]["latitude"], results[0]["longitude"]
-        except Exception:
-            pass
-        time.sleep(0.3)
     return None, None
 
 
 def _geocode_nominatim(street, city, postal, country):
-    """Nominatim fallback."""
     try:
         from geopy.geocoders import Nominatim
         from geopy.exc import GeocoderTimedOut, GeocoderServiceError
@@ -85,6 +57,34 @@ def _geocode_nominatim(street, city, postal, country):
     return None, None
 
 
+def _geocode_positionstack(street, city, postal, country, api_key):
+    queries = [
+        f"{street}, {postal} {city}, {country}",
+        f"{street}, {city}, {country}",
+    ]
+    for query in queries:
+        try:
+            url = "http://api.positionstack.com/v1/forward?" + urllib.parse.urlencode({
+                "access_key": api_key,
+                "query": query,
+                "country": "FI",
+                "limit": 1,
+            })
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "RavintolaAmazona/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as r:
+                data = json.loads(r.read().decode("utf-8"))
+                results = data.get("data", [])
+                if results:
+                    return results[0]["latitude"], results[0]["longitude"]
+        except Exception:
+            pass
+        time.sleep(0.3)
+    return None, None
+
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     R = 6371
     dlat = math.radians(lat2 - lat1)
@@ -100,6 +100,10 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
 
 def get_delivery_fee(customer_lat, customer_lon, settings):
+    # ── Guard: agar geocoding fail ho toh crash mat karo ──
+    if customer_lat is None or customer_lon is None:
+        return None, None
+
     distance = haversine_distance(
         customer_lat, customer_lon,
         settings.latitude, settings.longitude,
