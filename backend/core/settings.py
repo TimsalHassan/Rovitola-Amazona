@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'django_celery_results',
+    'django_celery_beat',
     'cloudinary_storage',
     'cloudinary',
 
@@ -176,6 +177,7 @@ LOCALE_PATHS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://123.456.789.0",
 ]
 
 # Static files (CSS, JavaScript, Images)
@@ -201,6 +203,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://eceb-2406-d00-aaaa-879b-21d0-fd3a-d02d-79ef.ngrok-free.app",
+    "http://123.456.789.0"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
