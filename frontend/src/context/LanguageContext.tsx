@@ -45,11 +45,12 @@ const resources = {
 
       // ── Features strip ────────────────────────────────────────────────────
       fastDelivery: "Nopea Toimitus",
-      fastDeliveryDesc: "Ilmainen alle 9km • €4 yli 9km",
+      fastDeliveryDesc:
+        "Ilmainen alle {{freeKm}}km • €{{fee}} yli {{freeKm}}km",
+      deliveryTimeDesc: "Minimitilaus €{{minOrder}} • Max {{paidKm}}km säde",
       discount: "5% Alennus",
       discountDesc: "Automaattinen alennus jokaisesta tilauksesta",
       deliveryTime: "~60 min toimitus",
-      deliveryTimeDesc: "Minimitilaus €13 • Max 14km säde",
 
       // ── Carousel section ──────────────────────────────────────────────────
       fromMenu: "Ruokalistalta",
@@ -57,7 +58,8 @@ const resources = {
       newSelectionEveryVisit: "Uusi järjestys joka latauskerralla",
       fullMenu: "Koko ruokalista",
       emptyMenuTitle: "Ei näytettäviä annoksia",
-      emptyMenuBody: "Ruokalista päivittyy pian. Tarkista uudelleen hetken päästä.",
+      emptyMenuBody:
+        "Ruokalista päivittyy pian. Tarkista uudelleen hetken päästä.",
 
       // ── About ─────────────────────────────────────────────────────────────
       aboutUs: "Tietoa meistä",
@@ -119,7 +121,8 @@ const resources = {
       menuItem: {
         backToMenu: "Takaisin ruokalistaan",
         notFoundTitle: "Annoksen tiedot puuttuvat",
-        notFoundBody: "Tätä annosta ei löytynyt. Se on voinut poistua ruokalistalta.",
+        notFoundBody:
+          "Tätä annosta ei löytynyt. Se on voinut poistua ruokalistalta.",
         details: "Annoksen tiedot",
         lunchItem: "Lounasannos",
         available: "Saatavilla",
@@ -147,7 +150,7 @@ const resources = {
         addedToCart: "Lisätty!",
         requiredExtraError: "Tee valinta kohdassa",
         showMoreExtras: "Näytä kaikki lisukkeet",
-        showLessExtras: "Näytä vähemmän lisukkeet"
+        showLessExtras: "Näytä vähemmän lisukkeet",
       },
 
       // ── Nav ───────────────────────────────────────────────────────────────
@@ -259,7 +262,8 @@ const resources = {
         cashOnDeliveryDesc: "Maksa käteisellä kun tilaus saapuu",
         cardOnDelivery: "Kortti toimituksessa",
         cardOnDeliveryDesc: "Maksa kortilla kun tilaus saapuu",
-        paytrailRedirectNote: "Sinut ohjataan Paytrailin turvalliselle maksusivulle.",
+        paytrailRedirectNote:
+          "Sinut ohjataan Paytrailin turvalliselle maksusivulle.",
         summary: "Yhteenveto",
         subtotal: "Välisumma",
         delivery: "Toimitus",
@@ -267,7 +271,8 @@ const resources = {
         total: "Yhteensä",
         redirectingToPayment: "Ohjataan maksuun…",
         payViaPaytrail: "Maksa €{{amount}} Paytraililla",
-        paytrailFootnote: "Ohjattu Paytrailiin — korttitietojasi ei tallenneta.",
+        paytrailFootnote:
+          "Ohjattu Paytrailiin — korttitietojasi ei tallenneta.",
         processing: "Käsitellään...",
         placeOrder: "Tee Tilaus",
         offlinePaymentNote: "Tilauksesi vahvistetaan välittömästi.",
@@ -296,7 +301,8 @@ const resources = {
         pendingPaymentBanner: "Maksu vaaditaan tilauksen vahvistamiseksi",
         completePayment: "Suorita maksu — €{{amount}}",
         redirectingToPaytrail: "Ohjataan Paytrailiin…",
-        paymentPendingNote: "Maksu on kesken — suorita se tilauksen vahvistamiseksi.",
+        paymentPendingNote:
+          "Maksu on kesken — suorita se tilauksen vahvistamiseksi.",
         paymentError: "Maksuvirhe. Yritä uudelleen.",
         notes: "Huomio",
       },
@@ -336,7 +342,8 @@ const resources = {
       orderConfirmed: {
         // Success state
         paymentSuccessTitle: "Maksu onnistui",
-        paymentSuccessBody: "Tilauksesi on vahvistettu ja sen valmistus on aloitettu.",
+        paymentSuccessBody:
+          "Tilauksesi on vahvistettu ja sen valmistus on aloitettu.",
         orderLabel: "Tilaus",
         summaryTitle: "Yhteenveto",
         paidBadge: "Maksettu",
@@ -507,11 +514,11 @@ const resources = {
           "Tilausta ei voi enää peruuttaa — ravintola on jo aloittanut valmistuksen.",
         cancelling: "Perutaan…",
         backHome: "Takaisin Etusivulle",
-        paymentMethod:{
+        paymentMethod: {
           cash_on_delivery: "Käteinen toimituksessa",
           card: "Kortti",
           online: "Verkkomaksu",
-        }
+        },
       },
 
       // ── Order status labels ───────────────────────────────────────────────
@@ -644,11 +651,12 @@ const resources = {
 
       // ── Features strip ────────────────────────────────────────────────────
       fastDelivery: "Fast Delivery",
-      fastDeliveryDesc: "Free under 9km • €4 over 9km",
+      fastDeliveryDesc: "Free under {{freeKm}}km • €{{fee}} over {{freeKm}}km",
+      deliveryTimeDesc: "Min order €{{minOrder}} • Max {{paidKm}}km radius",
+
       discount: "5% Off Every Order",
       discountDesc: "Automatic discount on every order",
       deliveryTime: "~60 min delivery",
-      deliveryTimeDesc: "Min order €13 • Max 14km radius",
 
       // ── Carousel section ──────────────────────────────────────────────────
       fromMenu: "From the menu",
@@ -746,7 +754,7 @@ const resources = {
         addedToCart: "Added!",
         requiredExtraError: "Please make a selection for",
         showMoreExtras: "Show more extras",
-        showLessExtras: "Show less extras"
+        showLessExtras: "Show less extras",
       },
 
       // ── Nav ───────────────────────────────────────────────────────────────
@@ -858,7 +866,8 @@ const resources = {
         cashOnDeliveryDesc: "Pay in cash when your order arrives",
         cardOnDelivery: "Card on Delivery",
         cardOnDeliveryDesc: "Pay by card when your order arrives",
-        paytrailRedirectNote: "You'll be redirected to Paytrail's secure payment page.",
+        paytrailRedirectNote:
+          "You'll be redirected to Paytrail's secure payment page.",
         summary: "Summary",
         subtotal: "Subtotal",
         delivery: "Delivery",
@@ -896,7 +905,8 @@ const resources = {
         pendingPaymentBanner: "Payment required to confirm this order",
         completePayment: "Complete Payment — €{{amount}}",
         redirectingToPaytrail: "Redirecting to Paytrail…",
-        paymentPendingNote: "Payment is pending — complete it to confirm your order.",
+        paymentPendingNote:
+          "Payment is pending — complete it to confirm your order.",
         paymentError: "Payment error. Try again.",
         notes: "Note",
       },
@@ -1105,11 +1115,11 @@ const resources = {
           "Order can no longer be cancelled — the restaurant has already started preparation.",
         cancelling: "Cancelling…",
         backHome: "Back to Home",
-        paymentMethod:{
+        paymentMethod: {
           cash_on_delivery: "Cash on Delivery",
           card: "Card",
           online: "Online payment",
-        }
+        },
       },
 
       // ── Order status labels ───────────────────────────────────────────────

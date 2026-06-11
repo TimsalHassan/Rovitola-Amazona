@@ -173,7 +173,11 @@ function MenuCarousel({ items }: { items: CarouselItem[] }) {
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="overflow-hidden">
-        <motion.div ref={trackRef} className="flex" style={{ x, gap: `${gapPx}px` }}>
+        <motion.div
+          ref={trackRef}
+          className="flex"
+          style={{ x, gap: `${gapPx}px` }}
+        >
           {cloned.map((item, i) => (
             <Link
               key={`${item.id}-${i}`}
@@ -368,28 +372,6 @@ function ReviewModal({ onClose, onSubmitted }: ReviewModalProps) {
   );
 }
 
-// ─── Opening Hours Row ────────────────────────────────────────────────────────
-
-const DAY_ORDER = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
-
-function formatTime(t: string | null): string {
-  if (!t) return "—";
-  // "HH:MM:SS" → "HH:MM"
-  return t.slice(0, 5);
-}
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 // ─── HomePage ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
@@ -403,7 +385,8 @@ export default function HomePage() {
     openStatusMessage,
     deliveryFee,
     minOrder,
-    isDeliveryEnabled,
+    freeDeliveryRadius,
+    paidDeliveryRadius,
   } = useRestaurant();
 
   const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
@@ -448,7 +431,7 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchReviews() {
       try {
-        const data = await reviewsApi.getAll();;
+        const data = await reviewsApi.getAll();
         setReviews(data.results);
       } catch {
         setReviews([]);
@@ -467,12 +450,16 @@ export default function HomePage() {
       .catch(() => setReviews([]))
       .finally(() => setReviewsLoading(false));
   }
-
   const features = [
     {
       icon: <Truck size={20} className="text-amber-400" />,
       title: t("fastDelivery"),
-      desc: t("fastDeliveryDesc"),
+      desc: restaurantLoading
+        ? "..."
+        : t("fastDeliveryDesc", {
+            freeKm: freeDeliveryRadius,
+            fee: deliveryFee,
+          }),
     },
     {
       icon: <Percent size={20} className="text-amber-400" />,
@@ -482,16 +469,14 @@ export default function HomePage() {
     {
       icon: <Clock size={20} className="text-amber-400" />,
       title: t("deliveryTime"),
-      desc: t("deliveryTimeDesc"),
+      desc: restaurantLoading
+        ? "..."
+        : t("deliveryTimeDesc", {
+            minOrder,
+            paidKm: paidDeliveryRadius,
+          }),
     },
   ];
-
-  // Sort opening hours by day order
-  const sortedHours = info
-    ? [...info.opening_hours].sort(
-        (a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day),
-      )
-    : [];
 
   return (
     <main className="bg-gray-950 text-white">
@@ -833,132 +818,6 @@ export default function HomePage() {
                 {t("signInToReview")}
               </Link>
             )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── App download + Opening Hours ──────────────────────────────────── */}
-      <section className="py-14 bg-gray-900 border-t border-white/5">
-        <div className="max-w-[1200px] mx-auto px-4">
-          <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/15 rounded-3xl p-8 md:p-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <div>
-                <p className="text-amber-400 text-sm font-semibold uppercase tracking-widest mb-3">
-                  {t("mobileApp")}
-                </p>
-                <h2 className="text-3xl font-black mb-3">{t("orderEasier")}</h2>
-                <p className="text-gray-400 text-sm mb-6">
-                  {t("downloadDesc")}
-                </p>
-
-                {/* Delivery info from backend */}
-                {info && isDeliveryEnabled && (
-                  <div className="mb-5 flex flex-wrap gap-2 text-xs">
-                    <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-3 py-1.5 rounded-full font-medium">
-                      Free delivery within {info.free_delivery_radius_km}km
-                    </span>
-                    <span className="bg-gray-800 border border-white/10 text-gray-300 px-3 py-1.5 rounded-full font-medium">
-                      €{deliveryFee} up to {info.paid_delivery_radius_km}km
-                    </span>
-                    <span className="bg-gray-800 border border-white/10 text-gray-300 px-3 py-1.5 rounded-full font-medium">
-                      Min order €{minOrder}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link
-                    to="https://apps.apple.com/us/app/ravintola-amazona/id6448418434"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 transition-colors"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-6 h-6 fill-white shrink-0"
-                    >
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                    </svg>
-                    <div>
-                      <div className="text-xs text-gray-400">
-                        {t("downloadOn")}
-                      </div>
-                      <div className="font-bold text-sm text-white">
-                        App Store
-                      </div>
-                    </div>
-                  </Link>
-                  <Link
-                    to="https://play.google.com/store/apps/details?id=com.ravintolaamazona_new"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 transition-colors"
-                  >
-                    <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0">
-                      <path
-                        d="M3.18 23.76c.3.17.64.21.97.13l12.08-6.98-2.62-2.62-10.43 9.47zM.35 1.18C.13 1.5 0 1.95 0 2.52v18.95c0 .57.13 1.03.36 1.35l.07.07 10.62-10.62v-.25L.42 1.11l-.07.07zM20.69 10.41l-2.9-1.67-2.94 2.94 2.94 2.94 2.91-1.68c.83-.48.83-1.26-.01-1.53zM3.18.24l12.11 6.99-2.62 2.62L2.24.38C2.55.1 2.89.07 3.18.24z"
-                        fill="#EA4335"
-                      />
-                    </svg>
-                    <div>
-                      <div className="text-xs text-gray-400">
-                        {t("downloadOn")}
-                      </div>
-                      <div className="font-bold text-sm text-white">
-                        Google Play
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Opening hours — from backend */}
-              <div className="bg-gray-900/60 rounded-2xl p-5 border border-white/5">
-                <h3 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
-                  <Clock size={16} className="text-amber-400" />
-                  {t("openingHours")}
-                </h3>
-                {restaurantLoading ? (
-                  <div className="space-y-2">
-                    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                      <div
-                        key={i}
-                        className="h-4 bg-gray-800 rounded animate-pulse"
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-1 text-xs">
-                    {sortedHours.map((row) => (
-                      <div
-                        key={row.day}
-                        className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0"
-                      >
-                        <span className="text-gray-400 w-24 shrink-0">
-                          {capitalize(row.day)}
-                        </span>
-                        {row.is_closed ? (
-                          <span className="text-red-400 font-medium">
-                            {t("closed") ?? "Closed"}
-                          </span>
-                        ) : (
-                          <span className="text-white font-medium">
-                            {formatTime(row.open_time)} –{" "}
-                            {formatTime(row.close_time)}
-                          </span>
-                        )}
-                        {!row.is_closed && row.lunch_open && (
-                          <span className="text-amber-400/70 text-right">
-                            {formatTime(row.lunch_open)}–
-                            {formatTime(row.lunch_close)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </section>
