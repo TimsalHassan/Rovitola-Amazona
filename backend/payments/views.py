@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 
 from orders.models import Order
 from .paytrail import create_payment, verify_callback
-from .tasks import send_payment_notification_email, send_payment_failed_email
+# from .tasks import send_payment_notification_email, send_payment_failed_email
 from orders.tasks import send_restaurant_notification_email
 
 logger = logging.getLogger(__name__)
@@ -81,26 +81,10 @@ class PaymentCallbackView(APIView):
                 order.status = "confirmed"
                 order.save(update_fields=["payment_status", "status"])
 
-                if customer_email:
-                    send_payment_notification_email.delay(
-                        order_id=order.order_number,
-                        user_email=customer_email,
-                        amount=str(order.total),
-                    )
-                send_restaurant_notification_email.delay(
-                    order_id=order.order_number,
-                    order_details=f"Payment received for order #{order.order_number}\nTotal: €{order.total}",
-                )
         else:
             if order.payment_status != "paid":
                 order.payment_status = "unpaid"
                 order.save(update_fields=["payment_status"])
-
-                if customer_email:
-                    send_payment_failed_email.delay(
-                        order_id=order.order_number,
-                        user_email=customer_email,
-                    )
 
         # Check if this is a server-to-server callback (no browser involved)
         # Paytrail server calls don't need a redirect
