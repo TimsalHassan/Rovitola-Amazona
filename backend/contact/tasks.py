@@ -2,7 +2,7 @@ from celery import shared_task
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 
-from .tasks import _wrap_email, _greeting, _body_text, _divider, _signature
+from users.tasks import _wrap_email, _greeting, _body_text, _divider, _signature
 from orders.tasks import _info_badge
 
 
