@@ -48,6 +48,8 @@ export default function CheckoutPage() {
   const { addToast } = useToast();
   const state = location.state as CartLocationState | null;
 
+  console.log(state)
+
   const [paymentMethod, setPaymentMethod] = useState<
     "online" | "cash_on_delivery" | "card_on_delivery"
   >("online");
@@ -63,11 +65,13 @@ export default function CheckoutPage() {
       id: "online" as const,
       label: t("checkout.payOnline"),
       desc: t("checkout.payOnlineDesc"),
+      isPickup: false
     },
     {
       id: "cash_on_delivery" as const,
       label: t("checkout.cashOnDelivery"),
       desc: t("checkout.cashOnDeliveryDesc"),
+      isPickup: state?.orderType === "pickup"
     },
   ];
 
@@ -312,7 +316,7 @@ export default function CheckoutPage() {
                   {t("checkout.paymentMethod")}
                 </h2>
 
-                {PAYMENT_METHODS.map((method) => (
+                {PAYMENT_METHODS.filter((method)=> !method.isPickup).map((method) => (
                   <button
                     key={method.id}
                     type="button"

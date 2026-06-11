@@ -32,7 +32,6 @@ class Order(models.Model):
     PAYMENT_METHOD_CHOICES = [
         ("online",           "Online (Paytrail)"),
         ("cash_on_delivery", "Cash on Delivery"),
-        ("card_on_delivery", "Card on Delivery"),
     ]
     # Guest fields (used when customer is None)
     guest_name  = models.CharField(max_length=100, blank=True)

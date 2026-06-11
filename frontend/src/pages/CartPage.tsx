@@ -636,7 +636,7 @@ export default function CartPage() {
       .filter((s) => s && s.trim() && s !== "-")
       .join(", ");
 
-    navigate("/checkout", {
+    navigate(`/checkout?order_type=${form.orderType}`, {
       state: {
         orderType: form.orderType,
         deliveryAddress: deliveryAddressStr,

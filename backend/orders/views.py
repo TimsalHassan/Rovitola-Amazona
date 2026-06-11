@@ -82,7 +82,6 @@ class OrderListView(generics.ListAPIView):
             .prefetch_related("items__selected_options")
             .order_by("-created_at")
         )
-
 class OrderCreateView(generics.CreateAPIView):
     serializer_class = CreateOrderSerializer
     permission_classes = [AllowAny]
@@ -92,53 +91,7 @@ class OrderCreateView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
 
-        # If offline payment → confirm immediately
-        if order.payment_method in ["cash_on_delivery", "card_on_delivery"]:
-            order.status = "confirmed"
-            order.save(update_fields=["status"])
-        # Online payment → stays pending until Paytrail callback
-
-        # Customer email get karo
-        customer_email = None
-        if order.customer:
-            customer_email = order.customer.email
-        elif order.guest_email:
-            customer_email = order.guest_email
-
-        if customer_email:
-            send_order_received_email.delay(
-                order_id=order.order_number,
-                user_email=customer_email,
-                user_name=order.get_customer_name(),
-                order_type=order.order_type,
-                total=str(order.total),
-            )
-
-        # Build items list
-        items_text = "\n".join([
-            f"  • {item.menu_item_name} x{item.quantity} = €{item.total_price}"
-            for item in order.items.all()
-        ])
- 
-        send_restaurant_notification_email.delay(
-            order_id=order.order_number,
-            order_details=(
-                f"Order Number : #{order.order_number}\n"
-                f"Order Type   : {order.order_type.upper()}\n"
-                f"Customer     : {order.get_customer_name()}\n"
-                f"Phone        : {order.get_customer_phone()}\n"
-                f"Email        : {order.get_customer_email()}\n"
-                f"Address      : {order.delivery_address or 'N/A (Pickup)'}\n"
-                f"Notes        : {order.order_notes or 'None'}\n\n"
-                f"Items:\n{items_text}\n\n"
-                f"Subtotal     : €{order.subtotal}\n"
-                f"Delivery     : €{order.delivery_charge}\n"
-                f"Discount     : -€{order.discount_amount}\n"
-                f"TOTAL        : €{order.total}"
-            ),
-        )
-
-        # Clear the customer's cart after successful order creation
+        # Clear cart after successful order
         if request.user.is_authenticated:
             Cart.objects.filter(user=request.user).delete()
         else:
