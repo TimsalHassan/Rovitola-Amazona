@@ -34,7 +34,10 @@ type RestaurantAction =
   | { type: "FETCH_SUCCESS"; info: RestaurantInfo }
   | { type: "FETCH_ERROR"; error: string };
 
-function reducer(state: RestaurantState, action: RestaurantAction): RestaurantState {
+function reducer(
+  state: RestaurantState,
+  action: RestaurantAction
+): RestaurantState {
   switch (action.type) {
     case "FETCH_START":
       return { ...state, isLoading: true, error: null };
@@ -56,6 +59,8 @@ export interface RestaurantContextValue extends RestaurantState {
   isOpen: boolean;
   openStatusMessage: string;
   deliveryFee: number;
+  freeDeliveryRadius: number;
+  paidDeliveryRadius: number;
   minOrder: number;
   isDeliveryEnabled: boolean;
 }
@@ -88,12 +93,14 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     return restaurantApi.checkDelivery(payload);
   }, []);
 
-  // Convenience computed values so consumers don't need to null-check state.info
-  const isOpen = state.info?.is_open_now ?? false;
-  const openStatusMessage = state.info?.open_status_message ?? "";
-  const deliveryFee = parseFloat(state.info?.delivery_fee ?? "0");
-  const minOrder = parseFloat(state.info?.min_order ?? "0");
-  const isDeliveryEnabled = state.info?.is_delivery_enabled ?? false;
+  // Convenience computed values — safe defaults when info hasn't loaded yet
+  const isOpen             = state.info?.is_open_now ?? false;
+  const openStatusMessage  = state.info?.open_status_message ?? "";
+  const deliveryFee        = parseFloat(state.info?.delivery_fee ?? "0");
+  const minOrder           = parseFloat(state.info?.min_order ?? "0");
+  const isDeliveryEnabled  = state.info?.is_delivery_enabled ?? false;
+  const freeDeliveryRadius = state.info?.free_delivery_radius_km ?? 0;
+  const paidDeliveryRadius = state.info?.paid_delivery_radius_km ?? 0;
 
   return (
     <RestaurantContext.Provider
@@ -106,6 +113,8 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
         deliveryFee,
         minOrder,
         isDeliveryEnabled,
+        freeDeliveryRadius,
+        paidDeliveryRadius,
       }}
     >
       {children}

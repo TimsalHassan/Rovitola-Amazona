@@ -426,6 +426,14 @@ function AddressInput({
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface DeliveryCheckResult {
+  is_eligible: boolean;
+  delivery_fee: number | null;
+  distance_km: number | null;
+  message: string;
+  zone: "free" | "paid" | "out_of_range" | "address_not_found" | null;
+}
+
 interface CheckoutFormData {
   orderType: "delivery" | "pickup";
   deliveryAddress: AddressFields;
@@ -454,15 +462,18 @@ export default function CartPage() {
     guestEmail: "",
   });
 
-  const [deliveryCheck, setDeliveryCheck] = useState<{
-    is_eligible: boolean;
-    delivery_fee: number | null;
-    distance_km: number | null;
-    message: string;
-  } | null>(null);
-
+  const [deliveryCheck, setDeliveryCheck] =
+    useState<DeliveryCheckResult | null>(null);
   const [checkingDelivery, setCheckingDelivery] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [addressError, setAddressError] = useState<string | undefined>();
+  const [showDeliveryUnavailableModal, setShowDeliveryUnavailableModal] =
+    useState(false);
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof CheckoutFormData, string>>
+  >({});
 
+  // ── Delivery check ─────────────────────────────────────────────────────────
   const checkDeliveryByAddress = useCallback(
     async (street: string, city: string, postal: string, country: string) => {
       setCheckingDelivery(true);
@@ -474,9 +485,12 @@ export default function CartPage() {
         });
         const data = await res.json();
         setDeliveryCheck({
-          ...data,
+          is_eligible: data.is_eligible,
           delivery_fee:
             data.delivery_fee != null ? parseFloat(data.delivery_fee) : null,
+          distance_km: data.distance_km,
+          message: data.message,
+          zone: data.zone ?? null,
         });
       } catch {
         setDeliveryCheck(null);
@@ -486,17 +500,6 @@ export default function CartPage() {
     },
     []
   );
-
-  const minOrder = restaurant.minOrder;
-  const meetsMinOrder = form.orderType === "pickup" || subtotal >= minOrder;
-
-  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
-  const [addressError, setAddressError] = useState<string | undefined>();
-  const [showDeliveryUnavailableModal, setShowDeliveryUnavailableModal] =
-    useState(false);
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof CheckoutFormData, string>>
-  >({});
 
   // ── Debounced delivery check ───────────────────────────────────────────────
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -522,33 +525,56 @@ export default function CartPage() {
     };
   }, [form.deliveryAddress, form.orderType, checkDeliveryByAddress]);
 
-  const handleAddressSaved = useCallback((addr: Address) => {
-    setSavedAddresses((prev) => {
-      const exists = prev.find((a) => a.id === addr.id);
-      if (exists) return prev;
-      return [...prev, addr];
-    });
-  }, []);
+  // ── Derived delivery zone states ───────────────────────────────────────────
+  const addressEntered =
+    !!form.deliveryAddress.street.trim() &&
+    !!form.deliveryAddress.city.trim() &&
+    !!form.deliveryAddress.postal.trim();
 
-  const round2 = (n: number) => Math.round(n * 100) / 100;
+  // Zone 1: within free_delivery_radius_km
+  const deliveryIsFree =
+    form.orderType === "delivery" &&
+    !!deliveryCheck?.is_eligible &&
+    deliveryCheck.delivery_fee === 0;
 
-  // ── Delivery state derived values ─────────────────────────────────────────
-  // Not available = check ran, not eligible (covers both address-not-found and out-of-range)
-  const deliveryNotAvailable =
+  // Zone 2: between free_delivery_radius_km and paid_delivery_radius_km
+  const deliveryIsPaid =
+    form.orderType === "delivery" &&
+    !!deliveryCheck?.is_eligible &&
+    (deliveryCheck.delivery_fee ?? 0) > 0;
+
+  // Zone 3a: geocoding failed — address string not recognized
+  const deliveryAddressNotFound =
     form.orderType === "delivery" &&
     !!deliveryCheck &&
-    !deliveryCheck.is_eligible;
+    !deliveryCheck.is_eligible &&
+    deliveryCheck.distance_km === null;
 
-  // Address geocoding failed (not found) vs out of range
-  const deliveryAddressNotFound =
-    deliveryNotAvailable && deliveryCheck?.distance_km === null;
+  // Zone 3b: address found but beyond paid_delivery_radius_km
+  const deliveryOutOfRange =
+    form.orderType === "delivery" &&
+    !!deliveryCheck &&
+    !deliveryCheck.is_eligible &&
+    deliveryCheck.distance_km !== null;
 
   const deliveryCharge =
     form.orderType === "delivery" && deliveryCheck?.is_eligible
       ? (deliveryCheck.delivery_fee ?? 0)
       : 0;
 
+  const round2 = (n: number) => Math.round(n * 100) / 100;
   const total = round2(subtotal + deliveryCharge);
+
+  const minOrder = restaurant.minOrder;
+  const meetsMinOrder = form.orderType === "pickup" || subtotal >= minOrder;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const handleAddressSaved = useCallback((addr: Address) => {
+    setSavedAddresses((prev) => {
+      if (prev.find((a) => a.id === addr.id)) return prev;
+      return [...prev, addr];
+    });
+  }, []);
 
   const patch = useCallback((field: keyof CheckoutFormData, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -570,6 +596,8 @@ export default function CartPage() {
         e.deliveryAddress = "Please enter your postal code.";
       else if (!form.deliveryAddress.country.trim())
         e.deliveryAddress = "Please enter your country.";
+      else if (checkingDelivery)
+        e.deliveryAddress = "Please wait — checking delivery availability…";
       else if (!deliveryCheck)
         e.deliveryAddress = "Please wait — checking delivery availability…";
       else if (!deliveryCheck.is_eligible)
@@ -579,19 +607,21 @@ export default function CartPage() {
     return Object.keys(e).length === 0;
   };
 
+  // ── Proceed ────────────────────────────────────────────────────────────────
   const handleProceed = () => {
-    if (deliveryNotAvailable) {
-      if (deliveryAddressNotFound) {
-        // Geocoding failed — address not recognized
-        addToast({
-          type: "error",
-          title: "Address not found",
-          duration: 4000,
-        });
-      } else {
-        // Address found but outside delivery radius — show modal
-        setShowDeliveryUnavailableModal(true);
-      }
+    // Zone 3a — address not found by geocoder
+    if (deliveryAddressNotFound) {
+      addToast({
+        type: "error",
+        title: "Address not found. Please check your street, city and postal code.",
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Zone 3b — outside delivery radius → show modal
+    if (deliveryOutOfRange) {
+      setShowDeliveryUnavailableModal(true);
       return;
     }
 
@@ -853,45 +883,63 @@ export default function CartPage() {
                   <span>{t("cart.subtotal")}</span>
                   <span>€{subtotal.toFixed(2)}</span>
                 </div>
+
+                {/* ── Delivery fee row with 3-zone display ─────────── */}
                 {form.orderType === "delivery" && (
                   <div className="flex justify-between text-sm">
-                    <span>{t("cart.delivery")}</span>
+                    <span className="text-gray-400">{t("cart.delivery")}</span>
                     <div className="text-right">
-                      {!form.deliveryAddress.street.trim() ? (
+                      {/* Not enough address info yet */}
+                      {!addressEntered ? (
                         <span className="text-gray-600 text-xs">
-                          Enter address
-                        </span>
-                      ) : !form.deliveryAddress.city.trim() ||
-                        !form.deliveryAddress.postal.trim() ? (
-                        <span className="text-gray-600 text-xs">
-                          Enter city &amp; postal code
+                          Enter full address
                         </span>
                       ) : checkingDelivery ? (
-                        <span className="text-gray-500 text-xs">
+                        /* Checking in progress */
+                        <span className="text-gray-500 text-xs flex items-center gap-1 justify-end">
+                          <Loader2 size={10} className="animate-spin" />
                           Checking…
                         </span>
-                      ) : deliveryCheck ? (
+                      ) : deliveryIsFree ? (
+                        /* Zone 1 — free */
                         <div>
-                          {deliveryNotAvailable ? (
-                            <span className="text-red-400 font-medium text-sm">
-                              Not available
-                            </span>
-                          ) : (
-                            <span
-                              className={
-                                deliveryCharge === 0
-                                  ? "text-green-400 font-medium"
-                                  : "text-white font-medium"
-                              }
-                            >
-                              {deliveryCharge === 0
-                                ? t("cart.free")
-                                : `€${deliveryCharge.toFixed(2)}`}
-                            </span>
+                          <span className="text-green-400 font-bold text-sm">
+                            FREE 🎉
+                          </span>
+                          {deliveryCheck?.distance_km != null && (
+                            <p className="text-gray-500 text-[10px] mt-0.5">
+                              {deliveryCheck.distance_km}km away
+                            </p>
                           )}
-                          <p className="text-gray-500 text-[10px] mt-0.5">
-                            {deliveryCheck.message}
-                          </p>
+                        </div>
+                      ) : deliveryIsPaid ? (
+                        /* Zone 2 — paid */
+                        <div>
+                          <span className="text-white font-semibold">
+                            €{deliveryCharge.toFixed(2)}
+                          </span>
+                          {deliveryCheck?.distance_km != null && (
+                            <p className="text-gray-500 text-[10px] mt-0.5">
+                              {deliveryCheck.distance_km}km away
+                            </p>
+                          )}
+                        </div>
+                      ) : deliveryAddressNotFound ? (
+                        /* Zone 3a — geocoding failed */
+                        <span className="text-red-400 text-xs">
+                          Address not found
+                        </span>
+                      ) : deliveryOutOfRange ? (
+                        /* Zone 3b — beyond paid radius */
+                        <div>
+                          <span className="text-red-400 text-xs font-medium">
+                            Out of range
+                          </span>
+                          {deliveryCheck?.distance_km != null && (
+                            <p className="text-gray-500 text-[10px] mt-0.5">
+                              {deliveryCheck.distance_km}km away
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <span className="text-gray-600 text-xs">—</span>
@@ -919,14 +967,24 @@ export default function CartPage() {
                   </div>
                 )}
 
-              {/* Delivery not available warning */}
-              {deliveryNotAvailable && (
-                <div className="mt-4 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                  <Truck size={15} className="text-red-400 shrink-0" />
+              {/* Zone 3a — address not found banner */}
+              {deliveryAddressNotFound && (
+                <div className="mt-4 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  <MapPin size={15} className="text-red-400 shrink-0 mt-0.5" />
                   <p className="text-red-400 text-xs font-medium">
-                    {deliveryAddressNotFound
-                      ? "Address not found. Please check your address and try again."
-                      : "Delivery is not available to this address. Switch to pickup or change your address."}
+                    We couldn't find this address. Please check your street,
+                    city and postal code.
+                  </p>
+                </div>
+              )}
+
+              {/* Zone 3b — out of range banner */}
+              {deliveryOutOfRange && (
+                <div className="mt-4 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  <Truck size={15} className="text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-red-400 text-xs font-medium">
+                    Delivery isn't available to this address — it's outside our
+                    delivery area. Switch to pickup or try a closer address.
                   </p>
                 </div>
               )}
@@ -952,7 +1010,7 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* ── Delivery Unavailable Modal ──────────────────────────────────────── */}
+      {/* ── Out-of-range modal (Zone 3b only) ──────────────────────────────── */}
       {showDeliveryUnavailableModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
@@ -961,17 +1019,36 @@ export default function CartPage() {
             </div>
 
             <h2 className="text-white font-bold text-lg text-center mb-2">
-              Delivery Not Available
+              Outside Delivery Area
             </h2>
             <p className="text-gray-400 text-sm text-center mb-1">
-              Sorry, we don't deliver to your address.
+              Sorry, we can't deliver to your address.
             </p>
             {deliveryCheck?.distance_km != null && (
-              <p className="text-gray-500 text-xs text-center mb-5">
-                Your address is {deliveryCheck.distance_km}km away — outside
-                our delivery area.
+              <p className="text-gray-500 text-xs text-center">
+                Your address is{" "}
+                <span className="text-gray-300 font-semibold">
+                  {deliveryCheck.distance_km}km
+                </span>{" "}
+                away — outside our delivery radius.
               </p>
             )}
+
+            {/* Zone visual */}
+            <div className="mt-5 bg-gray-800 rounded-xl p-4 space-y-2 text-xs">
+              <div className="flex justify-between text-gray-400">
+                <span>🟢 Free delivery</span>
+                <span>up to {restaurant.freeDeliveryRadius ?? "9"}km</span>
+              </div>
+              <div className="flex justify-between text-gray-400">
+                <span>🟡 Paid delivery</span>
+                <span>up to {restaurant.paidDeliveryRadius ?? "14"}km</span>
+              </div>
+              <div className="flex justify-between text-red-400/70">
+                <span>🔴 Not available</span>
+                <span>beyond {restaurant.paidDeliveryRadius ?? "14"}km</span>
+              </div>
+            </div>
 
             <div className="flex flex-col gap-3 mt-5">
               <button

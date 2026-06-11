@@ -6,7 +6,7 @@ from django.core.cache import cache
 
 from .models import RestaurantSettings
 from .serializers import RestaurantSettingsSerializer, DeliveryCheckSerializer
-from .utils import get_delivery_fee, is_restaurant_open, geocode_address 
+from .utils import get_delivery_fee, is_restaurant_open, geocode_address
 
 
 class RestaurantInfoView(APIView):
@@ -26,7 +26,6 @@ class RestaurantInfoView(APIView):
         serializer = RestaurantSettingsSerializer(settings)
         open_now, message = is_restaurant_open(settings.opening_hours.all())
 
-        # Lunch hours alag nikalo
         lunch_hours = [
             {
                 "day": oh.day,
@@ -65,6 +64,7 @@ class DeliveryCheckView(APIView):
                 "is_eligible": False,
                 "delivery_fee": None,
                 "distance_km": None,
+                "zone": None,
                 "message": "Delivery is currently not available.",
             })
 
@@ -72,11 +72,11 @@ class DeliveryCheckView(APIView):
         lat = data.get('latitude')
         lon = data.get('longitude')
 
-        # ── NEW: agar lat/lon nahi, address se geocode karo ──
+        # Geocode from address fields if lat/lon not provided
         if lat is None or lon is None:
-            street = data.get('street', '')
-            city = data.get('city', '')
-            postal = data.get('postal', '')
+            street  = data.get('street', '')
+            city    = data.get('city', '')
+            postal  = data.get('postal', '')
             country = data.get('country', 'Finland')
 
             if not street.strip():
@@ -84,36 +84,56 @@ class DeliveryCheckView(APIView):
                     "is_eligible": False,
                     "delivery_fee": None,
                     "distance_km": None,
+                    "zone": None,
                     "message": "Please enter a delivery address.",
                 })
 
             lat, lon = geocode_address(street, city, postal, country)
 
+            # Geocoding failed — address not recognized
             if lat is None:
                 return Response({
                     "is_eligible": False,
                     "delivery_fee": None,
                     "distance_km": None,
-                    "message": "Address is not in the radius",
+                    "zone": "address_not_found",
+                    "message": "Address not found. Please check your street, city and postal code.",
                 })
-        # ── existing logic same rehti hai ──
 
         fee, distance = get_delivery_fee(lat, lon, settings)
         distance_rounded = round(distance, 1)
 
+        # Zone 3b — address found but beyond paid delivery radius
         if fee is None:
             return Response({
                 "is_eligible": False,
                 "delivery_fee": None,
                 "distance_km": distance_rounded,
-                "message": f"Sorry, delivery is not available to your location ({distance_rounded}km). Maximum delivery radius is {settings.paid_delivery_radius_km}km.",
+                "zone": "out_of_range",
+                "message": (
+                    f"Sorry, we don't deliver to your address. "
+                    f"Your location is {distance_rounded}km away — "
+                    f"our maximum delivery radius is {settings.paid_delivery_radius_km}km."
+                ),
             })
 
         fee_float = round(float(fee), 2)
-        message = f"Free delivery! ({distance_rounded}km)" if fee_float == 0 else f"€{fee_float:.2f} delivery fee. ({distance_rounded}km)"
+
+        # Zone 1 — free delivery
+        if fee_float == 0:
+            return Response({
+                "is_eligible": True,
+                "delivery_fee": 0,
+                "distance_km": distance_rounded,
+                "zone": "free",
+                "message": f"Free delivery! ({distance_rounded}km)",
+            })
+
+        # Zone 2 — paid delivery
         return Response({
             "is_eligible": True,
             "delivery_fee": fee_float,
             "distance_km": distance_rounded,
-            "message": message,
+            "zone": "paid",
+            "message": f"€{fee_float:.2f} delivery fee ({distance_rounded}km).",
         })
