@@ -10,11 +10,6 @@ from restaurant.models import RestaurantSettings, OpeningHours
 
 User = get_user_model()
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# USERS
-# ──────────────────────────────────────────────────────────────────────────────
-
 class AdminUserSerializer(serializers.ModelSerializer):
     orders_count = serializers.SerializerMethodField()
 
@@ -29,10 +24,6 @@ class AdminUserSerializer(serializers.ModelSerializer):
     def get_orders_count(self, obj):
         return obj.orders.count()
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# CATEGORIES
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminCategorySerializer(serializers.ModelSerializer):
     items_count = serializers.SerializerMethodField()
@@ -63,10 +54,6 @@ class AdminCategorySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A category with this slug already exists.")
         return value
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# EXTRAS  (used inside Admin Menu Form to show/edit extras per category)
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminExtraOptionSerializer(serializers.ModelSerializer):
     # Frontend uses "price" — map it to additional_price on the model
@@ -215,10 +202,6 @@ class AdminExtraWriteSerializer(serializers.ModelSerializer):
         return AdminExtraSerializer(instance, context=self.context).data
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# MENU ITEMS
-# ──────────────────────────────────────────────────────────────────────────────
-
 class AdminMenuItemListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for the list page."""
     category_name = serializers.CharField(source="category.name", read_only=True)
@@ -267,10 +250,6 @@ class AdminMenuItemWriteSerializer(serializers.ModelSerializer):
             )
         return data
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# ORDERS
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminOrderItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -322,10 +301,6 @@ class AdminOrderStatusSerializer(serializers.ModelSerializer):
         fields = ["status", "payment_status"]
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# REVIEWS
-# ──────────────────────────────────────────────────────────────────────────────
-
 class AdminReviewSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source="customer.name", read_only=True)
     customer_email = serializers.CharField(source="customer.email", read_only=True)
@@ -342,10 +317,6 @@ class AdminReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ["customer", "rating", "text", "created_at"]
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# CONTACT MESSAGES
-# ──────────────────────────────────────────────────────────────────────────────
-
 class AdminContactMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactMessage
@@ -359,10 +330,6 @@ class AdminContactMessageSerializer(serializers.ModelSerializer):
             "subject", "message", "created_at",
         ]
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# RESTAURANT SETTINGS
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminOpeningHoursSerializer(serializers.ModelSerializer):
     class Meta:
@@ -402,10 +369,6 @@ class AdminOpeningHoursWriteSerializer(serializers.ModelSerializer):
             "lunch_open", "lunch_close",
         ]
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# DASHBOARD STATS
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminDashboardStatsSerializer(serializers.Serializer):
     total_orders = serializers.IntegerField()

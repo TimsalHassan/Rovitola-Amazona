@@ -6,7 +6,7 @@ import { ADMIN, adminGet, adminPatch, adminPut } from "../../api/admin";
 
 interface OpeningHours {
   id: number;
-  day: number;
+  day: string;
   is_closed: boolean;
   open_time: string | null;
   close_time: string | null;
@@ -34,7 +34,7 @@ interface RestaurantSettings {
 // Shape the backend expects for each row in the bulk PUT
 interface OpeningHoursPayload {
   id?: number;       // omit / undefined for new rows so backend creates them
-  day: number;
+  day: string;
   is_closed: boolean;
   open_time: string | null;
   close_time: string | null;
@@ -47,7 +47,12 @@ interface BulkUpdateResponse {
   errors: { id: number | null; error: string }[];
 }
 
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+// Aur display ke liye alag array:
+const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const DAY_LABELS: Record<string, string> = {
+  monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday",
+  thursday: "Thursday", friday: "Friday", saturday: "Saturday", sunday: "Sunday",
+};
 
 type Tab = "info" | "delivery" | "hours";
 
@@ -104,7 +109,7 @@ export default function AdminRestaurantPage() {
           delivery_fee: data.delivery_fee ?? "",
           min_order: data.min_order ?? "",
         });
-        const sorted = [...(data.opening_hours ?? [])].sort((a, b) => a.day - b.day);
+        const sorted = [...(data.opening_hours ?? [])].sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
         setHours(sorted);
         // Pre-expand lunch for days that already have lunch times set
         const openMap: Record<number, boolean> = {};
@@ -155,7 +160,7 @@ export default function AdminRestaurantPage() {
       // the backend knows to create them.
       const payload: OpeningHoursPayload[] = hours.map((h) => ({
         ...(isTemp(h.id) ? {} : { id: h.id }),
-        day: Number(h.day),           // <select> gives strings; coerce to int
+        day: h.day,     // <select> gives strings; coerce to int
         is_closed: h.is_closed,
         open_time: h.is_closed ? null : (h.open_time || null),
         close_time: h.is_closed ? null : (h.close_time || null),
@@ -176,36 +181,23 @@ export default function AdminRestaurantPage() {
       // Merge the freshly-saved rows (which now have real DB ids) back into
       // local state so subsequent saves don't re-create them.
       if (response.updated && response.updated.length > 0) {
-        setHours((prev) => {
-          // Build a lookup of real id → updated record
-          const byId = new Map(response.updated.map((r) => [r.id, r]));
+        // Simply replace entire hours state with what backend returned
+        const saved = response.updated.sort(
+          (a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)
+        );
+        setHours(saved);
 
-          // Replace rows that were returned by the server
-          const merged = prev.map((h) => byId.get(h.id) ?? h);
-
-          // Append any created rows whose temp id isn't in prev
-          // (shouldn't normally happen, but defensive)
-          const existingIds = new Set(prev.map((h) => h.id));
-          response.updated.forEach((r) => {
-            if (!existingIds.has(r.id)) merged.push(r);
-          });
-
-          return merged.sort((a, b) => a.day - b.day);
-        });
-
-        // Re-sync lunchOpen keys: old temp ids → new real ids
+        // Re-sync lunchOpen: use day name to map old id → new real id
         setLunchOpen((prev) => {
           const next: Record<number, boolean> = {};
-          hours.forEach((h) => {
-            const savedRow = response.updated.find(
-              (r) => r.day === Number(h.day) && isTemp(h.id)
-            );
-            const realId = savedRow ? savedRow.id : h.id;
-            if (prev[h.id]) next[realId] = true;
-          });
-          // Also keep existing non-temp entries
-          response.updated.forEach((r) => {
-            if (prev[r.id]) next[r.id] = prev[r.id];
+          saved.forEach((r) => {
+            // Find the old local row with same day (could have been temp id)
+            const oldRow = hours.find((h) => h.day === r.day);
+            if (oldRow && prev[oldRow.id]) {
+              next[r.id] = true;
+            } else if (prev[r.id]) {
+              next[r.id] = prev[r.id];
+            }
           });
           return next;
         });
@@ -226,18 +218,18 @@ export default function AdminRestaurantPage() {
   }
 
   function addDay() {
-    const usedDays = new Set(hours.map((h) => Number(h.day)));
-    const nextDay = [0, 1, 2, 3, 4, 5, 6].find((d) => !usedDays.has(d)) ?? 0;
+    const usedDays = new Set(hours.map((h) => h.day)); // Number() remove karo
+    const nextDay = DAY_ORDER.find((d) => !usedDays.has(d)) ?? "monday"; // numbers ki jagah DAY_ORDER use karo
     const newEntry: OpeningHours = {
       id: tempId(),
-      day: nextDay,
+      day: nextDay, // ab string hai "monday", "tuesday" etc
       is_closed: false,
       open_time: "10:00",
       close_time: "22:00",
       lunch_open: null,
       lunch_close: null,
     };
-    setHours((prev) => [...prev, newEntry].sort((a, b) => a.day - b.day));
+    setHours((prev) => [...prev, newEntry].sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)));
   }
 
   function removeHour(idx: number) {
@@ -438,8 +430,8 @@ export default function AdminRestaurantPage() {
                           onChange={(e) => updateHour(idx, "day", e.target.value)}
                           className="bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-3 py-2 text-white text-sm outline-none transition-colors flex-1 min-w-0"
                         >
-                          {DAY_NAMES.map((name, d) => (
-                            <option key={d} value={d}>{name}</option>
+                          {DAY_ORDER.map((day) => (
+                            <option key={day} value={day}>{DAY_LABELS[day]}</option>
                           ))}
                         </select>
                         {/* Badge for unsaved new rows */}

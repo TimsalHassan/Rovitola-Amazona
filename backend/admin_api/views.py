@@ -41,10 +41,6 @@ class AdminPagination(PageNumberPagination):
     max_page_size = 200
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# DASHBOARD STATS
-# ──────────────────────────────────────────────────────────────────────────────
-
 class AdminDashboardStatsView(APIView):
     """
     GET /api/admin/stats/
@@ -81,10 +77,6 @@ class AdminDashboardStatsView(APIView):
         return Response(serializer.data)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# USERS
-# ──────────────────────────────────────────────────────────────────────────────
-
 class AdminUserListView(generics.ListAPIView):
     """
     GET /api/admin/users/?search=…
@@ -114,10 +106,6 @@ class AdminUserDetailView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
     http_method_names = ["get", "patch", "head", "options"]
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# CATEGORIES
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminCategoryListCreateView(generics.ListCreateAPIView):
     """
@@ -157,10 +145,6 @@ class AdminCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
         cache.clear()
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# MENU ITEMS
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminMenuItemListCreateView(generics.ListCreateAPIView):
     """
@@ -222,14 +206,6 @@ class AdminMenuItemDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
         cache.clear()
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# EXTRAS  (read-only in admin panel — managed via Django admin or future form)
-# ──────────────────────────────────────────────────────────────────────────────
-
-# ──────────────────────────────────────────────────────────────────────────────
-# EXTRAS
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminExtraListCreateView(generics.ListCreateAPIView):
     """
@@ -322,10 +298,6 @@ class AdminExtraOptionDetailView(generics.RetrieveUpdateDestroyAPIView):
         cache.clear()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# ORDERS
-# ──────────────────────────────────────────────────────────────────────────────
-
 class AdminOrderListView(generics.ListAPIView):
     """
     GET /api/admin/orders/?status=…&order_type=…&payment_status=…&search=…
@@ -387,10 +359,6 @@ class AdminOrderStatusUpdateView(generics.UpdateAPIView):
     http_method_names = ["patch", "head", "options"]
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# REVIEWS
-# ──────────────────────────────────────────────────────────────────────────────
-
 class AdminReviewListView(generics.ListAPIView):
     """
     GET /api/admin/reviews/?approved=true|false
@@ -418,10 +386,6 @@ class AdminReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.select_related("customer")
     http_method_names = ["get", "patch", "delete", "head", "options"]
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# CONTACT MESSAGES
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminContactMessageListView(generics.ListAPIView):
     """
@@ -459,10 +423,6 @@ class AdminContactMessageDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# RESTAURANT SETTINGS
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminRestaurantSettingsView(APIView):
     """
@@ -515,19 +475,19 @@ class AdminOpeningHoursBulkUpdateView(APIView):
         if not isinstance(hours_data, list):
             return Response({"detail": "Expected a list of opening hours."}, status=400)
 
-        # ── Collect which real ids the client is keeping ──────────────────────
+        # Collect which real ids the client is keeping 
         submitted_ids = {
             int(item["id"])
             for item in hours_data
             if item.get("id") is not None
         }
 
-        # ── Delete rows the client removed ────────────────────────────────────
+        # Delete rows the client removed 
         OpeningHours.objects.filter(
             restaurant=settings_obj
         ).exclude(id__in=submitted_ids).delete()
 
-        # ── Create / update the submitted rows ───────────────────────────────
+        # Create / update the submitted rows
         updated = []
         errors = []
 
@@ -561,10 +521,9 @@ class AdminOpeningHoursBulkUpdateView(APIView):
         cache.delete("restaurant_info")
         return Response({"updated": updated, "errors": errors})
 
+    def patch(self, request):
+        return self.put(request)
 
-# ──────────────────────────────────────────────────────────────────────────────
-# MENU ITEM AVAILABILITY TOGGLE  (quick toggle from the list page)
-# ──────────────────────────────────────────────────────────────────────────────
 
 class AdminMenuItemToggleView(APIView):
     """
