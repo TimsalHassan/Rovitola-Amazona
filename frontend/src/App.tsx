@@ -101,7 +101,7 @@ export default function App() {
                             }
                           />
                           <Route
-                            path="/verify-email/:uid/:token"
+                            path="/verify-email/:token"
                             element={
                               <RequireGuest>
                                 <VerifyEmailPage />

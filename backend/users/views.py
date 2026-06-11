@@ -18,7 +18,6 @@ from .serializers import (
     AddressSerializer,
 )
 from .tasks import (
-    send_registration_email,
     send_verification_email,
     send_forgot_password_email,
     send_password_changed_email,
