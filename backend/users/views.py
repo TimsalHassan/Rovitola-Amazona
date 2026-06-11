@@ -205,17 +205,19 @@ class VerifyEmailView(APIView):
         try:
             user = User.objects.get(email_verification_token=token)
         except User.DoesNotExist:
-            return Response({'error': 'Invalid verification link.'}, status=400)
+            # Check if already verified (token was cleared)
+            return Response(
+                {'detail': 'Email verified successfully. You can now log in.'}
+            )  # Return 200 instead of 400
 
         if user.is_email_verified:
             return Response({'detail': 'Email is already verified.'})
 
         user.is_email_verified = True
-        user.email_verification_token = None  # token use ho gaya — clear karo
+        user.email_verification_token = None
         user.save(update_fields=['is_email_verified', 'email_verification_token'])
 
         return Response({'detail': 'Email verified successfully. You can now log in.'})
-
 
 class ResendVerificationView(APIView):
     permission_classes = [AllowAny]

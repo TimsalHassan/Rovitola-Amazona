@@ -364,7 +364,7 @@ function AddressInput({
         />
       </div>
 
-      {/* Country — required, pre-filled with Finland */}
+      {/* Country */}
       <input
         type="text"
         value={value.country}
@@ -443,6 +443,7 @@ export default function CartPage() {
   const { t } = useLanguage();
   const restaurant = useRestaurant();
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const [form, setForm] = useState<CheckoutFormData>({
     orderType: "delivery",
@@ -472,7 +473,6 @@ export default function CartPage() {
           body: JSON.stringify({ street, city, postal, country }),
         });
         const data = await res.json();
-        // Parse delivery_fee as float — backend may return it as a string decimal
         setDeliveryCheck({
           ...data,
           delivery_fee:
@@ -508,7 +508,6 @@ export default function CartPage() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const { street, city, postal, country } = form.deliveryAddress;
-    // All three fields required — partial address causes Nominatim to guess
     if (!street.trim() || !city.trim() || !postal.trim()) {
       setDeliveryCheck(null);
       return;
@@ -533,16 +532,21 @@ export default function CartPage() {
 
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
+  // ── Delivery state derived values ─────────────────────────────────────────
+  // Not available = check ran, not eligible (covers both address-not-found and out-of-range)
+  const deliveryNotAvailable =
+    form.orderType === "delivery" &&
+    !!deliveryCheck &&
+    !deliveryCheck.is_eligible;
+
+  // Address geocoding failed (not found) vs out of range
+  const deliveryAddressNotFound =
+    deliveryNotAvailable && deliveryCheck?.distance_km === null;
+
   const deliveryCharge =
     form.orderType === "delivery" && deliveryCheck?.is_eligible
       ? (deliveryCheck.delivery_fee ?? 0)
       : 0;
-
-  const deliveryNotAvailable =
-    form.orderType === "delivery" &&
-    !!deliveryCheck &&
-    !deliveryCheck.is_eligible &&
-    deliveryCheck.distance_km !== null;
 
   const total = round2(subtotal + deliveryCharge);
 
@@ -577,9 +581,21 @@ export default function CartPage() {
 
   const handleProceed = () => {
     if (deliveryNotAvailable) {
-      setShowDeliveryUnavailableModal(true);
+      if (deliveryAddressNotFound) {
+        // Geocoding failed — address not recognized
+        addToast({
+          type: "error",
+          title: "Address not found",
+          description: "Please check your address and try again.",
+          duration: 4000,
+        });
+      } else {
+        // Address found but outside delivery radius — show modal
+        setShowDeliveryUnavailableModal(true);
+      }
       return;
     }
+
     if (!validate()) return;
 
     const deliveryAddressStr = [
@@ -909,8 +925,9 @@ export default function CartPage() {
                 <div className="mt-4 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                   <Truck size={15} className="text-red-400 shrink-0" />
                   <p className="text-red-400 text-xs font-medium">
-                    Delivery is not available to this address. Switch to pickup
-                    or change your address.
+                    {deliveryAddressNotFound
+                      ? "Address not found. Please check your address and try again."
+                      : "Delivery is not available to this address. Switch to pickup or change your address."}
                   </p>
                 </div>
               )}

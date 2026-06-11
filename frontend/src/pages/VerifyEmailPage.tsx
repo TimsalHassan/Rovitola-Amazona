@@ -1,45 +1,49 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
-import { CheckCircle2, XCircle, Loader2, Mail, ArrowRight, Inbox, RefreshCw } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Mail,
+  ArrowRight,
+  Inbox,
+  RefreshCw,
+} from "lucide-react";
 import { BASE } from "../api/base";
 import { useLanguage } from "../hooks/useLanguage";
 
-// ─── Session storage key (set by RegisterPage after successful registration) ──
 export const PENDING_VERIFY_EMAIL_KEY = "pending_verify_email";
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
-// Backend uses GET /auth/verify-email/<uid>/<token>/
-async function verifyEmailApi(uid: string, token: string): Promise<void> {
-  const res = await fetch(`${BASE}/auth/verify-email/${uid}/${token}/`, {
+// Backend: GET /auth/verify-email/<uuid:token>/
+async function verifyEmailApi(token: string): Promise<void> {
+  const res = await fetch(`${BASE}/auth/verify-email/${token}/`, {
     method: "GET",
-    headers: { "ngrok-skip-browser-warning": "true" },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(
       (data as { error?: string; detail?: string }).error ??
-      (data as { detail?: string }).detail ??
-      "Verification failed.",
+        (data as { detail?: string }).detail ??
+        "Verification failed."
     );
   }
 }
 
+// Backend: POST /auth/resend-verification/
 async function resendVerificationApi(email: string): Promise<void> {
   const res = await fetch(`${BASE}/auth/resend-verification/`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(
       (data as { error?: string; detail?: string }).error ??
-      (data as { detail?: string }).detail ??
-      "Failed to resend. Try again.",
+        (data as { detail?: string }).detail ??
+        "Failed to resend. Try again."
     );
   }
 }
@@ -49,48 +53,48 @@ async function resendVerificationApi(email: string): Promise<void> {
 type VerifyState = "check_email" | "loading" | "success" | "error";
 
 export default function VerifyEmailPage() {
-  const { uid, token } = useParams<{ uid?: string; token?: string }>();
+  // Backend sends link: /verify-email/<uuid>/  → single :token param
+  const { token } = useParams<{ token?: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const location = useLocation();
 
-  const {email} = location.state || {};
-  // If email is passed via state (e.g. from RegisterPage), store it for potential resending
+  const { email } = (location.state as { email?: string }) || {};
+
+  // Persist email from RegisterPage so resend works without re-typing
   useEffect(() => {
-    if (email) {
-      sessionStorage.setItem(PENDING_VERIFY_EMAIL_KEY, email);
-    }
+    if (email) sessionStorage.setItem(PENDING_VERIFY_EMAIL_KEY, email);
   }, [email]);
 
-  const hasToken = Boolean(uid && token);
+  const hasToken = Boolean(token);
 
-  // Email stored by RegisterPage so we can resend without asking again
   const [pendingEmail] = useState<string>(
-    () => sessionStorage.getItem(PENDING_VERIFY_EMAIL_KEY) ?? "",
+    () => sessionStorage.getItem(PENDING_VERIFY_EMAIL_KEY) ?? ""
   );
 
   const [state, setState] = useState<VerifyState>(
-    hasToken ? "loading" : "check_email",
+    hasToken ? "loading" : "check_email"
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
 
-  // Auto-verify when uid + token are in URL
+  // Auto-verify when token is in URL
   useEffect(() => {
-    if (!hasToken) return;
-    verifyEmailApi(uid!, token!)
+    if (!hasToken || !token) return;
+    verifyEmailApi(token)
       .then(() => {
-        // Clean up stored email on success
         sessionStorage.removeItem(PENDING_VERIFY_EMAIL_KEY);
         setState("success");
       })
       .catch((err: Error) => {
         setState("error");
-        setErrorMsg(err.message || "Verification failed. The link may be expired or invalid.");
+        setErrorMsg(
+          err.message || "Verification failed. The link may be expired or invalid."
+        );
       });
-  }, [uid, token, hasToken]);
+  }, [token, hasToken]);
 
   const handleResend = useCallback(async () => {
     if (!pendingEmail || resending) return;
@@ -139,7 +143,6 @@ export default function VerifyEmailPage() {
               </p>
             </div>
 
-            {/* Resend — uses stored email, no input needed */}
             <div className="w-full space-y-3">
               {resent ? (
                 <div className="flex items-center gap-2 justify-center py-3 bg-green-500/10 border border-green-500/20 rounded-xl">
@@ -167,7 +170,6 @@ export default function VerifyEmailPage() {
                       {t("verifyEmail.resendButton") || "Resend verification email"}
                     </button>
                   ) : (
-                    // Fallback if email not in session (e.g. navigated directly)
                     <p className="text-gray-600 text-xs text-center">
                       {t("verifyEmail.noEmailFallback") ||
                         "Please register again to receive a new verification link."}
@@ -239,12 +241,13 @@ export default function VerifyEmailPage() {
                 {t("verifyEmail.errorTitle") || "Verification Failed"}
               </p>
               <p className="text-gray-400 text-sm mt-1">
-                {errorMsg ?? t("verifyEmail.errorBody") ?? "This link is invalid or has expired."}
+                {errorMsg ??
+                  t("verifyEmail.errorBody") ??
+                  "This link is invalid or has expired."}
               </p>
             </div>
 
             <div className="w-full space-y-3">
-              {/* Resend with stored email */}
               {pendingEmail && !resent && (
                 <>
                   {resendError && (
@@ -281,7 +284,6 @@ export default function VerifyEmailPage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

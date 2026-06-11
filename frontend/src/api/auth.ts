@@ -141,8 +141,8 @@ export const authApi = {
     }),
 
   // Backend VerifyEmailView is a GET
-  verifyEmail: (uid: string, token: string) =>
-    request<{ detail: string }>(`/auth/verify-email/${uid}/${token}/`, {
+  verifyEmail: (token: string) =>
+    request<{ detail: string }>(`/auth/verify-email/${token}/`, {
       method: "GET",
     }),
 

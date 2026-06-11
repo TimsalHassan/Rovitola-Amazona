@@ -94,7 +94,7 @@ class DeliveryCheckView(APIView):
                     "is_eligible": False,
                     "delivery_fee": None,
                     "distance_km": None,
-                    "message": "Could not find your address. Please check and try again.",
+                    "message": "Address is not in the radius",
                 })
         # ── existing logic same rehti hai ──
 
