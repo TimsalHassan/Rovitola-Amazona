@@ -14,7 +14,7 @@ export type OrderStatus =
 
 export type OrderType = "delivery" | "pickup";
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
-export type PaymentMethod = "online" | "cash_on_delivery" | "card_on_delivery";
+export type PaymentMethod = "online" | "cash_on_delivery" | "cash_on_pickup";
 
 export interface SelectedOptionRead {
   extra_name: string;

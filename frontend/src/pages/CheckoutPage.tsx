@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import {
   CreditCard,
@@ -22,8 +22,6 @@ import {
   type CreateSelectedOption,
 } from "../api/order";
 
-// ─── State from CartPage ──────────────────────────────────────────────────────
-
 interface CartLocationState {
   orderType: "delivery" | "pickup";
   deliveryAddress: string;
@@ -37,7 +35,7 @@ interface CartLocationState {
   guestEmail: string;
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+type PaymentMethod = "online" | "cash_on_delivery" | "cash_on_pickup";
 
 export default function CheckoutPage() {
   const { items, clearCart } = useCart();
@@ -48,34 +46,54 @@ export default function CheckoutPage() {
   const { addToast } = useToast();
   const state = location.state as CartLocationState | null;
 
-  console.log(state)
+  const isPickup = state?.orderType === "pickup";
 
-  const [paymentMethod, setPaymentMethod] = useState<
-    "online" | "cash_on_delivery" | "card_on_delivery"
-  >("online");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("online");
   const [notes, setNotes] = useState(state?.orderNotes || "");
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [confirmedOrder, setConfirmedOrder] = useState<{ orderNumber: string; total: number } | null>(null);
+  const [confirmedOrder, setConfirmedOrder] = useState<{
+    orderNumber: string;
+    total: number;
+  } | null>(null);
 
-  // ── Payment method options (labels from i18n) ─────────────────────────────
+  useEffect(() => {
+    if (items.length === 0 && !loading) {
+      navigate("/menu", { replace: true });
+    }
+  }, [items.length, loading, navigate]);
 
-  const PAYMENT_METHODS = [
-    {
-      id: "online" as const,
-      label: t("checkout.payOnline"),
-      desc: t("checkout.payOnlineDesc"),
-      isPickup: false
-    },
-    {
-      id: "cash_on_delivery" as const,
-      label: t("checkout.cashOnDelivery"),
-      desc: t("checkout.cashOnDeliveryDesc"),
-      isPickup: state?.orderType === "pickup"
-    },
-  ];
-
-  // ── Guard ─────────────────────────────────────────────────────────────────
+  if (items.length === 0 && !loading) {
+    return null; // still prevent rendering while redirect happens
+  }
+  // Payment options filtered by orderType
+  const PAYMENT_METHODS: { id: PaymentMethod; label: string; desc: string }[] =
+    isPickup
+      ? [
+          {
+            id: "online",
+            label: t("checkout.payOnline"),
+            desc: t("checkout.payOnlineDesc"),
+          },
+          {
+            id: "cash_on_pickup",
+            // Change these two lines to match your object path:
+            label: t("checkout.cashOnPickup"),
+            desc: t("checkout.cashOnPickupDesc"),
+          },
+        ]
+      : [
+          {
+            id: "online",
+            label: t("checkout.payOnline"),
+            desc: t("checkout.payOnlineDesc"),
+          },
+          {
+            id: "cash_on_delivery",
+            label: t("checkout.cashOnDelivery"),
+            desc: t("checkout.cashOnDeliveryDesc"),
+          },
+        ];
 
   if (!state || state.total == null) {
     return (
@@ -97,15 +115,8 @@ export default function CheckoutPage() {
     );
   }
 
-  if (items.length === 0 && !loading) {
-    navigate("/menu", { replace: true });
-    return null;
-  }
-
   const customerName = user?.name || state.guestName || "";
   const customerPhone = user?.phone || state.guestPhone || "";
-
-  // ── Build order items ─────────────────────────────────────────────────────
 
   function buildOrderItems(): CreateOrderItem[] {
     return items.map((ci) => {
@@ -130,20 +141,14 @@ export default function CheckoutPage() {
     });
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSubmitError(null);
 
     try {
-      // Round to 2 decimal places — floating-point arithmetic produces values like
-      // 3.9 + 12.45 = 16.349999999999998 which Django's DecimalField rejects.
       const round2 = (n: number) => Math.round(n * 100) / 100;
 
-      // Strip the "-" city/postal placeholders injected when saving a freeform
-      // address from CartPage (e.g. "Street, -, -, Finland" → "Street, Finland")
       const cleanAddress = (state.deliveryAddress || "")
         .split(",")
         .map((s) => s.trim())
@@ -165,18 +170,20 @@ export default function CheckoutPage() {
         ...(state.guestEmail && { guest_email: state.guestEmail }),
       };
 
-      // WITH:
       const order = await ordersApi.create(payload);
 
       if (paymentMethod === "online") {
         const { payment_url } = await ordersApi.initiatePayment(
           order.order_number,
         );
-        clearCart(); // clear before leaving — no re-render matters now
-        window.location.replace(payment_url); // replace so back-button doesn't return to checkout
+        clearCart();
+        window.location.replace(payment_url);
       } else {
         clearCart();
-        setConfirmedOrder({ orderNumber: order.order_number, total: round2(state.total) });
+        setConfirmedOrder({
+          orderNumber: order.order_number,
+          total: round2(state.total),
+        });
       }
     } catch (err) {
       setSubmitError(
@@ -186,7 +193,13 @@ export default function CheckoutPage() {
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // Modal message based on actual payment method
+  const offlineModalMessage =
+    paymentMethod === "cash_on_pickup"
+      ? "Please have the exact cash amount ready when you pick up your order."
+      : paymentMethod === "cash_on_delivery"
+        ? "Please have the exact cash amount ready when your order arrives."
+        : "Please have your card ready when your order arrives.";
 
   return (
     <main className="bg-gray-950 min-h-screen pt-16 text-white">
@@ -220,9 +233,8 @@ export default function CheckoutPage() {
       <form onSubmit={handleSubmit}>
         <div className="max-w-5xl mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            {/* ── Left ────────────────────────────────────────────────── */}
             <div className="lg:col-span-2 space-y-5">
-              {/* Order details — read-only */}
+              {/* Customer details */}
               <div className="bg-gray-900 border border-white/5 rounded-2xl p-5 space-y-4">
                 <h2 className="font-bold text-sm uppercase tracking-widest text-gray-400">
                   {t("checkout.customerDetails")}
@@ -258,7 +270,6 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {/* Delivery address — read-only */}
                 {state.orderType === "delivery" ? (
                   <div className="flex items-start gap-3">
                     <div className="w-9 h-9 bg-gray-800 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
@@ -292,7 +303,6 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {/* Notes — editable */}
                 <div>
                   <label className="block text-xs text-gray-500 mb-1.5">
                     {t("checkout.orderNotes")}{" "}
@@ -316,7 +326,7 @@ export default function CheckoutPage() {
                   {t("checkout.paymentMethod")}
                 </h2>
 
-                {PAYMENT_METHODS.filter((method)=> !method.isPickup).map((method) => (
+                {PAYMENT_METHODS.map((method) => (
                   <button
                     key={method.id}
                     type="button"
@@ -366,7 +376,6 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* Error */}
               {submitError && (
                 <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                   <AlertCircle
@@ -378,14 +387,13 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* ── Right: summary ───────────────────────────────────────── */}
+            {/* Summary */}
             <div className="lg:sticky lg:top-24">
               <div className="bg-gray-900 border border-white/5 rounded-2xl p-5">
                 <h2 className="font-bold text-sm uppercase tracking-widest text-gray-400 mb-4">
                   {t("checkout.summary")}
                 </h2>
 
-                {/* Items */}
                 <div className="max-h-52 overflow-y-auto space-y-3 mb-4 pr-1">
                   {items.map((ci) => {
                     const name =
@@ -421,7 +429,6 @@ export default function CheckoutPage() {
                   })}
                 </div>
 
-                {/* Totals */}
                 <div className="border-t border-white/5 pt-3 space-y-2 text-sm">
                   <div className="flex justify-between text-gray-400">
                     <span>{t("checkout.subtotal")}</span>
@@ -455,7 +462,6 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* CTA */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -498,39 +504,29 @@ export default function CheckoutPage() {
         </div>
       </form>
 
-      {/* ── Thank-you modal (COD / card on delivery) ──────────────────────── */}
+      {/* Thank-you modal */}
       {confirmedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
           <div className="relative bg-gray-900 border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            {/* Icon */}
             <div className="w-20 h-20 bg-amber-500/10 border-2 border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
               <span className="text-4xl">🎉</span>
             </div>
-
-            <h2 className="text-white font-black text-2xl mb-2">
-              Thank you!
-            </h2>
+            <h2 className="text-white font-black text-2xl mb-2">Thank you!</h2>
             <p className="text-gray-400 text-sm mb-1">
               Your order has been placed successfully.
             </p>
             <p className="text-amber-400 font-mono font-bold text-sm mb-5">
               #{confirmedOrder.orderNumber}
             </p>
-
-            {/* Amount */}
             <div className="bg-gray-800 rounded-2xl px-5 py-3 mb-6 inline-block">
               <p className="text-gray-500 text-xs mb-0.5">Order total</p>
               <p className="text-white font-black text-2xl">
                 €{confirmedOrder.total.toFixed(2)}
               </p>
             </div>
-
             <p className="text-gray-500 text-xs mb-6 leading-relaxed">
-              {paymentMethod === "cash_on_delivery"
-                ? "Please have the exact cash amount ready when your order arrives."
-                : "Please have your card ready when your order arrives."}
+              {offlineModalMessage}
             </p>
-
             <button
               onClick={() => {
                 addToast({
@@ -539,7 +535,9 @@ export default function CheckoutPage() {
                   body: `Order #${confirmedOrder.orderNumber} is being prepared.`,
                   duration: 6000,
                 });
-                navigate(`/order/${confirmedOrder.orderNumber}/track`, { replace: true });
+                navigate(`/order/${confirmedOrder.orderNumber}/track`, {
+                  replace: true,
+                });
               }}
               className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-gray-900 font-black text-sm rounded-xl transition-all flex items-center justify-center gap-2"
             >

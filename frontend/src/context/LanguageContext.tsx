@@ -260,8 +260,8 @@ const resources = {
         payOnlineDesc: "Visa, Mastercard, OP, Nordea Paytrailin kautta",
         cashOnDelivery: "Käteinen toimituksessa",
         cashOnDeliveryDesc: "Maksa käteisellä kun tilaus saapuu",
-        cardOnDelivery: "Kortti toimituksessa",
-        cardOnDeliveryDesc: "Maksa kortilla kun tilaus saapuu",
+        cashOnPickup: "Käteismaksu noudettaessa",
+        cashOnPickupDesc: "Maksa käteisellä noudettaessa tilauksesi",
         paytrailRedirectNote:
           "Sinut ohjataan Paytrailin turvalliselle maksusivulle.",
         summary: "Yhteenveto",
@@ -864,8 +864,8 @@ const resources = {
         payOnlineDesc: "Visa, Mastercard, OP, Nordea via Paytrail",
         cashOnDelivery: "Cash on Delivery",
         cashOnDeliveryDesc: "Pay in cash when your order arrives",
-        cardOnDelivery: "Card on Delivery",
-        cardOnDeliveryDesc: "Pay by card when your order arrives",
+      cashOnPickup: "Cash on Pickup",
+      cashOnPickupDesc: "Pay cash when you collect your order",
         paytrailRedirectNote:
           "You'll be redirected to Paytrail's secure payment page.",
         summary: "Summary",
