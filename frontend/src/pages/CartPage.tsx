@@ -586,7 +586,6 @@ export default function CartPage() {
         addToast({
           type: "error",
           title: "Address not found",
-          description: "Please check your address and try again.",
           duration: 4000,
         });
       } else {
