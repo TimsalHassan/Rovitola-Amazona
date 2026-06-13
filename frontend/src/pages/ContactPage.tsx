@@ -314,15 +314,16 @@ export default function ContactPage() {
               </table>
               {info?.opening_hours.some((h) => h.lunch_open) && (
                 <div className="mt-4 pt-4 border-t border-white/10">
-                  <p className="text-amber-400 text-xs font-medium">
-                    {t("contact.lunchLabel")}{" "}
-                    {(() => {
-                      const d = info.opening_hours.find((h) => h.lunch_open);
-                      return d
-                        ? `${formatTime(d.lunch_open)} – ${formatTime(d.lunch_close)}`
-                        : "";
-                    })()}
+                  <p className="text-amber-400 text-xs font-medium mb-1">
+                    {t("contact.lunchLabel")}
                   </p>
+                  {info.opening_hours
+                    .filter((h) => h.lunch_open && h.lunch_close && !h.is_closed)
+                    .map((h) => (
+                      <p key={h.day} className="text-gray-400 text-xs">
+                        {t(`footer.days.${h.day}`)}: {formatTime(h.lunch_open)} – {formatTime(h.lunch_close)}
+                      </p>
+                    ))}
                 </div>
               )}
             </div>

@@ -388,29 +388,22 @@ export default function MenuPage() {
 
   // Derive lunch hours string from opening_hours
   const lunchHoursText = useMemo(() => {
-    if (!info?.opening_hours) return t("menu.lunchHours"); // fallback to translation
+    if (!info?.opening_hours) return null;
 
     const days = info.opening_hours.filter(
       (row) => !row.is_closed && row.lunch_open && row.lunch_close
     );
 
-    if (!days.length) return t("menu.lunchHours");
+    if (!days.length) return null;
 
-    // Group consecutive days with same hours
-    const formatTime = (t: string) => t.slice(0, 5); // "10:30:00" → "10:30"
-    const firstDay = days[0];
-    const lastDay = days[days.length - 1];
-    const time = `${formatTime(firstDay.lunch_open!)} – ${formatTime(firstDay.lunch_close!)}`;
-
-    // Capitalize day names
+    const formatTime = (s: string) => s.slice(0, 5);
     const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-    const dayRange =
-      days.length === 1
-        ? capitalize(firstDay.day)
-        : `${capitalize(firstDay.day)} – ${capitalize(lastDay.day)}`;
 
-    return `${dayRange}  ${time}`;
-  }, [info, t]);
+    // Har day alag show karo
+    return days
+      .map((row) => `${capitalize(row.day)} ${formatTime(row.lunch_open!)} – ${formatTime(row.lunch_close!)}`)
+      .join("  |  ");
+  }, [info]);
 
   useEffect(() => {
     if (!sortedCategories.length) return;
@@ -685,7 +678,10 @@ export default function MenuPage() {
               {t("menu.lunchAvailable")}
             </p>
             {/* ✅ Dynamic from API instead of hardcoded translation string */}
-            <p className="text-gray-400 text-sm">{lunchHoursText}</p>
+            {/* ← sirf dikhao agar set hai */}
+            {lunchHoursText && (
+              <p className="text-gray-400 text-sm">{lunchHoursText}</p>
+            )}
           </div>
 
           {isItemsLoading ? (

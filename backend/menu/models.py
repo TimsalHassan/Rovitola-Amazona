@@ -1,6 +1,7 @@
 from django.db import models
 from core.translation import translate_text
 from cloudinary.models import CloudinaryField
+from django.utils.text import slugify
 
 
 class Category(models.Model):
@@ -36,6 +37,16 @@ class Category(models.Model):
             self.description = translate_text(self.description_fi, 'fi', 'en')
         if self.deal_label and not self.deal_label_fi:
             self.deal_label_fi = translate_text(self.deal_label, 'en', 'fi')
+
+        # Slug auto-generate karo agar nahi hai
+        if not self.slug:
+            base_slug = slugify(self.name or self.name_fi or 'category')
+            slug = base_slug
+            counter = 1
+            while Category.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)
 
 

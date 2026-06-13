@@ -161,8 +161,8 @@ export default function AdminCategoriesPage() {
               <label className="block text-gray-400 text-xs mb-1.5">Name (Finnish)</label>
               <input
                 type="text"
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
+                value={form.name_fi}
+                onChange={(e) => setField("name_fi", e.target.value)}
                 placeholder="e.g. Pizzat"
                 className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
               />
@@ -171,8 +171,8 @@ export default function AdminCategoriesPage() {
               <label className="block text-gray-400 text-xs mb-1.5">Name (English)</label>
               <input
                 type="text"
-                value={form.name_fi}
-                onChange={(e) => setField("name_fi", e.target.value)}
+                value={form.name}
+                onChange={(e) => setField("name", e.target.value)}
                 placeholder="e.g. Pizzas"
                 className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
               />
@@ -210,8 +210,8 @@ export default function AdminCategoriesPage() {
                 <label className="block text-gray-400 text-xs mb-1.5">Deal label (Finnish)</label>
                 <input
                   type="text"
-                  value={form.deal_label}
-                  onChange={(e) => setField("deal_label", e.target.value)}
+                  value={form.deal_label_fi}
+                  onChange={(e) => setField("deal_label_fi", e.target.value)}
                   placeholder="e.g. Lounastarjous"
                   className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
                 />
@@ -220,8 +220,8 @@ export default function AdminCategoriesPage() {
                 <label className="block text-gray-400 text-xs mb-1.5">Deal label (English)</label>
                 <input
                   type="text"
-                  value={form.deal_label_fi}
-                  onChange={(e) => setField("deal_label_fi", e.target.value)}
+                  value={form.deal_label}
+                  onChange={(e) => setField("deal_label", e.target.value)}
                   placeholder="e.g. Lunch special"
                   className="w-full bg-gray-800 border border-white/10 focus:border-amber-500 rounded-xl px-4 py-2 text-white text-sm outline-none transition-colors placeholder:text-gray-600"
                 />
@@ -263,7 +263,7 @@ export default function AdminCategoriesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5">
-                {["Name (FI)", "Name (EN)", "Slug", "Items", "Order", "Deal", "Actions"].map((h) => (
+                {["Name (EN)", "Name (FI)", "Slug", "Items", "Order", "Deal", "Actions"].map((h) => (
                   <th key={h} className="text-left text-gray-500 text-xs font-medium px-4 py-3 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
