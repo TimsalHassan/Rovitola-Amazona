@@ -115,7 +115,9 @@ const resources = {
         lunchHours: "Maanantai - Perjantai 10:30 - 14:30",
         noItemsTitle: "Ruokalista päivittyy",
         noItemsBody: "Annoksia lisätään pian. Tarkista uudelleen myöhemmin.",
-        searchPlaceholder: "Hae valikosta...."
+        searchPlaceholder: "Hae valikosta....",
+        noSearchResultsTitle: "tulosta ei löytynyt",
+        noSearchResultsBody: "Hakusanaa {{query}} ei löydy. Kokeile toista avainsanaa."
       },
 
       // ── Menu item page ────────────────────────────────────────────────────
@@ -721,7 +723,9 @@ const resources = {
         lunchHours: "Monday - Friday 10:30 - 14:30",
         noItemsTitle: "Menu is updating",
         noItemsBody: "New items are coming soon. Please check back later.",
-        searchPlaceholder: "Search the menu...."
+        searchPlaceholder: "Search the menu....",
+        noSearchResultsTitle: "No Result Found",
+        noSearchResultsBody: "No items match {{query}}. Try a different keyword."
       },
 
       // ── Menu item page ────────────────────────────────────────────────────

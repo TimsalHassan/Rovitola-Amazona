@@ -356,7 +356,9 @@ function NoSearchResults({ query }: { query: string }) {
         {t("menu.noSearchResultsTitle") || "No results found"}
       </h2>
       <p className="text-gray-400 text-sm">
-        {t("menu.noSearchResultsBody") ||
+        {t("menu.noSearchResultsBody", {
+          query: query
+        }) ||
           `No items match "${query}". Try a different keyword.`}
       </p>
     </div>
