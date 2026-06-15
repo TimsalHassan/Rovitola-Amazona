@@ -9,6 +9,7 @@ export interface ExtraOption {
   display_price: string;
   is_on_sale: boolean;
   order: number;
+  is_default: boolean;  // ← yeh add karo
 }
 
 export interface Extra {

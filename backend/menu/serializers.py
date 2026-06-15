@@ -43,6 +43,7 @@ class ExtraOptionSerializer(serializers.ModelSerializer):
             "id", "name", "name_fi",
             "additional_price", "sale_price",
             "display_price", "is_on_sale", "order",
+            "is_default",
         ]
 
     def get_name(self, obj):

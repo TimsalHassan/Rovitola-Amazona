@@ -45,7 +45,7 @@ export default function AdminCategoriesPage() {
     setLoading(true);
     try {
       const data = await adminGet<{ results?: Category[] } | Category[]>(
-        `${ADMIN}/categories/`,
+        `${ADMIN}/categories/?page_size=100`,
         token
       );
       const list = Array.isArray(data) ? data : data.results ?? [];
@@ -99,7 +99,7 @@ export default function AdminCategoriesPage() {
       if (editItem) {
         await adminPut(`${ADMIN}/categories/${editItem.id}/`, token, payload);
       } else {
-        await adminPost(`${ADMIN}/categories/`, token, payload);
+        await adminPost(`${ADMIN}/categories/?page_size=100`, token, payload);
       }
 
       setShowForm(false);

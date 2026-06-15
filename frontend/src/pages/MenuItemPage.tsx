@@ -60,21 +60,28 @@ const MenuItemPage = () => {
     setItem(foundItem || null);
 
     // Pre-populate selections from default options
-    if (foundItem?.extras?.length) {
-      const defaultSelections: ExtraSelections = {};
-      for (const extra of foundItem.extras) {
-        if (
-          extra.is_required &&
-          extra.extra_type === "choice" &&
-          extra.options.length > 0
-        ) {
-          defaultSelections[extra.id] = new Set([extra.options[0].id]);
-        }
+  if (foundItem?.extras?.length) {
+    const defaultSelections: ExtraSelections = {};
+    for (const extra of foundItem.extras) {
+      
+      // is_default wale options pre-select karo
+      const defaultOptions = extra.options.filter(opt => opt.is_default);
+      if (defaultOptions.length > 0) {
+        defaultSelections[extra.id] = new Set(defaultOptions.map(o => o.id));
       }
-      setSelections(defaultSelections);
-    } else {
-      setSelections({});
+      // Fallback: agar koi is_default nahi aur required choice hai toh pehla select karo
+      else if (
+        extra.is_required &&
+        extra.extra_type === "choice" &&
+        extra.options.length > 0
+      ) {
+        defaultSelections[extra.id] = new Set([extra.options[0].id]);
+      }
     }
+    setSelections(defaultSelections);
+  } else {
+    setSelections({});
+  }
 
     setQuantity(1);
     setSpecialInstruction("");

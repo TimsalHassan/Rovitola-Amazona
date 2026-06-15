@@ -98,8 +98,8 @@ export default function AdminExtrasPage() {
     setLoading(true);
     try {
       const [extrasData, catsData] = await Promise.all([
-        adminGet<{ results?: Extra[] } | Extra[]>(`${ADMIN}/extras/`, token),
-        adminGet<{ results?: Category[] } | Category[]>(`${ADMIN}/categories/`, token),
+        adminGet<{ results?: Extra[] } | Extra[]>(`${ADMIN}/extras/?page_size=100`, token),
+        adminGet<{ results?: Category[] } | Category[]>(`${ADMIN}/categories/?page_size=100`, token),
       ]);
       setExtras(Array.isArray(extrasData) ? extrasData : (extrasData.results ?? []));
       setCategories(Array.isArray(catsData) ? catsData : (catsData.results ?? []));
@@ -180,7 +180,7 @@ export default function AdminExtrasPage() {
         );
         setExtras((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
       } else {
-        const created = await adminPost<Extra>(`${ADMIN}/extras/`, token, payload);
+        const created = await adminPost<Extra>(`${ADMIN}/extras/?page_size=100`, token, payload);
         setExtras((prev) => [...prev, created]);
       }
       closeForm();

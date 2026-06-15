@@ -213,6 +213,7 @@ class AdminExtraListCreateView(generics.ListCreateAPIView):
     POST /api/admin/extras/
     """
     permission_classes = [IsAdminUser]
+    pagination_class = None  # extras are always fetched in full
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -265,6 +266,7 @@ class AdminExtraOptionListCreateView(generics.ListCreateAPIView):
     POST /api/admin/extras/<extra_pk>/options/
     """
     permission_classes = [IsAdminUser]
+    pagination_class = None  # always return all options for an extra
     serializer_class = AdminExtraOptionSerializer
 
     def get_queryset(self):

@@ -60,8 +60,7 @@ class AdminExtraOptionSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(
         source="additional_price", max_digits=6, decimal_places=2, default=0
     )
-    # Frontend sends/expects these flags; they don't exist on the model so we
-    # handle them as virtual fields (ignored on write, defaulted on read).
+    # is_default now exists on the model — saved properly
     is_default = serializers.BooleanField(default=False, required=False)
     is_active = serializers.BooleanField(default=True, required=False)
     description = serializers.CharField(default="", required=False, allow_blank=True)
@@ -80,16 +79,13 @@ class AdminExtraOptionSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        # Strip virtual fields before hitting the ORM
-        validated_data.pop("is_default", None)
-        validated_data.pop("is_active", None)
+        # description/description_fi not on model yet — strip before ORM
         validated_data.pop("description", None)
         validated_data.pop("description_fi", None)
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        validated_data.pop("is_default", None)
-        validated_data.pop("is_active", None)
+        # description/description_fi not on model yet — strip before ORM
         validated_data.pop("description", None)
         validated_data.pop("description_fi", None)
         return super().update(instance, validated_data)

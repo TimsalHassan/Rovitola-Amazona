@@ -81,7 +81,7 @@ export default function AdminExtraOptionsPage() {
       const [extraData, optionsData] = await Promise.all([
         adminGet<Extra>(`${ADMIN}/extras/${id}/`, token),
         adminGet<{ results?: ExtraOption[] } | ExtraOption[]>(
-          `${ADMIN}/extras/${id}/options/`,
+          `${ADMIN}/extras/${id}/options/?page_size=100`,
           token
         ),
       ]);
@@ -157,7 +157,7 @@ export default function AdminExtraOptionsPage() {
         setOptions((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
       } else {
         const created = await adminPost<ExtraOption>(
-          `${ADMIN}/extras/${id}/options/`,
+          `${ADMIN}/extras/${id}/options/?page_size=100`,
           token,
           payload
         );

@@ -165,6 +165,10 @@ class ExtraOption(models.Model):
         help_text='Sale price for this option. If set, shown instead of additional_price'
     )
     order = models.IntegerField(default=0)
+    is_default = models.BooleanField(
+        default=False,
+        help_text='This option will be selected by default when adding the extra to the cart'
+    )
 
     class Meta:
         ordering = ["extra", "order"]
