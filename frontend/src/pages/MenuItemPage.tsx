@@ -25,9 +25,18 @@ function validateSelections(
   for (const extra of extras) {
     const chosen = selections[extra.id];
     const count = chosen ? chosen.size : 0;
+
+    // Required check
     if (extra.is_required && count === 0) {
       return extra.name;
     }
+
+    // Min selections check ← yeh add karo
+    if (extra.min_selections > 0 && count < extra.min_selections) {
+      return extra.name;
+    }
+
+    // Max selections check
     if (extra.max_selections !== null && count > extra.max_selections) {
       return extra.name;
     }

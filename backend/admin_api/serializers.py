@@ -60,8 +60,7 @@ class AdminExtraOptionSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(
         source="additional_price", max_digits=6, decimal_places=2, default=0
     )
-    # Frontend sends/expects these flags; they don't exist on the model so we
-    # handle them as virtual fields (ignored on write, defaulted on read).
+    # description/description_fi are real model fields
     description = serializers.CharField(default="", required=False, allow_blank=True)
     description_fi = serializers.CharField(default="", required=False, allow_blank=True)
     extra = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -94,8 +93,7 @@ class AdminExtraSerializer(serializers.ModelSerializer):
     # Frontend uses "selection_type" with values "single"/"multiple"
     # Model uses "extra_type" with values "choice"/"extra"
     selection_type = serializers.SerializerMethodField()
-    # Virtual fields the frontend expects (model doesn't have them)
-    is_active = serializers.BooleanField(default=True, required=False)
+    # description/description_fi are now real model fields
     description = serializers.CharField(default="", required=False, allow_blank=True)
     description_fi = serializers.CharField(default="", required=False, allow_blank=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
@@ -125,11 +123,9 @@ class AdminExtraWriteSerializer(serializers.ModelSerializer):
     selection_type = serializers.ChoiceField(
         choices=["single", "multiple"], write_only=True, required=False
     )
-    # Virtual frontend-only fields — accepted but not stored
-    is_active = serializers.BooleanField(default=True, required=False)
+    # description/description_fi are real model fields now
     description = serializers.CharField(default="", required=False, allow_blank=True)
     description_fi = serializers.CharField(default="", required=False, allow_blank=True)
-    min_selections = serializers.IntegerField(default=0, required=False)
     options_count = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -176,13 +172,9 @@ class AdminExtraWriteSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        validated_data.pop("description", None)
-        validated_data.pop("description_fi", None)
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        validated_data.pop("description", None)
-        validated_data.pop("description_fi", None)
         return super().update(instance, validated_data)
 
     def to_representation(self, instance):

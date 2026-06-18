@@ -133,6 +133,10 @@ class Extra(models.Model):
         null=True, blank=True,
         help_text='Max options selectable (for multiple type only). Leave blank for unlimited.'
     )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Show this extra group to customers'
+    )
 
     class Meta:
         ordering = ["category", "order"]

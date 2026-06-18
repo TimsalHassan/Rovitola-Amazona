@@ -20,6 +20,7 @@ export interface Extra {
   name_fi: string;
   extra_type: "choice" | "extra";
   is_required: boolean;
+  min_selections: number;
   max_selections: number | null;
   order: number;
   options: ExtraOption[];
