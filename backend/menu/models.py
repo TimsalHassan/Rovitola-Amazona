@@ -125,6 +125,10 @@ class Extra(models.Model):
         default=False,
         help_text='Customer must select this before adding to cart'
     )
+    min_selections = models.IntegerField(
+        default=0,
+        help_text='Minimum options customer must select (0 = optional)'
+    )
     max_selections = models.IntegerField(
         null=True, blank=True,
         help_text='Max options selectable (for multiple type only). Leave blank for unlimited.'
@@ -168,6 +172,10 @@ class ExtraOption(models.Model):
     is_default = models.BooleanField(
         default=False,
         help_text='This option will be selected by default when adding the extra to the cart'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Show this option to customers'
     )
 
     class Meta:

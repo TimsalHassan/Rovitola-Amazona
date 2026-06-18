@@ -60,9 +60,8 @@ class AdminExtraOptionSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(
         source="additional_price", max_digits=6, decimal_places=2, default=0
     )
-    # is_default now exists on the model — saved properly
-    is_default = serializers.BooleanField(default=False, required=False)
-    is_active = serializers.BooleanField(default=True, required=False)
+    # Frontend sends/expects these flags; they don't exist on the model so we
+    # handle them as virtual fields (ignored on write, defaulted on read).
     description = serializers.CharField(default="", required=False, allow_blank=True)
     description_fi = serializers.CharField(default="", required=False, allow_blank=True)
     extra = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -79,13 +78,11 @@ class AdminExtraOptionSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        # description/description_fi not on model yet — strip before ORM
         validated_data.pop("description", None)
         validated_data.pop("description_fi", None)
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        # description/description_fi not on model yet — strip before ORM
         validated_data.pop("description", None)
         validated_data.pop("description_fi", None)
         return super().update(instance, validated_data)
@@ -101,7 +98,6 @@ class AdminExtraSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=True, required=False)
     description = serializers.CharField(default="", required=False, allow_blank=True)
     description_fi = serializers.CharField(default="", required=False, allow_blank=True)
-    min_selections = serializers.IntegerField(default=0, required=False)
     category_name = serializers.CharField(source="category.name", read_only=True)
 
     class Meta:
@@ -180,17 +176,13 @@ class AdminExtraWriteSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        validated_data.pop("is_active", None)
         validated_data.pop("description", None)
         validated_data.pop("description_fi", None)
-        validated_data.pop("min_selections", None)
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        validated_data.pop("is_active", None)
         validated_data.pop("description", None)
         validated_data.pop("description_fi", None)
-        validated_data.pop("min_selections", None)
         return super().update(instance, validated_data)
 
     def to_representation(self, instance):
