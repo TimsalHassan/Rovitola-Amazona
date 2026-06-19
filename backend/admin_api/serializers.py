@@ -255,6 +255,7 @@ class AdminOrderSerializer(serializers.ModelSerializer):
             "id", "order_number",
             "customer", "customer_name", "customer_email", "customer_phone",
             "guest_name", "guest_email", "guest_phone",
+            "scheduled_pickup_time",
             "status", "order_type",
             "delivery_address", "order_notes",
             "payment_status", "payment_method",

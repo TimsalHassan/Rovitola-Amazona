@@ -46,6 +46,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "customer_name",
             "guest_name",
             "guest_phone",
+            "guest_email",
+            "scheduled_pickup_time",
             "status",
             "payment_status",
             "payment_method",
@@ -114,6 +116,8 @@ class CreateOrderSerializer(serializers.Serializer):
     discount_amount = serializers.DecimalField(
         max_digits=5, decimal_places=2, default=0)
     total = serializers.DecimalField(max_digits=8, decimal_places=2)
+    scheduled_pickup_time = serializers.DateTimeField(
+        required=False, allow_null=True, default=None)
     items = CreateOrderItemSerializer(many=True)
 
     def validate_items(self, value):
@@ -123,10 +127,26 @@ class CreateOrderSerializer(serializers.Serializer):
         return value
 
     def validate(self, data):
+        request = self.context.get("request")
+        is_authenticated = request and request.user.is_authenticated
+
         if data.get("order_type") == "delivery" and not data.get("delivery_address", "").strip():
             raise serializers.ValidationError(
                 {"delivery_address": "Delivery address is required for delivery orders."}
             )
+
+        # Pickup orders mein scheduled time required hai
+        if data.get("order_type") == "pickup" and not data.get("scheduled_pickup_time"):
+            raise serializers.ValidationError(
+                {"scheduled_pickup_time": "Pickup time is required for pickup orders."}
+            )
+
+        # Email required for all orders (guest users)
+        if not is_authenticated and not data.get("guest_email", "").strip():
+            raise serializers.ValidationError(
+                {"guest_email": "Email is required."}
+            )
+
         return data
 
     def create(self, validated_data):

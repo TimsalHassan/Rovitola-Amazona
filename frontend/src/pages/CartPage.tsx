@@ -26,6 +26,7 @@ import { useLanguage } from "../hooks/useLanguage";
 import { useToast } from "../hooks/useToast";
 import { addressApi, type Address } from "../api/auth";
 import { useRestaurant } from "../context/RestaurantContext";
+import PickupTimeSelector from "../components/PickupTimeSelector";
 
 // ─── CartItemRow ──────────────────────────────────────────────────────────────
 
@@ -441,6 +442,7 @@ interface CheckoutFormData {
   guestName: string;
   guestPhone: string;
   guestEmail: string;
+  scheduledPickupTime: string;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -460,6 +462,7 @@ export default function CartPage() {
     guestName: user?.name ?? "",
     guestPhone: user?.phone ?? "",
     guestEmail: "",
+    scheduledPickupTime: "",
   });
 
   const [deliveryCheck, setDeliveryCheck] =
@@ -587,6 +590,10 @@ export default function CartPage() {
       e.guestName = t("cart.errors.nameRequired");
     if (!user && !form.guestPhone.trim())
       e.guestPhone = t("cart.errors.phoneRequired");
+    if (!form.guestEmail.trim())
+      e.guestEmail = "Email is required.";
+    if (form.orderType === "pickup" && !form.scheduledPickupTime.trim())
+      e.scheduledPickupTime = "Please select your pickup time.";
     if (form.orderType === "delivery") {
       if (!form.deliveryAddress.street.trim())
         e.deliveryAddress = t("cart.errors.deliveryAddressRequired");
@@ -649,6 +656,7 @@ export default function CartPage() {
         guestName: form.guestName,
         guestPhone: form.guestPhone,
         guestEmail: form.guestEmail,
+        scheduledPickupTime: form.scheduledPickupTime,
       },
     });
   };
@@ -772,7 +780,7 @@ export default function CartPage() {
                 {t("cart.contactInfo")}
               </h2>
               {user ? (
-                <div className="bg-gray-900 border border-white/5 rounded-xl px-4 py-3 space-y-2">
+                <div className="bg-gray-900 border border-white/5 rounded-xl px-4 py-3 space-y-3">
                   <div className="flex items-center gap-2 text-sm text-gray-300">
                     <UserIcon size={14} className="text-gray-500 shrink-0" />
                     <span>{user.name}</span>
@@ -783,14 +791,35 @@ export default function CartPage() {
                       <span>{user.phone}</span>
                     </div>
                   ) : (
-                    <input
-                      type="tel"
-                      value={form.guestPhone}
-                      onChange={(e) => patch("guestPhone", e.target.value)}
-                      placeholder={t("cart.phonePlaceholder")}
-                      className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
-                    />
+                    <div>
+                      <input
+                        type="tel"
+                        value={form.guestPhone}
+                        onChange={(e) => patch("guestPhone", e.target.value)}
+                        placeholder={t("cart.phonePlaceholder")}
+                        className={`w-full bg-gray-800 border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors ${
+                          errors.guestPhone ? "border-red-500/60" : "border-white/10"
+                        }`}
+                      />
+                      {errors.guestPhone && (
+                        <p className="text-red-400 text-xs mt-1">{errors.guestPhone}</p>
+                      )}
+                    </div>
                   )}
+                  <div>
+                    <input
+                      type="email"
+                      value={form.guestEmail}
+                      onChange={(e) => patch("guestEmail", e.target.value)}
+                      placeholder="Email address"
+                      className={`w-full bg-gray-800 border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors ${
+                        errors.guestEmail ? "border-red-500/60" : "border-white/10"
+                      }`}
+                    />
+                    {errors.guestEmail && (
+                      <p className="text-red-400 text-xs mt-1">{errors.guestEmail}</p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -830,19 +859,39 @@ export default function CartPage() {
                       </p>
                     )}
                   </div>
-                  <input
-                    type="email"
-                    value={form.guestEmail}
-                    onChange={(e) => patch("guestEmail", e.target.value)}
-                    placeholder={t("cart.emailPlaceholder")}
-                    className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-colors"
-                  />
-                  <p className="text-xs text-gray-500">
-                    {t("cart.guestEmailNote")}
-                  </p>
+                  <div>
+                    <input
+                      type="email"
+                      value={form.guestEmail}
+                      onChange={(e) => patch("guestEmail", e.target.value)}
+                      placeholder="Email address"
+                      className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors ${
+                        errors.guestEmail
+                          ? "border-red-500/60"
+                          : "border-white/10 focus:border-amber-500/50"
+                      }`}
+                    />
+                    {errors.guestEmail && (
+                      <p className="text-red-400 text-xs mt-1">{errors.guestEmail}</p>
+                    )}
+                  </div>
                 </div>
               )}
             </section>
+
+            {/* Scheduled Pickup Time - only for pickup orders */}
+            {form.orderType === "pickup" && (
+              <section>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                  Pickup Time <span className="text-red-400">*</span>
+                </h2>
+                <PickupTimeSelector
+                  value={form.scheduledPickupTime}
+                  onChange={(val) => patch("scheduledPickupTime", val)}
+                  error={errors.scheduledPickupTime}
+                />
+              </section>
+            )}
 
             {/* Order notes */}
             <section>

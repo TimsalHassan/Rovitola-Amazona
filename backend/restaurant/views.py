@@ -6,7 +6,7 @@ from django.core.cache import cache
 
 from .models import RestaurantSettings
 from .serializers import RestaurantSettingsSerializer, DeliveryCheckSerializer
-from .utils import get_delivery_fee, is_restaurant_open, geocode_address
+from .utils import get_delivery_fee, is_restaurant_open, geocode_address, get_pickup_slots
 
 
 class RestaurantInfoView(APIView):
@@ -137,3 +137,15 @@ class DeliveryCheckView(APIView):
             "zone": "paid",
             "message": f"€{fee_float:.2f} delivery fee ({distance_rounded}km).",
         })
+
+
+class PickupSlotsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        settings = RestaurantSettings.get_settings()
+        if not settings:
+            return Response({"detail": "Not configured."}, status=503)
+
+        slots = get_pickup_slots(settings.opening_hours.all())
+        return Response({"slots": slots})

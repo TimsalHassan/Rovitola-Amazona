@@ -39,6 +39,12 @@ export interface DeliveryCheckResponse {
   message: string;
 }
 
+export interface PickupSlot {
+  value: string;       // "YYYY-MM-DDTHH:MM"
+  label: string;       // "HH:MM"
+  date_label: string;  // "Today" | "Tomorrow" | "Friday 26 Jun"
+}
+
 // ─── Fetch helper ─────────────────────────────────────────────────────────────
 
 async function get<T>(path: string): Promise<T> {
@@ -69,4 +75,6 @@ export const restaurantApi = {
 
   checkDelivery: (payload: DeliveryCheckPayload) =>
     post<DeliveryCheckResponse>("/restaurant/delivery-check/", payload),
+
+  getPickupSlots: () => get<{ slots: PickupSlot[] }>("/restaurant/pickup-slots/"),
 };

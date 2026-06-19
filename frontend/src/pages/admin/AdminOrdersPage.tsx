@@ -42,6 +42,7 @@ interface Order {
   delivery_address: string;
   order_notes: string;
   created_at: string;
+  scheduled_pickup_time: string | null;
   items: OrderItem[];
 }
 
@@ -112,6 +113,22 @@ function getNextStatus(order: Order): string | null {
 }
 
 const PAGE_SIZE = 20;
+
+// Restaurant is in Finland, so all order timestamps should always be shown
+// in Helsinki local time — regardless of the admin's own device/browser
+// timezone (this is what caused the time-mismatch vs the Django admin,
+// which renders using the server's Europe/Helsinki TIME_ZONE setting).
+const RESTAURANT_TZ = "Europe/Helsinki";
+
+const formatDateHelsinki = (iso: string) =>
+  new Date(iso).toLocaleDateString("fi-FI", { timeZone: RESTAURANT_TZ });
+
+const formatTimeHelsinki = (iso: string) =>
+  new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: RESTAURANT_TZ,
+  });
 
 const formatStatus = (s: string) =>
   s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -322,13 +339,10 @@ export default function AdminOrdersPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
-                        {new Date(order.created_at).toLocaleDateString("fi-FI")}
+                        {formatDateHelsinki(order.created_at)}
                         <br />
                         <span className="text-gray-600">
-                          {new Date(order.created_at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatTimeHelsinki(order.created_at)}
                         </span>
                       </td>
                       <td
@@ -409,6 +423,17 @@ export default function AdminOrdersPage() {
 
                             {/* Order info */}
                             <div className="space-y-2 text-xs">
+                              {order.order_type === "pickup" && order.scheduled_pickup_time && (
+                                <div>
+                                  <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">
+                                    Pickup Date &amp; Time
+                                  </p>
+                                  <p className="text-amber-400 font-medium">
+                                    {formatDateHelsinki(order.scheduled_pickup_time)}{" "}
+                                    {formatTimeHelsinki(order.scheduled_pickup_time)}
+                                  </p>
+                                </div>
+                              )}
                               {order.delivery_address && (
                                 <div>
                                   <p className="text-gray-500 uppercase tracking-wider text-[10px] mb-0.5">

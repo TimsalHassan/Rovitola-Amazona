@@ -505,6 +505,7 @@ const resources = {
         orderStatusTitle: "Tilauksen tila",
         currentStatus: "Nykyinen tila",
         deliveryInfo: "Toimitustiedot",
+        pickupInfo: "Noutotiedot",
         pickupFromRestaurant: "Nouto ravintolasta",
         delivery: "Toimitus",
         addressUnavailable: "Osoite ei saatavilla",
@@ -519,6 +520,7 @@ const resources = {
         backHome: "Takaisin Etusivulle",
         paymentMethod: {
           cash_on_delivery: "Käteinen toimituksessa",
+          cash_on_pickup: "Käteinen noudettaessa",
           card: "Kortti",
           online: "Verkkomaksu",
         },
@@ -1109,6 +1111,7 @@ const resources = {
         orderStatusTitle: "Order Status",
         currentStatus: "Current status",
         deliveryInfo: "Delivery Info",
+        pickupInfo: "Pickup Info",
         pickupFromRestaurant: "Pickup from restaurant",
         delivery: "Delivery",
         addressUnavailable: "Address not available",
@@ -1123,6 +1126,7 @@ const resources = {
         backHome: "Back to Home",
         paymentMethod: {
           cash_on_delivery: "Cash on Delivery",
+          cash_on_pickup: "Cash on Pickup",
           card: "Card",
           online: "Online payment",
         },

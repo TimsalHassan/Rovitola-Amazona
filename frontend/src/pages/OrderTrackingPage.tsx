@@ -11,10 +11,26 @@ import {
   ChefHat,
   Package,
   CreditCard,
+  Calendar,
 } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { OrderStatus } from "../api/order";
 import { useOrders } from "../context/OrderContext";
+
+// Restaurant is in Finland — always show pickup time in Helsinki local time,
+// regardless of the customer's own device/browser timezone.
+const RESTAURANT_TZ = "Europe/Helsinki";
+
+const formatPickupDateTime = (iso: string) => {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("fi-FI", { timeZone: RESTAURANT_TZ });
+  const time = d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: RESTAURANT_TZ,
+  });
+  return `${date} ${time}`;
+};
 
 const DELIVERY_STATUS_ORDER: OrderStatus[] = [
   "pending", "confirmed", "preparing", "on_the_way", "delivered",
@@ -231,7 +247,9 @@ export default function OrderTrackingPage() {
         </div>
         <div className="bg-gray-900 border border-white/5 rounded-2xl p-5 mb-5">
           <h2 className="text-white font-semibold mb-4">
-            {t("orderTracking.deliveryInfo")}
+            {isPickup
+              ? t("orderTracking.pickupInfo")
+              : t("orderTracking.deliveryInfo")}
           </h2>
           <div className="space-y-3 text-sm">
             <div className="flex items-center gap-3 text-gray-400">
@@ -246,6 +264,14 @@ export default function OrderTrackingPage() {
                   : t("orderTracking.delivery")}
               </span>
             </div>
+            {isPickup && currentOrder.scheduled_pickup_time && (
+              <div className="flex items-center gap-3 text-gray-400">
+                <Calendar size={15} className="text-amber-400" />
+                <span>
+                  {formatPickupDateTime(currentOrder.scheduled_pickup_time)}
+                </span>
+              </div>
+            )}
             {currentOrder.order_type === "delivery" &&
               currentOrder.delivery_address && (
                 <div className="flex items-start gap-3 text-gray-400">

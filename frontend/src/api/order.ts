@@ -54,6 +54,7 @@ export interface Order {
   total: string;
   created_at: string;
   updated_at: string;
+  scheduled_pickup_time: string | null;
   items: OrderItemRead[];
 }
 
@@ -91,6 +92,7 @@ export interface CreateOrderPayload {
   delivery_charge: number;
   discount_amount: number;
   total: number;
+  scheduled_pickup_time?: string;
   items: CreateOrderItem[];
 }
 

@@ -58,6 +58,8 @@ class Order(models.Model):
     discount_amount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     total           = models.DecimalField(max_digits=8, decimal_places=2)
 
+    scheduled_pickup_time = models.DateTimeField(null=True, blank=True, help_text="Customer requested pickup time (pickup orders only)")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

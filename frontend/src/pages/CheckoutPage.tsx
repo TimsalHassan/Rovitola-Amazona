@@ -33,6 +33,7 @@ interface CartLocationState {
   guestName: string;
   guestPhone: string;
   guestEmail: string;
+  scheduledPickupTime: string;
 }
 
 type PaymentMethod = "online" | "cash_on_delivery" | "cash_on_pickup";
@@ -168,6 +169,7 @@ export default function CheckoutPage() {
         ...(state.guestName && { guest_name: state.guestName }),
         ...(state.guestPhone && { guest_phone: state.guestPhone }),
         ...(state.guestEmail && { guest_email: state.guestEmail }),
+        ...(state.scheduledPickupTime && { scheduled_pickup_time: state.scheduledPickupTime }),
       };
 
       const order = await ordersApi.create(payload);
@@ -299,6 +301,17 @@ export default function CheckoutPage() {
                       <p className="text-gray-400 text-xs mt-0.5">
                         Aleksanterinkatu 3, 15110 Lahti
                       </p>
+                      {state.scheduledPickupTime && (
+                        <p className="text-amber-400 text-xs mt-1 font-medium">
+                          🕐 {new Date(state.scheduledPickupTime).toLocaleString("fi-FI", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
