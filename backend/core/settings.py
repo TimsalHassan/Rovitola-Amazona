@@ -181,6 +181,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://123.456.789.0",
     "https://ravintolaamazona.fi",
     "https://www.ravintolaamazona.fi",
+	"http://77.42.23.114/"
 ]
 
 
@@ -206,6 +207,7 @@ AUTH_USER_MODEL = 'users.User'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+"http://77.42.23.114",
      "https://ravintolaamazona.fi",
     "https://www.ravintolaamazona.fi",
 ]
