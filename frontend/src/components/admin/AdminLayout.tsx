@@ -22,6 +22,7 @@ import { ToastProvider } from "../../context/admin/ToastContext";
 import ToastContainer from "./ToastContainer";
 import { ADMIN, adminGet } from "../../api/admin";
 import { AdminStatsProvider } from "../../context/admin/AdminStatsContext";
+import { usePushNotifications } from "../../hooks/usePushNotifications";
 
 const NAV = [
   { label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
@@ -53,6 +54,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Register service worker + subscribe to browser push notifications so
+  // the admin gets notified of new orders even when this tab isn't open.
+  usePushNotifications(token);
 
   // ── Toast system ────────────────────────────────────────────────────────────
   const { toasts, addToast, removeToast } = useToast();

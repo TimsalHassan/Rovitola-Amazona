@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'restaurant.apps.RestaurantConfig',
     'contact',
     "admin_api",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -273,3 +274,11 @@ POSITIONSTACK_API_KEY = config('POSITIONSTACK_API_KEY', default=None)
 # # settings.py mein add karo
 PAYTRAIL_ACCOUNT = config('PAYTRAIL_ACCOUNT', default='375917')
 PAYTRAIL_SECRET  = config('PAYTRAIL_SECRET',  default='SAIPPUAKAUPPIAS')
+
+# ── Web Push (browser notifications for new orders) ───────────────────────────
+# Generate a keypair once with:
+#   python -c "from py_vapid import Vapid; v = Vapid(); v.generate_keys(); print(v.public_key, v.private_key)"
+# or: `vapid --gen` (from the py-vapid package). Put the resulting keys in .env.
+VAPID_PUBLIC_KEY    = config('VAPID_PUBLIC_KEY', default='')
+VAPID_PRIVATE_KEY   = config('VAPID_PRIVATE_KEY', default='')
+VAPID_CLAIMS_EMAIL  = config('VAPID_CLAIMS_EMAIL', default=RESTAURANT_EMAIL)

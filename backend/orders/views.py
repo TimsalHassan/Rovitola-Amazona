@@ -8,6 +8,7 @@ from .models import Order
 from .serializers import OrderSerializer, CreateOrderSerializer, OrderStatusSerializer
 from cart.models import Cart
 from .tasks import send_order_received_email, send_restaurant_notification_email
+from notifications.tasks import send_new_order_push
 
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils.decorators import method_decorator
@@ -140,6 +141,12 @@ class OrderCreateView(generics.CreateAPIView):
                     f"Discount     : -€{order.discount_amount}\n"
                     f"TOTAL        : €{order.total}"
                 ),
+            )
+
+            send_new_order_push.delay(
+                order_number=order.order_number,
+                total=str(order.total),
+                order_type=order.order_type,
             )
 
         # Clear cart

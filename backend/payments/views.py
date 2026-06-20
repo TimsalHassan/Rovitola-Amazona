@@ -9,7 +9,8 @@ from rest_framework.permissions import AllowAny
 from orders.models import Order
 from .paytrail import create_payment, verify_callback
 # from .tasks import send_payment_notification_email, send_payment_failed_email
-from orders.tasks import send_order_received_email
+from orders.tasks import send_order_received_email, send_restaurant_notification_email
+from notifications.tasks import send_new_order_push
 from menu.models import MenuItem
 
 logger = logging.getLogger(__name__)
@@ -85,28 +86,29 @@ class PaymentCallbackView(APIView):
                 print(order.get_customer_email())
 
                 customer_email = order.get_customer_email()
-                if customer_email:
-                    
-                    raw_items = order.items.values(
-                        "menu_item_name",
-                        "quantity",
-                        "base_price",
-                        "total_price",
+
+                raw_items = order.items.values(
+                    "menu_item_name",
+                    "quantity",
+                    "base_price",
+                    "total_price",
+                )
+
+                # Build a lookup: name → image URL from MenuItem
+                image_lookup = {
+                    m.name: m.image.url if m.image else ""
+                    for m in MenuItem.objects.filter(
+                        name__in=[i["menu_item_name"] for i in raw_items]
                     )
+                }
 
-                    # Build a lookup: name → image URL from MenuItem
-                    image_lookup = {
-                        m.name: m.image.url if m.image else ""
-                        for m in MenuItem.objects.filter(
-                            name__in=[i["menu_item_name"] for i in raw_items]
-                        )
-                    }
+                items = [
+                    {**item,
+                        "menu_item_image": image_lookup.get(item["menu_item_name"], "")}
+                    for item in raw_items
+                ]
 
-                    items = [
-                        {**item,
-                            "menu_item_image": image_lookup.get(item["menu_item_name"], "")}
-                        for item in raw_items
-                    ]
+                if customer_email:
                     send_order_received_email.delay(
                         order_id=order.order_number,
                         user_email=customer_email,
@@ -118,6 +120,35 @@ class PaymentCallbackView(APIView):
                         total=str(order.total),
                         items=items,
                     )
+
+                items_text = "\n".join([
+                    f"  • {i['menu_item_name']} x{i['quantity']} = €{i['total_price']}"
+                    for i in items
+                ])
+                send_restaurant_notification_email.delay(
+                    order_id=order.order_number,
+                    order_details=(
+                        f"Order Number : #{order.order_number}\n"
+                        f"Order Type   : {order.order_type.upper()}\n"
+                        f"Payment      : {order.payment_method.replace('_', ' ').upper()}\n"
+                        f"Customer     : {order.get_customer_name()}\n"
+                        f"Phone        : {order.get_customer_phone()}\n"
+                        f"Email        : {order.get_customer_email() or 'N/A'}\n"
+                        f"Address      : {order.delivery_address or 'N/A (Pickup)'}\n"
+                        f"Notes        : {order.order_notes or 'None'}\n\n"
+                        f"Items:\n{items_text}\n\n"
+                        f"Subtotal     : €{order.subtotal}\n"
+                        f"Delivery     : €{order.delivery_charge}\n"
+                        f"Discount     : -€{order.discount_amount}\n"
+                        f"TOTAL        : €{order.total}"
+                    ),
+                )
+
+                send_new_order_push.delay(
+                    order_number=order.order_number,
+                    total=str(order.total),
+                    order_type=order.order_type,
+                )
 
         else:
             if order.payment_status != "paid":
